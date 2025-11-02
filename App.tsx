@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Task, Category, DayType, RecurringTaskTemplate, DailyLog } from './types';
-import Header from './components/Header';
-import TaskList from './components/TaskList';
-import AddTaskForm from './components/AddTaskForm';
-import DayTypeManager from './components/DayTypeManager';
-import CategoryManager from './components/CategoryManager';
-import { SettingsIcon, EditIcon } from './components/icons';
-import DateNavigator from './components/DateNavigator';
+import Header from './Header';
+import TaskList from './TaskList';
+import AddTaskForm from './AddTaskForm';
+import DayTypeManager from './DayTypeManager';
+import CategoryManager from './CategoryManager';
+import { SettingsIcon, EditIcon } from './icons';
+import DateNavigator from './DateNavigator';
 import { createClient } from '@supabase/supabase-js';
 
 // --- Supabase Setup ---
