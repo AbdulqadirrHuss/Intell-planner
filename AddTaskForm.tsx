@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Category } from '../types';
 import { PlusIcon } from './icons';
 
@@ -10,7 +9,20 @@ interface AddTaskFormProps {
 
 const AddTaskForm: React.FC<AddTaskFormProps> = ({ categories, onAddTask }) => {
   const [text, setText] = useState('');
-  const [categoryId, setCategoryId] = useState(categories[0]?.id || '');
+  // Set initial category to 'uncategorized' to be safe
+  const [categoryId, setCategoryId] = useState('uncategorized');
+
+  // THIS IS THE FIX:
+  // When the categories load, if the selected ID is "uncategorized",
+  // update it to the first *real* category in the list.
+  useEffect(() => {
+    if (categories.length > 0 && categoryId === 'uncategorized') {
+      const firstRealCategory = categories.find(c => c.id !== 'uncategorized');
+      if (firstRealCategory) {
+        setCategoryId(firstRealCategory.id);
+      }
+    }
+  }, [categories, categoryId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
