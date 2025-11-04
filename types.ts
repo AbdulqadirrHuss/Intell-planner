@@ -1,4 +1,3 @@
-
 export interface Task {
   id: string;
   text: string;
@@ -11,6 +10,7 @@ export interface Category {
   id: string;
   name: string;
   color: string;
+  recurringTasks: RecurringTaskTemplate[]; // CATEGORY now owns recurring tasks
 }
 
 export interface RecurringTaskTemplate {
@@ -22,7 +22,7 @@ export interface RecurringTaskTemplate {
 export interface DayType {
   id: string;
   name: string;
-  recurringTasks: RecurringTaskTemplate[];
+  categoryIds: string[]; // DAY TYPE now just has a list of category IDs
 }
 
 export interface DailyLog {
