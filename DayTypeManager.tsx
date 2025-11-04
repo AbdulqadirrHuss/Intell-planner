@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { DayType, Category, RecurringTaskTemplate } from '../types';
+import { DayType, Category } from '../types';
 import { PlusIcon, TrashIcon, EditIcon, CheckIcon } from './icons';
 
 interface DayTypeManagerProps {
@@ -11,18 +10,18 @@ interface DayTypeManagerProps {
   onAddDayType: (name: string) => void;
   onUpdateDayType: (id: string, name: string) => void;
   onDeleteDayType: (id: string) => void;
-  onAddRecurringTask: (dayTypeId: string, text: string, categoryId: string) => void;
-  onDeleteRecurringTask: (dayTypeId: string, taskId: string) => void;
+  onAddCategoryToDayType: (dayTypeId: string, categoryId: string) => void;
+  onRemoveCategoryFromDayType: (dayTypeId: string, categoryId: string) => void;
 }
 
 const DayTypeManager: React.FC<DayTypeManagerProps> = ({
   isOpen, onClose, dayTypes, categories, onAddDayType, onUpdateDayType,
-  onDeleteDayType, onAddRecurringTask, onDeleteRecurringTask
+  onDeleteDayType, onAddCategoryToDayType, onRemoveCategoryFromDayType
 }) => {
   const [newDayTypeName, setNewDayTypeName] = useState('');
   const [editingDayTypeId, setEditingDayTypeId] = useState<string | null>(null);
   const [editingDayTypeName, setEditingDayTypeName] = useState('');
-  const [newRecurringTask, setNewRecurringTask] = useState<{ [key: string]: { text: string; categoryId: string } }>({});
+  const [newCategoryLink, setNewCategoryLink] = useState<{ [key: string]: string }>({});
 
   if (!isOpen) return null;
 
@@ -36,9 +35,9 @@ const DayTypeManager: React.FC<DayTypeManagerProps> = ({
 
   const handleUpdateDayType = (id: string) => {
     if (editingDayTypeName.trim()) {
-        onUpdateDayType(id, editingDayTypeName.trim());
-        setEditingDayTypeId(null);
-        setEditingDayTypeName('');
+      onUpdateDayType(id, editingDayTypeName.trim());
+      setEditingDayTypeId(null);
+      setEditingDayTypeName('');
     }
   };
 
@@ -47,14 +46,16 @@ const DayTypeManager: React.FC<DayTypeManagerProps> = ({
     setEditingDayTypeName(dayType.name);
   }
 
-  const handleAddRecurringTask = (e: React.FormEvent, dayTypeId: string) => {
+  const handleAddCategory = (e: React.FormEvent, dayTypeId: string) => {
     e.preventDefault();
-    const taskInfo = newRecurringTask[dayTypeId];
-    if (taskInfo && taskInfo.text.trim() && taskInfo.categoryId) {
-      onAddRecurringTask(dayTypeId, taskInfo.text, taskInfo.categoryId);
-      setNewRecurringTask(prev => ({ ...prev, [dayTypeId]: { text: '', categoryId: categories[0]?.id || '' } }));
+    const categoryId = newCategoryLink[dayTypeId];
+    if (categoryId) {
+      onAddCategoryToDayType(dayTypeId, categoryId);
+      setNewCategoryLink(prev => ({ ...prev, [dayTypeId]: '' }));
     }
   };
+
+  const availableCategories = categories.filter(c => c.id !== 'uncategorized');
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4">
@@ -83,10 +84,10 @@ const DayTypeManager: React.FC<DayTypeManagerProps> = ({
               <div key={dt.id} className="bg-gray-700 p-4 rounded-lg">
                 <div className="flex justify-between items-center mb-4">
                   {editingDayTypeId === dt.id ? (
-                      <div className="flex gap-2 w-full">
-                        <input type="text" value={editingDayTypeName} onChange={e => setEditingDayTypeName(e.target.value)} className="flex-grow bg-gray-600 rounded p-1" autoFocus/>
-                        <button onClick={() => handleUpdateDayType(dt.id)} className="text-green-400 hover:text-green-300"><CheckIcon className="w-5 h-5"/></button>
-                      </div>
+                    <div className="flex gap-2 w-full">
+                      <input type="text" value={editingDayTypeName} onChange={e => setEditingDayTypeName(e.target.value)} className="flex-grow bg-gray-600 rounded p-1 text-white" autoFocus/>
+                      <button onClick={() => handleUpdateDayType(dt.id)} className="text-green-400 hover:text-green-300"><CheckIcon className="w-5 h-5"/></button>
+                    </div>
                   ) : (
                     <h3 className="text-lg font-bold text-indigo-300">{dt.name}</h3>
                   )}
@@ -96,32 +97,33 @@ const DayTypeManager: React.FC<DayTypeManagerProps> = ({
                   </div>
                 </div>
 
-                {/* Recurring Tasks */}
-                <div className="space-y-2 mb-4">
-                  {dt.recurringTasks.map(task => (
-                    <div key={task.id} className="flex justify-between items-center bg-gray-600 p-2 rounded">
-                      <span className="text-sm">{task.text}</span>
-                      <button onClick={() => onDeleteRecurringTask(dt.id, task.id)} className="text-gray-400 hover:text-red-500"><TrashIcon className="w-4 h-4"/></button>
-                    </div>
-                  ))}
-                  {dt.recurringTasks.length === 0 && <p className="text-sm text-gray-500">No recurring tasks.</p>}
+                {/* Linked Categories */}
+                <div className="space-y-2 mb-4 pl-4">
+                  {dt.categoryIds.map(catId => {
+                    const category = categories.find(c => c.id === catId);
+                    if (!category) return null;
+                    return (
+                      <div key={catId} className="flex justify-between items-center bg-gray-600 p-2 rounded">
+                        <span className="text-sm font-medium" style={{color: category.color}}>{category.name}</span>
+                        <button onClick={() => onRemoveCategoryFromDayType(dt.id, catId)} className="text-gray-400 hover:text-red-500"><TrashIcon className="w-4 h-4"/></button>
+                      </div>
+                    );
+                  })}
+                  {dt.categoryIds.length === 0 && <p className="text-sm text-gray-500">No categories linked. Add one below.</p>}
                 </div>
 
-                {/* Add Recurring Task Form */}
-                <form onSubmit={(e) => handleAddRecurringTask(e, dt.id)} className="flex gap-2 text-sm">
-                  <input
-                    type="text"
-                    value={newRecurringTask[dt.id]?.text || ''}
-                    onChange={(e) => setNewRecurringTask(prev => ({ ...prev, [dt.id]: { ...prev[dt.id], text: e.target.value, categoryId: prev[dt.id]?.categoryId || categories[0]?.id } }))}
-                    placeholder="Add recurring task..."
-                    className="flex-grow bg-gray-600 border-gray-500 rounded-md p-2"
-                  />
+                {/* Add Category to Day Type Form */}
+                <form onSubmit={(e) => handleAddCategory(e, dt.id)} className="flex gap-2 text-sm pl-4">
                   <select
-                     value={newRecurringTask[dt.id]?.categoryId || categories[0]?.id}
-                     onChange={(e) => setNewRecurringTask(prev => ({ ...prev, [dt.id]: { ...prev[dt.id], categoryId: e.target.value, text: prev[dt.id]?.text || '' } }))}
-                     className="bg-gray-600 border-gray-500 rounded-md p-2"
+                    value={newCategoryLink[dt.id] || ''}
+                    onChange={(e) => setNewCategoryLink(prev => ({ ...prev, [dt.id]: e.target.value }))}
+                    className="flex-grow bg-gray-600 border-gray-500 rounded-md p-2 text-white"
                   >
-                    {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                    <option value="" disabled>Link a category...</option>
+                    {availableCategories
+                      .filter(cat => !dt.categoryIds.includes(cat.id)) // Only show categories not already added
+                      .map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)
+                    }
                   </select>
                   <button type="submit" className="p-2 bg-indigo-500 hover:bg-indigo-600 rounded-md"><PlusIcon className="w-4 h-4"/></button>
                 </form>
