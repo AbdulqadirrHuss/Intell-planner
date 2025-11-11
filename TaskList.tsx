@@ -1,8 +1,15 @@
 // abdulqadirrhuss/intell-planner/Intell-planner-e4eec65ae3452797ce24afb321a4c1a7a0f5cce3/TaskList.tsx
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Task, Category, Subtask } from '../types';
 import { TrashIcon, PlusIcon, EditIcon, CheckIcon } from './icons';
+
+// NEW: Icon for recurring indicator
+const RecurringIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+  </svg>
+);
 
 // --- SubtaskItem Component ---
 interface SubtaskItemProps {
@@ -11,9 +18,12 @@ interface SubtaskItemProps {
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
   onDeleteSubtask: (subtaskId: string) => void;
   onUpdateSubtaskText: (taskId: string, subtaskId: string, newText: string) => void;
+  onToggleSubtaskRecurring: (taskId: string, subtaskId: string) => void;
 }
 
-const SubtaskItem: React.FC<SubtaskItemProps> = ({ task, subtask, onToggleSubtask, onDeleteSubtask, onUpdateSubtaskText }) => {
+const SubtaskItem: React.FC<SubtaskItemProps> = ({ 
+  task, subtask, onToggleSubtask, onDeleteSubtask, onUpdateSubtaskText, onToggleSubtaskRecurring 
+}) => {
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(subtask.text);
 
@@ -49,6 +59,15 @@ const SubtaskItem: React.FC<SubtaskItemProps> = ({ task, subtask, onToggleSubtas
         </span>
       )}
 
+      {/* NEW: Recurring toggle button */}
+      <button 
+        onClick={() => onToggleSubtaskRecurring(task.id, subtask.id)}
+        className={`ml-2 ${subtask.isRecurring ? 'text-indigo-400' : 'text-gray-600'} hover:text-indigo-300`}
+        title={subtask.isRecurring ? "Recurring subtask" : "Make recurring"}
+      >
+        <RecurringIcon className="w-4 h-4" />
+      </button>
+
       {isEditing ? (
         <button onClick={handleUpdate} className="ml-2 text-green-400 hover:text-green-300"><CheckIcon className="w-4 h-4"/></button>
       ) : (
@@ -73,12 +92,13 @@ interface TaskItemProps {
   onAddSubtask: (taskId: string, text: string) => void;
   onUpdateTaskText: (taskId: string, newText: string) => void;
   onUpdateSubtaskText: (taskId: string, subtaskId: string, newText: string) => void;
+  onToggleSubtaskRecurring: (taskId: string, subtaskId: string) => void;
 }
 
 const TaskItem: React.FC<TaskItemProps> = ({ 
   task, categoryColor, onToggleTask, onDeleteTask, 
   onToggleSubtask, onDeleteSubtask, onAddSubtask,
-  onUpdateTaskText, onUpdateSubtaskText
+  onUpdateTaskText, onUpdateSubtaskText, onToggleSubtaskRecurring
 }) => {
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -151,6 +171,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
             onToggleSubtask={onToggleSubtask}
             onDeleteSubtask={onDeleteSubtask}
             onUpdateSubtaskText={onUpdateSubtaskText}
+            onToggleSubtaskRecurring={onToggleSubtaskRecurring}
           />
         ))}
       </div>
@@ -183,6 +204,7 @@ interface TaskListProps {
   onAddSubtask: (taskId: string, text: string) => void;
   onUpdateTaskText: (taskId: string, newText: string) => void;
   onUpdateSubtaskText: (taskId: string, subtaskId: string, newText: string) => void;
+  onToggleSubtaskRecurring: (taskId: string, subtaskId: string) => void;
 }
 
 const calculateProgress = (tasks: Task[]): number => {
@@ -195,7 +217,6 @@ const calculateProgress = (tasks: Task[]): number => {
     if (task.subtasks.length === 0) {
       return acc + (task.completed ? progressPerParent : 0);
     } else {
-      if (task.subtasks.length === 0) return acc;
       const progressPerSubtask = progressPerParent / task.subtasks.length;
       const completedSubtasks = task.subtasks.filter(st => st.completed).length;
       return acc + (completedSubtasks * progressPerSubtask);
@@ -208,7 +229,7 @@ const calculateProgress = (tasks: Task[]): number => {
 const TaskList: React.FC<TaskListProps> = ({ 
   tasks, categories, onToggleTask, onDeleteTask,
   onToggleSubtask, onDeleteSubtask, onAddSubtask,
-  onUpdateTaskText, onUpdateSubtaskText
+  onUpdateTaskText, onUpdateSubtaskText, onToggleSubtaskRecurring
 }) => {
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
 
@@ -287,6 +308,7 @@ const TaskList: React.FC<TaskListProps> = ({
                 onAddSubtask={onAddSubtask}
                 onUpdateTaskText={onUpdateTaskText}
                 onUpdateSubtaskText={onUpdateSubtaskText}
+                onToggleSubtaskRecurring={onToggleSubtaskRecurring}
               />
             ))}
           </div>
@@ -307,6 +329,7 @@ const TaskList: React.FC<TaskListProps> = ({
                 onAddSubtask={onAddSubtask}
                 onUpdateTaskText={onUpdateTaskText}
                 onUpdateSubtaskText={onUpdateSubtaskText}
+                onToggleSubtaskRecurring={onToggleSubtaskRecurring}
               />
             ))}
           </div>
