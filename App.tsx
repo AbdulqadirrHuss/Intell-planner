@@ -160,8 +160,6 @@ function App() {
       const category = categories.find(c => c.id === catId);
       if (category) {
         
-        // --- *** FIX 1 (FILTERING) *** ---
-        // This filter logic is now correct.
         const tasksForThisDay = category.recurringTasks.filter(rt => {
           const hasDaysSet = rt.daysOfWeek && rt.daysOfWeek.length > 0;
           if (!hasDaysSet) {
@@ -169,7 +167,6 @@ function App() {
           }
           return rt.daysOfWeek.includes(currentDayOfWeek); // Days are set, check if today is one of them.
         });
-        // --- *** END FIX *** ---
 
         allRecurringTaskTemplates.push(...tasksForThisDay);
       }
@@ -273,6 +270,21 @@ function App() {
     setDailyLogs(prev => ({ ...prev, [selectedDate]: { ...currentDailyLog, tasks: newTasks } }));
   };
 
+  // --- NEW: Handler for Editing Task Text ---
+  const handleUpdateTaskText = async (taskId: string, newText: string) => {
+    await supabase.from('tasks').update({ text: newText }).eq('id', taskId);
+    
+    setDailyLogs(prevLogs => ({
+      ...prevLogs,
+      [selectedDate]: {
+        ...currentDailyLog,
+        tasks: currentDailyLog.tasks.map(task =>
+          task.id === taskId ? { ...task, text: newText } : task
+        )
+      }
+    }));
+  };
+
   // --- Subtask Handlers ---
   const handleAddSubtask = async (taskId: string, text: string) => {
     const { data, error } = await supabase.from('subtasks').insert({
@@ -300,6 +312,26 @@ function App() {
       subtasks: task.subtasks.filter(st => st.id !== subtaskId)
     }));
     setDailyLogs(prev => ({ ...prev, [selectedDate]: { ...currentDailyLog, tasks: newTasks } }));
+  };
+
+  // --- NEW: Handler for Editing Subtask Text ---
+  const handleUpdateSubtaskText = async (taskId: string, subtaskId: string, newText: string) => {
+    await supabase.from('subtasks').update({ text: newText }).eq('id', subtaskId);
+
+    setDailyLogs(prevLogs => ({
+      ...prevLogs,
+      [selectedDate]: {
+        ...currentDailyLog,
+        tasks: currentDailyLog.tasks.map(task =>
+          task.id === taskId ? {
+            ...task,
+            subtasks: task.subtasks.map(subtask =>
+              subtask.id === subtaskId ? { ...subtask, text: newText } : subtask
+            )
+          } : task
+        )
+      }
+    }));
   };
 
   const handleToggleSubtask = async (taskId: string, subtaskId: string) => {
@@ -377,19 +409,28 @@ function App() {
     })));
   };
 
+  // --- BUG FIX IS HERE: Using functional update `prevCategories` ---
   const onUpdateRecurringTask = async (task: RecurringTaskTemplate) => {
     await supabase.from('recurring_task_templates')
       .update({ days_of_week: task.daysOfWeek })
       .eq('id', task.id);
     
-    // --- *** FIX 2 (SAVING) *** ---
-    // We now use a functional update (prevCategories => ...)
-    // This prevents the state save from failing.
     setCategories(prevCategories => prevCategories.map(cat => ({
       ...cat,
       recurringTasks: cat.recurringTasks.map(rt => rt.id === task.id ? task : rt)
     })));
-    // --- *** END FIX *** ---
+  };
+
+  // --- NEW: Handler for Editing Recurring Task Text ---
+  const handleUpdateRecurringTaskText = async (taskId: string, newText: string) => {
+    await supabase.from('recurring_task_templates').update({ text: newText }).eq('id', taskId);
+
+    setCategories(prevCategories => prevCategories.map(cat => ({
+      ...cat,
+      recurringTasks: cat.recurringTasks.map(rt =>
+        rt.id === taskId ? { ...rt, text: newText } : rt
+      )
+    })));
   };
 
   const onAddRecurringSubtask = async (parentTemplateId: string, text: string) => {
@@ -418,6 +459,21 @@ function App() {
       recurringTasks: cat.recurringTasks.map(rt => ({
         ...rt,
         subtaskTemplates: rt.subtaskTemplates.filter(st => st.id !== subtaskTemplateId)
+      }))
+    })));
+  };
+
+  // --- NEW: Handler for Editing Recurring Subtask Text ---
+  const handleUpdateRecurringSubtaskText = async (subtaskTemplateId: string, newText: string) => {
+    await supabase.from('recurring_subtask_templates').update({ text: newText }).eq('id', subtaskTemplateId);
+
+    setCategories(prevCategories => prevCategories.map(cat => ({
+      ...cat,
+      recurringTasks: cat.recurringTasks.map(rt => ({
+        ...rt,
+        subtaskTemplates: rt.subtaskTemplates.map(st =>
+          st.id === subtaskTemplateId ? { ...st, text: newText } : st
+        )
       }))
     })));
   };
@@ -514,6 +570,9 @@ function App() {
             onToggleSubtask={handleToggleSubtask}
             onDeleteSubtask={handleDeleteSubtask}
             onAddSubtask={handleAddSubtask}
+            // NEW: Pass text update handlers
+            onUpdateTaskText={handleUpdateTaskText}
+            onUpdateSubtaskText={handleUpdateSubtaskText}
           />
           <AddTaskForm categories={categories} onAddTask={handleAddTask} />
         
@@ -542,6 +601,9 @@ function App() {
           onUpdateRecurringTask={onUpdateRecurringTask}
           onAddRecurringSubtask={onAddRecurringSubtask}
           onDeleteRecurringSubtask={onDeleteRecurringSubtask}
+          // NEW: Pass text update handlers
+          onUpdateRecurringTaskText={handleUpdateRecurringTaskText}
+          onUpdateRecurringSubtaskText={handleUpdateRecurringSubtaskText}
         />
       </div>
     </div>
