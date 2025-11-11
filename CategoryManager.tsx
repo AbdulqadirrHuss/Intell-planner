@@ -4,6 +4,171 @@ import React, { useState } from 'react';
 import { Category, RecurringTaskTemplate, RecurringSubtaskTemplate } from '../types';
 import { PlusIcon, TrashIcon, EditIcon, CheckIcon } from './icons';
 
+// NEW: Component for editing recurring subtask template text
+const RecurringSubtaskItem: React.FC<{
+  subtask: RecurringSubtaskTemplate;
+  onDelete: (id: string) => void;
+  onUpdateText: (id: string, newText: string) => void;
+}> = ({ subtask, onDelete, onUpdateText }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [text, setText] = useState(subtask.text);
+
+  const handleUpdate = () => {
+    if (text.trim() && text !== subtask.text) {
+      onUpdateText(subtask.id, text.trim());
+    }
+    setIsEditing(false);
+  };
+
+  return (
+    <div className="flex justify-between items-center bg-gray-500 p-1.5 rounded">
+      {isEditing ? (
+        <input
+          type="text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={handleUpdate}
+          onKeyDown={(e) => e.key === 'Enter' && handleUpdate()}
+          className="flex-grow bg-gray-400 text-black rounded p-0.5 text-xs"
+          autoFocus
+        />
+      ) : (
+        <span className="text-xs text-gray-300">{subtask.text}</span>
+      )}
+      <div className="flex gap-1">
+        {isEditing ? (
+          <button onClick={handleUpdate}><CheckIcon className="w-3 h-3 text-green-300"/></button>
+        ) : (
+          <button onClick={() => setIsEditing(true)}><EditIcon className="w-3 h-3 text-gray-300"/></button>
+        )}
+        <button onClick={() => onDelete(subtask.id)} className="text-gray-300 hover:text-red-500"><TrashIcon className="w-3 h-3"/></button>
+      </div>
+    </div>
+  );
+};
+
+// NEW: Component for editing recurring task template
+const RecurringTaskItem: React.FC<{
+  task: RecurringTaskTemplate;
+  onDelete: (id: string) => void;
+  onUpdateDays: (task: RecurringTaskTemplate) => void;
+  onUpdateText: (id: string, newText: string) => void;
+  onAddSubtask: (parentTemplateId: string, text: string) => void;
+  onDeleteSubtask: (id: string) => void;
+  onUpdateSubtaskText: (id: string, newText: string) => void;
+}> = ({ task, onDelete, onUpdateDays, onUpdateText, onAddSubtask, onDeleteSubtask, onUpdateSubtaskText }) => {
+  
+  const [editingDays, setEditingDays] = useState(false);
+  const [daysOfWeek, setDaysOfWeek] = useState(task.daysOfWeek || []);
+  
+  const [editingText, setEditingText] = useState(false);
+  const [text, setText] = useState(task.text);
+
+  const [newSubtask, setNewSubtask] = useState('');
+
+  const DAYS_OF_WEEK = [
+    { label: 'S', value: 0 }, { label: 'M', value: 1 }, { label: 'T', value: 2 },
+    { label: 'W', value: 3 }, { label: 'T', value: 4 }, { label: 'F', value: 5 },
+    { label: 'S', value: 6 }
+  ];
+
+  const toggleDay = (day: number) => {
+    setDaysOfWeek(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
+  };
+
+  const handleSaveDays = () => {
+    onUpdateDays({ ...task, daysOfWeek });
+    setEditingDays(false);
+  };
+
+  const handleSaveText = () => {
+    if (text.trim() && text !== task.text) {
+      onUpdateText(task.id, text.trim());
+    }
+    setEditingText(false);
+  };
+
+  const handleAddSubtask = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newSubtask.trim()) {
+      onAddSubtask(task.id, newSubtask.trim());
+      setNewSubtask('');
+    }
+  };
+
+  return (
+    <div className="bg-gray-600 p-3 rounded">
+      <div className="flex justify-between items-center">
+        {editingText ? (
+          <input
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onBlur={handleSaveText}
+            onKeyDown={(e) => e.key === 'Enter' && handleSaveText()}
+            className="flex-grow bg-gray-500 text-white rounded p-0.5"
+            autoFocus
+          />
+        ) : (
+          <span className="text-sm text-gray-200">{task.text}</span>
+        )}
+        <div className="flex gap-2">
+          {editingText ? (
+            <button onClick={handleSaveText}><CheckIcon className="w-4 h-4 text-green-300"/></button>
+          ) : (
+            <button onClick={() => setEditingText(true)}><EditIcon className="w-4 h-4 text-gray-300"/></button>
+          )}
+          <button onClick={() => setEditingDays(true)} className="text-gray-300 hover:text-white"><EditIcon className="w-4 h-4"/></button>
+          <button onClick={() => onDelete(task.id)} className="text-gray-300 hover:text-red-500"><TrashIcon className="w-4 h-4"/></button>
+        </div>
+      </div>
+      
+      {editingDays ? (
+        <div className="mt-2 flex items-center gap-2">
+          <div className="flex gap-1">
+            {DAYS_OF_WEEK.map(day => (
+              <button
+                key={day.value}
+                onClick={() => toggleDay(day.value)}
+                className={`w-6 h-6 rounded-full text-xs font-bold ${daysOfWeek.includes(day.value) ? 'bg-indigo-500 text-white' : 'bg-gray-500 text-gray-200'}`}
+              >
+                {day.label}
+              </button>
+            ))}
+          </div>
+          <button onClick={handleSaveDays} className="p-1 bg-green-500 rounded-md"><CheckIcon className="w-4 h-4"/></button>
+        </div>
+      ) : (
+        <div className="mt-1 text-xs text-indigo-300">
+          {(task.daysOfWeek || []).length > 0 ? task.daysOfWeek.sort().map(d => DAYS_OF_WEEK[d].label).join(', ') : 'No days set'}
+        </div>
+      )}
+      
+      <div className="pl-4 mt-2 space-y-1">
+        {task.subtaskTemplates.map(st => (
+          <RecurringSubtaskItem
+            key={st.id}
+            subtask={st}
+            onDelete={onDeleteSubtask}
+            onUpdateText={onUpdateSubtaskText}
+          />
+        ))}
+      </div>
+
+      <form onSubmit={handleAddSubtask} className="flex gap-2 text-sm pl-4 mt-2">
+        <input
+          type="text"
+          value={newSubtask}
+          onChange={(e) => setNewSubtask(e.target.value)}
+          placeholder="Add subtask template..."
+          className="flex-grow bg-gray-500 border-gray-400 rounded-md p-1 text-xs text-white"
+        />
+        <button type="submit" className="p-1 bg-indigo-500 hover:bg-indigo-600 rounded-md"><PlusIcon className="w-3 h-3"/></button>
+      </form>
+    </div>
+  );
+};
+
 interface CategoryManagerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -11,36 +176,26 @@ interface CategoryManagerProps {
   onAddCategory: (name: string, color: string) => void;
   onUpdateCategory: (id: string, name: string, color: string) => void;
   onDeleteCategory: (id: string) => void;
-  // MODIFIED: Recurring task props
   onAddRecurringTask: (categoryId: string, text: string) => void;
   onDeleteRecurringTask: (taskId: string) => void;
-  onUpdateRecurringTask: (task: RecurringTaskTemplate) => void; // NEW
-  onAddRecurringSubtask: (parentTemplateId: string, text: string) => void; // NEW
-  onDeleteRecurringSubtask: (subtaskTemplateId: string) => void; // NEW
+  onUpdateRecurringTask: (task: RecurringTaskTemplate) => void;
+  onAddRecurringSubtask: (parentTemplateId: string, text: string) => void;
+  onDeleteRecurringSubtask: (subtaskTemplateId: string) => void;
+  // NEW: Add handlers for text updates
+  onUpdateRecurringTaskText: (taskId: string, newText: string) => void;
+  onUpdateRecurringSubtaskText: (subtaskTemplateId: string, newText: string) => void;
 }
-
-const DAYS_OF_WEEK = [
-  { label: 'S', value: 0 }, { label: 'M', value: 1 }, { label: 'T', value: 2 },
-  { label: 'W', value: 3 }, { label: 'T', value: 4 }, { label: 'F', value: 5 },
-  { label: 'S', value: 6 }
-];
 
 const CategoryManager: React.FC<CategoryManagerProps> = ({
   isOpen, onClose, categories, onAddCategory, onUpdateCategory, onDeleteCategory,
   onAddRecurringTask, onDeleteRecurringTask, onUpdateRecurringTask,
-  onAddRecurringSubtask, onDeleteRecurringSubtask
+  onAddRecurringSubtask, onDeleteRecurringSubtask,
+  onUpdateRecurringTaskText, onUpdateRecurringSubtaskText // NEW
 }) => {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState('#4f46e5');
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [newRecurringTask, setNewRecurringTask] = useState<{ [key: string]: string }>({});
-  
-  // NEW: State for editing a recurring task's days
-  const [editingRecTaskId, setEditingRecTaskId] = useState<string | null>(null);
-  const [editingRecTaskDays, setEditingRecTaskDays] = useState<number[]>([]);
-  
-  // NEW: State for adding a subtask template
-  const [newRecSubtask, setNewRecSubtask] = useState<{ [key: string]: string }>({});
 
   if (!isOpen) return null;
 
@@ -66,33 +221,6 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
     if (text && text.trim()) {
       onAddRecurringTask(categoryId, text);
       setNewRecurringTask(prev => ({ ...prev, [categoryId]: '' }));
-    }
-  };
-
-  // --- NEW: Handlers for recurring task day-of-week editing ---
-  const startEditingDays = (task: RecurringTaskTemplate) => {
-    setEditingRecTaskId(task.id);
-    setEditingRecTaskDays(task.daysOfWeek || []);
-  };
-
-  const toggleDay = (day: number) => {
-    setEditingRecTaskDays(prev => 
-      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
-    );
-  };
-
-  const saveEditingDays = (task: RecurringTaskTemplate) => {
-    onUpdateRecurringTask({ ...task, daysOfWeek: editingRecTaskDays });
-    setEditingRecTaskId(null);
-  };
-
-  // --- NEW: Handlers for recurring subtasks ---
-  const handleAddRecSubtask = (e: React.FormEvent, parentTemplateId: string) => {
-    e.preventDefault();
-    const text = newRecSubtask[parentTemplateId];
-    if (text && text.trim()) {
-      onAddRecurringSubtask(parentTemplateId, text);
-      setNewRecSubtask(prev => ({ ...prev, [parentTemplateId]: '' }));
     }
   };
 
@@ -160,59 +288,16 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
                 {/* Recurring Tasks List for this Category */}
                 <div className="pl-4 space-y-3 mb-4">
                   {cat.recurringTasks.map(task => (
-                    <div key={task.id} className="bg-gray-600 p-3 rounded">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-200">{task.text}</span>
-                        <div className="flex gap-2">
-                          <button onClick={() => startEditingDays(task)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4"/></button>
-                          <button onClick={() => onDeleteRecurringTask(task.id)} className="text-gray-400 hover:text-red-500"><TrashIcon className="w-4 h-4"/></button>
-                        </div>
-                      </div>
-                      
-                      {/* NEW: Day of Week Editor */}
-                      {editingRecTaskId === task.id ? (
-                        <div className="mt-2 flex items-center gap-2">
-                          <div className="flex gap-1">
-                            {DAYS_OF_WEEK.map(day => (
-                              <button
-                                key={day.value}
-                                onClick={() => toggleDay(day.value)}
-                                className={`w-6 h-6 rounded-full text-xs font-bold ${editingRecTaskDays.includes(day.value) ? 'bg-indigo-500 text-white' : 'bg-gray-500 text-gray-200'}`}
-                              >
-                                {day.label}
-                              </button>
-                            ))}
-                          </div>
-                          <button onClick={() => saveEditingDays(task)} className="p-1 bg-green-500 rounded-md"><CheckIcon className="w-4 h-4"/></button>
-                        </div>
-                      ) : (
-                        <div className="mt-1 text-xs text-indigo-300">
-                          {(task.daysOfWeek || []).length > 0 ? task.daysOfWeek.sort().map(d => DAYS_OF_WEEK[d].label).join(', ') : 'No days set'}
-                        </div>
-                      )}
-                      
-                      {/* NEW: Recurring Subtask List */}
-                      <div className="pl-4 mt-2 space-y-1">
-                        {task.subtaskTemplates.map(st => (
-                          <div key={st.id} className="flex justify-between items-center bg-gray-500 p-1.5 rounded">
-                            <span className="text-xs text-gray-300">{st.text}</span>
-                            <button onClick={() => onDeleteRecurringSubtask(st.id)} className="text-gray-400 hover:text-red-500"><TrashIcon className="w-3 h-3"/></button>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* NEW: Add Recurring Subtask Form */}
-                      <form onSubmit={(e) => handleAddRecSubtask(e, task.id)} className="flex gap-2 text-sm pl-4 mt-2">
-                        <input
-                          type="text"
-                          value={newRecSubtask[task.id] || ''}
-                          onChange={(e) => setNewRecSubtask(prev => ({ ...prev, [task.id]: e.target.value }))}
-                          placeholder="Add subtask template..."
-                          className="flex-grow bg-gray-500 border-gray-400 rounded-md p-1 text-xs text-white"
-                        />
-                        <button type="submit" className="p-1 bg-indigo-500 hover:bg-indigo-600 rounded-md"><PlusIcon className="w-3 h-3"/></button>
-                      </form>
-                    </div>
+                    <RecurringTaskItem
+                      key={task.id}
+                      task={task}
+                      onDelete={onDeleteRecurringTask}
+                      onUpdateDays={onUpdateRecurringTask}
+                      onUpdateText={onUpdateRecurringTaskText}
+                      onAddSubtask={onAddRecurringSubtask}
+                      onDeleteSubtask={onDeleteRecurringSubtask}
+                      onUpdateSubtaskText={onUpdateRecurringSubtaskText}
+                    />
                   ))}
                   {cat.recurringTasks.length === 0 && <p className="text-sm text-gray-500">No recurring tasks for this category.</p>}
                 </div>
