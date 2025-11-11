@@ -184,7 +184,7 @@ function App() {
         tasks: [...nonRecurringTasks, ...newTasks]
       }
     }));
-  }, [categories, dayTypes, dailyLogs]); 
+  }, [categories, dayTypes, dailyLogs]);
 
 
   // --- Daily Log Loading ---
@@ -205,7 +205,6 @@ function App() {
       logData = newLogData;
     }
 
-    // *** THIS IS THE FIX: Load tasks, REGARDLESS of day type ***
     const { data: taskData, error: taskError } = await supabase
       .from('tasks').select('*').eq('log_date', date);
     if (taskError) throw taskError;
@@ -245,7 +244,7 @@ function App() {
     regenerateTasks(dayTypeId, selectedDate);
   };
 
-  // --- Task Handlers (ALL UPDATED WITH CORRECTED LOGIC) ---
+  // --- Task Handlers ---
   const handleAddTask = async (text: string, categoryId: string) => {
     const newTaskForDb = {
       log_date: selectedDate, text: text, category_id: categoryId,
@@ -269,21 +268,23 @@ function App() {
   };
 
   // *** THIS IS THE FIX ***
+  // This function now correctly uses the functional updater pattern.
   const handleToggleTask = async (id: string) => {
     setDailyLogs(prev => {
       const log = prev[selectedDate] || { date: selectedDate, dayTypeId: null, tasks: [] };
       const taskToToggle = log.tasks.find(t => t.id === id);
 
-      if (!taskToToggle || taskToToggle.subtasks.length > 0) {
-        return prev; // No change
+      // Guard: If task not found, or it has subtasks, do nothing.
+      if (!taskToToggle || (taskToToggle.subtasks && taskToToggle.subtasks.length > 0)) {
+        return prev;
       }
       
       const newCompletedState = !taskToToggle.completed;
       
-      // Update DB
+      // Send update to DB (don't wait for it)
       supabase.from('tasks').update({ completed: newCompletedState }).eq('id', id).then();
       
-      // Update local state
+      // Return the new state
       const newTasks = log.tasks.map(task =>
         task.id === id ? { ...task, completed: newCompletedState } : task
       );
@@ -315,7 +316,7 @@ function App() {
     });
   };
 
-  // --- Subtask Handlers (ALL UPDATED WITH CORRECTED LOGIC) ---
+  // --- Subtask Handlers ---
   const handleAddSubtask = async (taskId: string, text: string) => {
     const { data, error } = await supabase.from('subtasks').insert({
       parent_task_id: taskId,
@@ -368,7 +369,6 @@ function App() {
   };
 
   const handleToggleSubtask = async (taskId: string, subtaskId: string) => {
-    // *** FIX: This function now uses functional updates to prevent stale state ***
     setDailyLogs(prev => {
       const log = prev[selectedDate] || { date: selectedDate, dayTypeId: null, tasks: [] };
       const task = log.tasks.find(t => t.id === taskId);
@@ -388,6 +388,7 @@ function App() {
           );
           
           const allSubtasksComplete = newSubtasks.every(st => st.completed);
+          parentCompletedState = t.completed; 
 
           if (allSubtasksComplete && !t.completed) {
             parentCompletedState = true;
