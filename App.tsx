@@ -1,7 +1,6 @@
 // abdulqadirrhuss/intell-planner/Intell-planner-e4eec65ae3452797ce24afb321a4c1a7a0f5cce3/App.tsx
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-// MODIFIED: Import new types
 import { Task, Category, DayType, RecurringTaskTemplate, DailyLog, Subtask, RecurringSubtaskTemplate } from './types';
 import Header from './Header';
 import TaskList from './TaskList';
@@ -20,12 +19,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const getTodayDateString = () => new Date().toISOString().split('T')[0];
 
-// --- MODIFIED: Type Mappings for Supabase ---
+// --- Type Mappings for Supabase ---
 interface SupabaseTask extends Omit<Task, 'categoryId' | 'isRecurring' | 'subtasks'> { category_id: string; is_recurring: boolean; log_date: string; }
 interface SupabaseSubtask extends Omit<Subtask, 'parent_task_id'> { parent_task_id: string; log_date: string; }
 interface SupabaseRecurringTask extends Omit<RecurringTaskTemplate, 'categoryId' | 'daysOfWeek' | 'subtaskTemplates'> { 
   category_id: string; 
-  days_of_week: number[]; // NEW
+  days_of_week: number[];
 }
 interface SupabaseRecurringSubtaskTemplate extends Omit<RecurringSubtaskTemplate, 'parent_template_id'> { parent_template_id: string; }
 interface SupabaseDayTypeCategoryLink { day_type_id: string; category_id: string; }
@@ -39,11 +38,10 @@ function App() {
   const [isDayTypeManagerOpen, setDayTypeManagerOpen] = useState(false);
   const [isCategoryManagerOpen, setCategoryManagerOpen] = useState(false);
 
-  // --- MODIFIED: Data Loading from Supabase ---
+  // --- Data Loading from Supabase ---
   useEffect(() => {
     async function loadInitialData() {
       try {
-        // 1. Fetch Categories AND their recurring tasks (w/ subtask templates)
         const { data: catData, error: catError } = await supabase
           .from('categories')
           .select(`
@@ -60,25 +58,22 @@ function App() {
             id: rt.id,
             text: rt.text,
             categoryId: rt.category_id,
-            daysOfWeek: rt.days_of_week || [], // NEW
+            daysOfWeek: rt.days_of_week || [],
             subtaskTemplates: rt.recurring_subtask_templates.map((rst: SupabaseRecurringSubtaskTemplate) => ({
               id: rst.id,
               text: rst.text,
               parentTemplateId: rst.parent_template_id
-            })) // NEW
+            }))
           }))
         }));
         setCategories(formattedCategories);
 
-        // 2. Fetch Day Types
         const { data: dtData, error: dtError } = await supabase.from('day_types').select('*');
         if (dtError) throw dtError;
         
-        // 3. Fetch the links between Day Types and Categories
         const { data: linksData, error: linksError } = await supabase.from('day_type_categories').select('*');
         if (linksError) throw linksError;
 
-        // 4. Combine Day Types with their category IDs
         const formattedDayTypes: DayType[] = dtData.map(dt => ({
           id: dt.id,
           name: dt.name,
@@ -95,7 +90,7 @@ function App() {
     loadInitialData();
   }, []);
 
-  // --- MODIFIED: Daily Log Loading (now includes subtasks) ---
+  // --- Daily Log Loading ---
   const fetchDailyLog = useCallback(async (date: string) => {
     let { data: logData, error: logError } = await supabase
       .from('daily_logs').select('*').eq('date', date).maybeSingle();
@@ -108,17 +103,14 @@ function App() {
       logData = newLogData;
     }
 
-    // 1. Fetch parent tasks
     const { data: taskData, error: taskError } = await supabase
       .from('tasks').select('*').eq('log_date', date);
     if (taskError) throw taskError;
 
-    // 2. Fetch all subtasks for this date
     const { data: subtaskData, error: subtaskError } = await supabase
       .from('subtasks').select('*').eq('log_date', date);
     if (subtaskError) throw subtaskError;
 
-    // 3. Map subtasks
     const subtasks: Subtask[] = subtaskData.map((st: SupabaseSubtask) => ({
       id: st.id,
       parent_task_id: st.parent_task_id,
@@ -127,14 +119,13 @@ function App() {
       completed: st.completed
     }));
 
-    // 4. Map tasks and nest their subtasks
     const formattedTasks: Task[] = taskData.map((t: SupabaseTask) => ({
       id: t.id,
       text: t.text,
       completed: t.completed,
       categoryId: t.category_id,
       isRecurring: t.is_recurring,
-      subtasks: subtasks.filter(st => st.parent_task_id === t.id) // Nesting
+      subtasks: subtasks.filter(st => st.parent_task_id === t.id)
     }));
 
     setDailyLogs(prevLogs => ({
@@ -155,14 +146,12 @@ function App() {
     return dailyLogs[selectedDate] || { date: selectedDate, dayTypeId: null, tasks: [] };
   }, [dailyLogs, selectedDate]);
   
-  // --- MODIFIED: Core App Logic (Day Type Selection) ---
+  // --- Core App Logic ---
   const handleSelectDayType = async (dayTypeId: string) => {
     const selectedDayType = dayTypes.find(dt => dt.id === dayTypeId);
     if (!selectedDayType) return;
 
-    // NEW: Get the day of the week for the selected date
     const currentDayOfWeek = new Date(selectedDate + 'T00:00:00').getDay();
-
     const nonRecurringTasks = currentDailyLog.tasks.filter(t => !t.isRecurring);
     const categoryIdsForDayType = selectedDayType.categoryIds;
     
@@ -170,16 +159,22 @@ function App() {
     categoryIdsForDayType.forEach(catId => {
       const category = categories.find(c => c.id === catId);
       if (category) {
-        // NEW: Filter by day of the week
-        const tasksForThisDay = category.recurringTasks.filter(rt => 
-          rt.daysOfWeek.includes(currentDayOfWeek)
-        );
+        
+        // --- *** FIX 1 (FILTERING) *** ---
+        // This filter logic is now correct.
+        const tasksForThisDay = category.recurringTasks.filter(rt => {
+          const hasDaysSet = rt.daysOfWeek && rt.daysOfWeek.length > 0;
+          if (!hasDaysSet) {
+            return true; // No days set, so show it every day.
+          }
+          return rt.daysOfWeek.includes(currentDayOfWeek); // Days are set, check if today is one of them.
+        });
+        // --- *** END FIX *** ---
+
         allRecurringTaskTemplates.push(...tasksForThisDay);
       }
     });
 
-    // 5. Delete old recurring tasks AND THEIR SUBTASKS from DB
-    // We must fetch the IDs first to delete subtasks
     const { data: oldRecTasks } = await supabase.from('tasks').select('id')
       .eq('log_date', selectedDate).eq('is_recurring', true);
     const oldRecTaskIds = oldRecTasks?.map(t => t.id) || [];
@@ -189,7 +184,6 @@ function App() {
       await supabase.from('tasks').delete().in('id', oldRecTaskIds);
     }
       
-    // 6. Create new parent tasks in DB
     const newRecurringTasksForDb = allRecurringTaskTemplates.map(rt => ({
       log_date: selectedDate, text: rt.text, category_id: rt.categoryId,
       is_recurring: true, completed: false
@@ -199,7 +193,6 @@ function App() {
       .from('tasks').insert(newRecurringTasksForDb).select();
     if (newTasksError) throw newTasksError;
 
-    // 7. Create new subtasks in DB
     const newSubtasksForDb: Omit<SupabaseSubtask, 'id' | 'completed'>[] = [];
     const newTasks: Task[] = newTasksData.map((t: SupabaseTask, index: number) => {
       const template = allRecurringTaskTemplates[index];
@@ -212,7 +205,7 @@ function App() {
       });
       return {
         id: t.id, text: t.text, completed: t.completed, categoryId: t.category_id, isRecurring: t.is_recurring,
-        subtasks: [] // Will be populated in step 8
+        subtasks: []
       };
     });
 
@@ -220,10 +213,8 @@ function App() {
       .from('subtasks').insert(newSubtasksForDb).select();
     if (newSubtasksError) throw newSubtasksError;
 
-    // 8. Update daily log's dayTypeId in DB
     await supabase.from('daily_logs').update({ day_type_id: dayTypeId }).eq('date', selectedDate);
 
-    // 9. Update local state
     const newSubtasks: Subtask[] = newSubtasksData.map((st: SupabaseSubtask) => ({
       id: st.id, parent_task_id: st.parent_task_id, log_date: st.log_date, text: st.text, completed: st.completed
     }));
@@ -242,10 +233,8 @@ function App() {
     }));
   };
 
-  // --- MODIFIED: Task Handlers (now include subtasks) ---
-
+  // --- Task Handlers ---
   const handleAddTask = async (text: string, categoryId: string) => {
-    // This function now only adds PARENT tasks
     const newTaskForDb = {
       log_date: selectedDate, text: text, category_id: categoryId,
       is_recurring: false, completed: false
@@ -255,7 +244,7 @@ function App() {
     
     const newTask: Task = {
       id: data.id, text: data.text, completed: data.completed, categoryId: data.category_id, isRecurring: data.is_recurring,
-      subtasks: [] // A new parent task has no subtasks
+      subtasks: []
     };
     setDailyLogs(prev => ({
       ...prev,
@@ -264,9 +253,8 @@ function App() {
   };
 
   const handleToggleTask = async (id: string) => {
-    // This function is now ONLY for parent tasks WITHOUT subtasks
     const taskToToggle = currentDailyLog.tasks.find(t => t.id === id);
-    if (!taskToToggle || taskToToggle.subtasks.length > 0) return; // Guard
+    if (!taskToToggle || taskToToggle.subtasks.length > 0) return;
     
     const newCompletedState = !taskToToggle.completed;
     await supabase.from('tasks').update({ completed: newCompletedState }).eq('id', id);
@@ -278,7 +266,6 @@ function App() {
   };
 
   const handleDeleteTask = async (id: string) => {
-    // Must also delete subtasks
     await supabase.from('subtasks').delete().eq('parent_task_id', id);
     await supabase.from('tasks').delete().eq('id', id);
     
@@ -286,7 +273,7 @@ function App() {
     setDailyLogs(prev => ({ ...prev, [selectedDate]: { ...currentDailyLog, tasks: newTasks } }));
   };
 
-  // --- NEW: Subtask Handlers ---
+  // --- Subtask Handlers ---
   const handleAddSubtask = async (taskId: string, text: string) => {
     const { data, error } = await supabase.from('subtasks').insert({
       parent_task_id: taskId,
@@ -324,21 +311,17 @@ function App() {
     const newSubtaskState = !subtask.completed;
     await supabase.from('subtasks').update({ completed: newSubtaskState }).eq('id', subtaskId);
 
-    // Update local state for subtask
     const newSubtasks = task.subtasks.map(st => 
       st.id === subtaskId ? { ...st, completed: newSubtaskState } : st
     );
 
-    // Check if parent task completion status needs to change
     const allSubtasksComplete = newSubtasks.every(st => st.completed);
     let parentCompletedState = task.completed;
 
     if (allSubtasksComplete && !task.completed) {
-      // All subtasks are now complete, auto-complete parent
       parentCompletedState = true;
       await supabase.from('tasks').update({ completed: true }).eq('id', taskId);
     } else if (!allSubtasksComplete && task.completed) {
-      // A subtask was un-checked, auto-un-complete parent
       parentCompletedState = false;
       await supabase.from('tasks').update({ completed: false }).eq('id', taskId);
     }
@@ -350,7 +333,7 @@ function App() {
   };
 
 
-  // --- MODIFIED: Category Management (to include new handlers) ---
+  // --- Category Management ---
   const handleAddCategory = async (name: string, color: string) => {
     const { data, error } = await supabase.from('categories').insert({ name, color, id: crypto.randomUUID() }).select().single();
     if (error) throw error;
@@ -375,7 +358,7 @@ function App() {
   
   const handleAddRecurringTask = async (categoryId: string, text: string) => {
     const { data, error } = await supabase.from('recurring_task_templates').insert({ 
-      category_id: categoryId, text: text, days_of_week: [] // NEW: Default to empty days
+      category_id: categoryId, text: text, days_of_week: []
     }).select().single();
     if (error) throw error;
     const newTask: RecurringTaskTemplate = { 
@@ -394,16 +377,19 @@ function App() {
     })));
   };
 
-  // --- NEW: Handlers for recurring task details ---
   const onUpdateRecurringTask = async (task: RecurringTaskTemplate) => {
     await supabase.from('recurring_task_templates')
       .update({ days_of_week: task.daysOfWeek })
       .eq('id', task.id);
     
-    setCategories(categories.map(cat => ({
+    // --- *** FIX 2 (SAVING) *** ---
+    // We now use a functional update (prevCategories => ...)
+    // This prevents the state save from failing.
+    setCategories(prevCategories => prevCategories.map(cat => ({
       ...cat,
       recurringTasks: cat.recurringTasks.map(rt => rt.id === task.id ? task : rt)
     })));
+    // --- *** END FIX *** ---
   };
 
   const onAddRecurringSubtask = async (parentTemplateId: string, text: string) => {
@@ -416,7 +402,7 @@ function App() {
       id: data.id, text: data.text, parentTemplateId: data.parent_template_id
     };
 
-    setCategories(categories.map(cat => ({
+    setCategories(prevCategories => prevCategories.map(cat => ({
       ...cat,
       recurringTasks: cat.recurringTasks.map(rt => 
         rt.id === parentTemplateId ? { ...rt, subtaskTemplates: [...rt.subtaskTemplates, newSubtaskTemplate] } : rt
@@ -427,7 +413,7 @@ function App() {
   const onDeleteRecurringSubtask = async (subtaskTemplateId: string) => {
     await supabase.from('recurring_subtask_templates').delete().eq('id', subtaskTemplateId);
     
-    setCategories(categories.map(cat => ({
+    setCategories(prevCategories => prevCategories.map(cat => ({
       ...cat,
       recurringTasks: cat.recurringTasks.map(rt => ({
         ...rt,
@@ -436,7 +422,7 @@ function App() {
     })));
   };
 
-  // --- Day Type Management (no change to handlers) ---
+  // --- Day Type Management ---
   const handleAddDayType = async (name: string) => {
     const { data, error } = await supabase.from('day_types').insert({ name, id: crypto.randomUUID() }).select().single();
     if (error) throw error;
@@ -465,7 +451,7 @@ function App() {
     ));
   };
 
-  // --- MODIFIED: Hierarchical Progress Calculation ---
+  // --- Progress Calculation ---
   const completionPercentage = useMemo(() => {
     const tasks = currentDailyLog.tasks;
     const totalParentTasks = tasks.length;
@@ -475,11 +461,9 @@ function App() {
 
     const totalProgress = tasks.reduce((acc, task) => {
       if (task.subtasks.length === 0) {
-        // No subtasks: parent task completion counts
         return acc + (task.completed ? progressPerParent : 0);
       } else {
-        // Has subtasks: progress is based on subtasks
-        if (task.subtasks.length === 0) return acc; // Avoid division by zero
+        if (task.subtasks.length === 0) return acc;
         const progressPerSubtask = progressPerParent / task.subtasks.length;
         const completedSubtasks = task.subtasks.filter(st => st.completed).length;
         return acc + (completedSubtasks * progressPerSubtask);
@@ -493,12 +477,10 @@ function App() {
     <div className="min-h-screen bg-gray-900 text-gray-100 font-sans p-4 sm:p-6 lg:p-8">
       <div className="max-w-3xl mx-auto">
         
-        {/* === THIS IS THE PART THAT WAS MISSING === */}
         <Header completionPercentage={completionPercentage} selectedDate={selectedDate} />
         <DateNavigator selectedDate={selectedDate} onDateChange={setSelectedDate} />
         
         <main>
-          {/* === THIS IS THE OTHER PART THAT WAS MISSING === */}
           <div className="p-6 bg-gray-800 rounded-lg shadow-lg mb-6">
             <div className="flex justify-between items-center">
               <div>
@@ -529,7 +511,6 @@ function App() {
             categories={categories}
             onToggleTask={handleToggleTask}
             onDeleteTask={handleDeleteTask}
-            // NEW: Pass subtask handlers
             onToggleSubtask={handleToggleSubtask}
             onDeleteSubtask={handleDeleteSubtask}
             onAddSubtask={handleAddSubtask}
@@ -558,7 +539,6 @@ function App() {
           onDeleteCategory={handleDeleteCategory}
           onAddRecurringTask={handleAddRecurringTask}
           onDeleteRecurringTask={onDeleteRecurringTask}
-          // NEW: Pass new handlers
           onUpdateRecurringTask={onUpdateRecurringTask}
           onAddRecurringSubtask={onAddRecurringSubtask}
           onDeleteRecurringSubtask={onDeleteRecurringSubtask}
