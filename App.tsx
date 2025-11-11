@@ -244,7 +244,7 @@ function App() {
     regenerateTasks(dayTypeId, selectedDate);
   };
 
-  // --- Task Handlers ---
+  // --- Task Handlers (ALL UPDATED WITH CORRECTED LOGIC) ---
   const handleAddTask = async (text: string, categoryId: string) => {
     const newTaskForDb = {
       log_date: selectedDate, text: text, category_id: categoryId,
@@ -276,15 +276,15 @@ function App() {
 
       // Guard: If task not found, or it has subtasks, do nothing.
       if (!taskToToggle || (taskToToggle.subtasks && taskToToggle.subtasks.length > 0)) {
-        return prev;
+        return prev; // No change
       }
       
       const newCompletedState = !taskToToggle.completed;
       
-      // Send update to DB (don't wait for it)
+      // Update DB (don't wait for it)
       supabase.from('tasks').update({ completed: newCompletedState }).eq('id', id).then();
       
-      // Return the new state
+      // Update local state
       const newTasks = log.tasks.map(task =>
         task.id === id ? { ...task, completed: newCompletedState } : task
       );
@@ -316,7 +316,7 @@ function App() {
     });
   };
 
-  // --- Subtask Handlers ---
+  // --- Subtask Handlers (ALL UPDATED WITH CORRECTED LOGIC) ---
   const handleAddSubtask = async (taskId: string, text: string) => {
     const { data, error } = await supabase.from('subtasks').insert({
       parent_task_id: taskId,
