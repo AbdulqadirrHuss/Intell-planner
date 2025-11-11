@@ -91,14 +91,15 @@ function App() {
   }, []);
 
   // --- Regenerate Task List Function ---
-  const regenerateTasks = useCallback(async (dayTypeId: string, date: string) => {
+  // *** FIX: This function now accepts the current logs to prevent stale state ***
+  const regenerateTasks = useCallback(async (dayTypeId: string, date: string, currentLogs: typeof dailyLogs) => {
     const selectedDayType = dayTypes.find(dt => dt.id === dayTypeId);
     if (!selectedDayType) return;
 
     const currentDayOfWeek = new Date(date + 'T00:00:00').getDay();
     
-    // Get non-recurring tasks from the current state
-    const log = dailyLogs[date] || { date: date, dayTypeId: null, tasks: [] };
+    // Get non-recurring tasks from the current state passed into the function
+    const log = currentLogs[date] || { date: date, dayTypeId: null, tasks: [] };
     const nonRecurringTasks = log.tasks.filter(t => !t.isRecurring);
 
     const categoryIdsForDayType = selectedDayType.categoryIds;
@@ -116,7 +117,6 @@ function App() {
       }
     });
 
-    // Delete old recurring tasks and subtasks for THIS date
     const { data: oldRecTasks } = await supabase.from('tasks').select('id')
       .eq('log_date', date).eq('is_recurring', true);
     const oldRecTaskIds = oldRecTasks?.map(t => t.id) || [];
@@ -126,7 +126,6 @@ function App() {
       await supabase.from('tasks').delete().in('id', oldRecTaskIds);
     }
       
-    // If no templates, just set tasks to the non-recurring ones
     if (allRecurringTaskTemplates.length === 0) {
        await supabase.from('daily_logs').update({ day_type_id: dayTypeId }).eq('date', date);
        setDailyLogs(prev => ({
@@ -136,7 +135,6 @@ function App() {
        return;
     }
 
-    // Create new tasks
     const newRecurringTasksForDb = allRecurringTaskTemplates.map(rt => ({
       log_date: date, text: rt.text, category_id: rt.categoryId,
       is_recurring: true, completed: false
@@ -146,7 +144,6 @@ function App() {
       .from('tasks').insert(newRecurringTasksForDb).select();
     if (newTasksError) throw newTasksError;
 
-    // Create new subtasks
     const newSubtasksForDb: Omit<SupabaseSubtask, 'id' | 'completed'>[] = [];
     const newTasks: Task[] = newTasksData.map((t: SupabaseTask, index: number) => {
       const template = allRecurringTaskTemplates[index];
@@ -173,28 +170,25 @@ function App() {
         }));
     }
 
-    // Update the daily log
     await supabase.from('daily_logs').update({ day_type_id: dayTypeId }).eq('date', date);
     
     newTasks.forEach(task => {
       task.subtasks = newSubtasks.filter(st => st.parent_task_id === task.id);
     });
     
-    // Set the final state
     setDailyLogs(prev => ({
       ...prev,
       [date]: {
-        ...prev[date],
+        ...log,
         dayTypeId: dayTypeId,
         tasks: [...nonRecurringTasks, ...newTasks]
       }
     }));
-  }, [categories, dayTypes, dailyLogs]); // Depends on all data
+  }, [categories, dayTypes]); // *** FIX: Removed `dailyLogs` dependency to break loop ***
 
 
   // --- Daily Log Loading ---
   const fetchDailyLog = useCallback(async (date: string) => {
-    // Wait for categories and dayTypes to be loaded
     if (categories.length === 0 || dayTypes.length === 0) {
       setTimeout(() => fetchDailyLog(date), 100);
       return;
@@ -211,15 +205,16 @@ function App() {
       logData = newLogData;
     }
 
-    // If a day type is set, regenerate tasks to apply rules
     if (logData.day_type_id) {
-      await regenerateTasks(logData.day_type_id, date);
+      // *** FIX: Pass the current state into regenerateTasks ***
+      setDailyLogs(prevLogs => {
+        regenerateTasks(logData.day_type_id, date, prevLogs);
+        return prevLogs; // Let regenerateTasks handle the update
+      });
     } else {
-      // No day type, just load tasks from DB
       const { data: taskData, error: taskError } = await supabase
         .from('tasks').select('*').eq('log_date', date);
       if (taskError) throw taskError;
-
       const { data: subtaskData, error: subtaskError } = await supabase
         .from('subtasks').select('*').eq('log_date', date);
       if (subtaskError) throw subtaskError;
@@ -227,7 +222,6 @@ function App() {
       const subtasks: Subtask[] = subtaskData.map((st: SupabaseSubtask) => ({
         id: st.id, parent_task_id: st.parent_task_id, log_date: st.log_date, text: st.text, completed: st.completed
       }));
-
       const formattedTasks: Task[] = taskData.map((t: SupabaseTask) => ({
         id: t.id, text: t.text, completed: t.completed, categoryId: t.category_id, isRecurring: t.is_recurring,
         subtasks: subtasks.filter(st => st.parent_task_id === t.id)
@@ -242,7 +236,7 @@ function App() {
         }
       }));
     }
-  }, [categories, dayTypes, regenerateTasks]); // Now depends on data
+  }, [categories, dayTypes, regenerateTasks]);
 
   useEffect(() => {
     fetchDailyLog(selectedDate);
@@ -254,7 +248,11 @@ function App() {
   
   // Handler for the dropdown menu
   const handleSelectDayTypeFromDropdown = (dayTypeId: string) => {
-    regenerateTasks(dayTypeId, selectedDate);
+    // *** FIX: Pass the current state into regenerateTasks ***
+    setDailyLogs(prevLogs => {
+      regenerateTasks(dayTypeId, selectedDate, prevLogs);
+      return prevLogs; // Let regenerateTasks handle the update
+    });
   };
 
   // --- Task Handlers (ALL UPDATED WITH CORRECTED LOGIC) ---
@@ -281,6 +279,7 @@ function App() {
   };
 
   const handleToggleTask = async (id: string) => {
+    // *** FIX: Read state directly ***
     const log = dailyLogs[selectedDate] || currentDailyLog;
     const taskToToggle = log.tasks.find(t => t.id === id);
 
@@ -374,6 +373,7 @@ function App() {
   };
 
   const handleToggleSubtask = async (taskId: string, subtaskId: string) => {
+    // *** FIX: Read state directly ***
     const log = dailyLogs[selectedDate] || currentDailyLog;
     const task = log.tasks.find(t => t.id === taskId);
     if (!task) return;
@@ -397,6 +397,7 @@ function App() {
           
           // Check if parent state needs to change
           const allSubtasksComplete = newSubtasks.every(st => st.completed);
+          parentCompletedState = t.completed; // Use outer scope task's completed state
 
           if (allSubtasksComplete && !t.completed) {
             parentCompletedState = true;
