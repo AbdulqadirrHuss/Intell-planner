@@ -152,22 +152,34 @@ function App() {
     if (!selectedDayType) return;
 
     const currentDayOfWeek = new Date(selectedDate + 'T00:00:00').getDay();
-    const nonRecurringTasks = currentDailyLog.tasks.filter(t => !t.isRecurring);
+    
+    // *** FIX: Use functional update to get non-recurring tasks ***
+    let nonRecurringTasks: Task[] = [];
+    setDailyLogs(prev => {
+        const log = prev[selectedDate] || currentDailyLog;
+        nonRecurringTasks = log.tasks.filter(t => !t.isRecurring);
+        return prev;
+    });
+
     const categoryIdsForDayType = selectedDayType.categoryIds;
     
     const allRecurringTaskTemplates: RecurringTaskTemplate[] = [];
     categoryIdsForDayType.forEach(catId => {
-      const category = categories.find(c => c.id === catId);
+      // *** FIX: Read from `categories` state using a functional update to ensure freshness ***
+      let category: Category | undefined;
+      setCategories(prevCategories => {
+          category = prevCategories.find(c => c.id === catId);
+          return prevCategories; // No change, just reading
+      });
+
       if (category) {
-        
         const tasksForThisDay = category.recurringTasks.filter(rt => {
           const hasDaysSet = rt.daysOfWeek && rt.daysOfWeek.length > 0;
           if (!hasDaysSet) {
-            return true; // No days set, so show it every day.
+            return true; // No days set = show every day
           }
-          return rt.daysOfWeek.includes(currentDayOfWeek); // Days are set, check if today is one of them.
+          return rt.daysOfWeek.includes(currentDayOfWeek); // Days set = check if today is one of them
         });
-
         allRecurringTaskTemplates.push(...tasksForThisDay);
       }
     });
@@ -185,6 +197,20 @@ function App() {
       log_date: selectedDate, text: rt.text, category_id: rt.categoryId,
       is_recurring: true, completed: false
     }));
+
+    if (newRecurringTasksForDb.length === 0) {
+       // No new tasks, just update the log and state
+       await supabase.from('daily_logs').update({ day_type_id: dayTypeId }).eq('date', selectedDate);
+       setDailyLogs(prev => ({
+         ...prev,
+         [selectedDate]: {
+           ...prev[selectedDate],
+           dayTypeId: dayTypeId,
+           tasks: nonRecurringTasks // Only non-recurring tasks remain
+         }
+       }));
+       return; // Exit early
+    }
 
     const { data: newTasksData, error: newTasksError } = await supabase
       .from('tasks').insert(newRecurringTasksForDb).select();
@@ -206,15 +232,17 @@ function App() {
       };
     });
 
-    const { data: newSubtasksData, error: newSubtasksError } = await supabase
-      .from('subtasks').insert(newSubtasksForDb).select();
-    if (newSubtasksError) throw newSubtasksError;
+    let newSubtasks: Subtask[] = [];
+    if (newSubtasksForDb.length > 0) {
+        const { data: newSubtasksData, error: newSubtasksError } = await supabase
+          .from('subtasks').insert(newSubtasksForDb).select();
+        if (newSubtasksError) throw newSubtasksError;
+        newSubtasks = newSubtasksData.map((st: SupabaseSubtask) => ({
+          id: st.id, parent_task_id: st.parent_task_id, log_date: st.log_date, text: st.text, completed: st.completed
+        }));
+    }
 
     await supabase.from('daily_logs').update({ day_type_id: dayTypeId }).eq('date', selectedDate);
-
-    const newSubtasks: Subtask[] = newSubtasksData.map((st: SupabaseSubtask) => ({
-      id: st.id, parent_task_id: st.parent_task_id, log_date: st.log_date, text: st.text, completed: st.completed
-    }));
     
     newTasks.forEach(task => {
       task.subtasks = newSubtasks.filter(st => st.parent_task_id === task.id);
@@ -230,7 +258,7 @@ function App() {
     }));
   };
 
-  // --- Task Handlers ---
+  // --- Task Handlers (ALL UPDATED WITH FUNCTIONAL STATE) ---
   const handleAddTask = async (text: string, categoryId: string) => {
     const newTaskForDb = {
       log_date: selectedDate, text: text, category_id: categoryId,
@@ -243,49 +271,62 @@ function App() {
       id: data.id, text: data.text, completed: data.completed, categoryId: data.category_id, isRecurring: data.is_recurring,
       subtasks: []
     };
-    setDailyLogs(prev => ({
-      ...prev,
-      [selectedDate]: { ...currentDailyLog, tasks: [...currentDailyLog.tasks, newTask] }
-    }));
+
+    setDailyLogs(prev => {
+      const log = prev[selectedDate] || currentDailyLog;
+      return {
+        ...prev,
+        [selectedDate]: { ...log, tasks: [...log.tasks, newTask] }
+      };
+    });
   };
 
   const handleToggleTask = async (id: string) => {
-    const taskToToggle = currentDailyLog.tasks.find(t => t.id === id);
+    let taskToToggle: Task | undefined;
+    setDailyLogs(prev => {
+      const log = prev[selectedDate] || currentDailyLog;
+      taskToToggle = log.tasks.find(t => t.id === id);
+      return prev; // No change yet
+    });
+
     if (!taskToToggle || taskToToggle.subtasks.length > 0) return;
     
     const newCompletedState = !taskToToggle.completed;
     await supabase.from('tasks').update({ completed: newCompletedState }).eq('id', id);
     
-    const newTasks = currentDailyLog.tasks.map(task =>
-      task.id === id ? { ...task, completed: newCompletedState } : task
-    );
-    setDailyLogs(prev => ({ ...prev, [selectedDate]: { ...currentDailyLog, tasks: newTasks } }));
+    setDailyLogs(prev => {
+      const log = prev[selectedDate] || currentDailyLog;
+      const newTasks = log.tasks.map(task =>
+        task.id === id ? { ...task, completed: newCompletedState } : task
+      );
+      return { ...prev, [selectedDate]: { ...log, tasks: newTasks } };
+    });
   };
 
   const handleDeleteTask = async (id: string) => {
     await supabase.from('subtasks').delete().eq('parent_task_id', id);
     await supabase.from('tasks').delete().eq('id', id);
     
-    const newTasks = currentDailyLog.tasks.filter(task => task.id !== id);
-    setDailyLogs(prev => ({ ...prev, [selectedDate]: { ...currentDailyLog, tasks: newTasks } }));
+    setDailyLogs(prev => {
+      const log = prev[selectedDate] || currentDailyLog;
+      const newTasks = log.tasks.filter(task => task.id !== id);
+      return { ...prev, [selectedDate]: { ...log, tasks: newTasks } };
+    });
   };
 
-  // --- NEW: Handler for Editing Task Text ---
   const handleUpdateTaskText = async (taskId: string, newText: string) => {
     await supabase.from('tasks').update({ text: newText }).eq('id', taskId);
     
-    setDailyLogs(prevLogs => ({
-      ...prevLogs,
-      [selectedDate]: {
-        ...currentDailyLog,
-        tasks: currentDailyLog.tasks.map(task =>
+    setDailyLogs(prevLogs => {
+      const log = prevLogs[selectedDate] || currentDailyLog;
+      const newTasks = log.tasks.map(task =>
           task.id === taskId ? { ...task, text: newText } : task
-        )
-      }
-    }));
+      );
+      return { ...prevLogs, [selectedDate]: { ...log, tasks: newTasks } };
+    });
   };
 
-  // --- Subtask Handlers ---
+  // --- Subtask Handlers (ALL UPDATED WITH FUNCTIONAL STATE) ---
   const handleAddSubtask = async (taskId: string, text: string) => {
     const { data, error } = await supabase.from('subtasks').insert({
       parent_task_id: taskId,
@@ -298,82 +339,106 @@ function App() {
       id: data.id, parent_task_id: data.parent_task_id, log_date: data.log_date, text: data.text, completed: data.completed
     };
     
-    const newTasks = currentDailyLog.tasks.map(task => 
-      task.id === taskId ? { ...task, subtasks: [...task.subtasks, newSubtask] } : task
-    );
-    setDailyLogs(prev => ({ ...prev, [selectedDate]: { ...currentDailyLog, tasks: newTasks } }));
+    setDailyLogs(prev => {
+      const log = prev[selectedDate] || currentDailyLog;
+      const newTasks = log.tasks.map(task => 
+        task.id === taskId ? { ...task, subtasks: [...task.subtasks, newSubtask] } : task
+      );
+      return { ...prev, [selectedDate]: { ...log, tasks: newTasks } };
+    });
   };
 
   const handleDeleteSubtask = async (subtaskId: string) => {
     await supabase.from('subtasks').delete().eq('id', subtaskId);
     
-    const newTasks = currentDailyLog.tasks.map(task => ({
-      ...task,
-      subtasks: task.subtasks.filter(st => st.id !== subtaskId)
-    }));
-    setDailyLogs(prev => ({ ...prev, [selectedDate]: { ...currentDailyLog, tasks: newTasks } }));
+    setDailyLogs(prev => {
+      const log = prev[selectedDate] || currentDailyLog;
+      const newTasks = log.tasks.map(task => ({
+        ...task,
+        subtasks: task.subtasks.filter(st => st.id !== subtaskId)
+      }));
+      return { ...prev, [selectedDate]: { ...log, tasks: newTasks } };
+    });
   };
 
-  // --- NEW: Handler for Editing Subtask Text ---
   const handleUpdateSubtaskText = async (taskId: string, subtaskId: string, newText: string) => {
     await supabase.from('subtasks').update({ text: newText }).eq('id', subtaskId);
 
-    setDailyLogs(prevLogs => ({
-      ...prevLogs,
-      [selectedDate]: {
-        ...currentDailyLog,
-        tasks: currentDailyLog.tasks.map(task =>
-          task.id === taskId ? {
-            ...task,
-            subtasks: task.subtasks.map(subtask =>
-              subtask.id === subtaskId ? { ...subtask, text: newText } : subtask
-            )
-          } : task
-        )
-      }
-    }));
+    setDailyLogs(prevLogs => {
+      const log = prevLogs[selectedDate] || currentDailyLog;
+      const newTasks = log.tasks.map(task =>
+        task.id === taskId ? {
+          ...task,
+          subtasks: task.subtasks.map(subtask =>
+            subtask.id === subtaskId ? { ...subtask, text: newText } : subtask
+          )
+        } : task
+      );
+      return { ...prevLogs, [selectedDate]: { ...log, tasks: newTasks } };
+    });
   };
 
   const handleToggleSubtask = async (taskId: string, subtaskId: string) => {
-    const task = currentDailyLog.tasks.find(t => t.id === taskId);
-    if (!task) return;
-    const subtask = task.subtasks.find(st => st.id === subtaskId);
-    if (!subtask) return;
+    let task: Task | undefined;
+    let subtask: Subtask | undefined;
+    setDailyLogs(prev => {
+        const log = prev[selectedDate] || currentDailyLog;
+        task = log.tasks.find(t => t.id === taskId);
+        if (task) {
+            subtask = task.subtasks.find(st => st.id === subtaskId);
+        }
+        return prev;
+    });
+
+    if (!task || !subtask) return;
 
     const newSubtaskState = !subtask.completed;
     await supabase.from('subtasks').update({ completed: newSubtaskState }).eq('id', subtaskId);
 
-    const newSubtasks = task.subtasks.map(st => 
-      st.id === subtaskId ? { ...st, completed: newSubtaskState } : st
-    );
+    // We must now update the state functionally
+    setDailyLogs(prev => {
+      const log = prev[selectedDate] || currentDailyLog;
+      let parentCompletedState: boolean | undefined = undefined;
 
-    const allSubtasksComplete = newSubtasks.every(st => st.completed);
-    let parentCompletedState = task.completed;
+      const newTasks = log.tasks.map(t => {
+        if (t.id === taskId) {
+          const newSubtasks = t.subtasks.map(st => 
+            st.id === subtaskId ? { ...st, completed: newSubtaskState } : st
+          );
+          
+          const allSubtasksComplete = newSubtasks.every(st => st.completed);
+          parentCompletedState = t.completed;
 
-    if (allSubtasksComplete && !task.completed) {
-      parentCompletedState = true;
-      await supabase.from('tasks').update({ completed: true }).eq('id', taskId);
-    } else if (!allSubtasksComplete && task.completed) {
-      parentCompletedState = false;
-      await supabase.from('tasks').update({ completed: false }).eq('id', taskId);
-    }
+          if (allSubtasksComplete && !t.completed) {
+            parentCompletedState = true;
+          } else if (!allSubtasksComplete && t.completed) {
+            parentCompletedState = false;
+          }
+          
+          return { ...t, completed: parentCompletedState, subtasks: newSubtasks };
+        }
+        return t;
+      });
 
-    const newTasks = currentDailyLog.tasks.map(t => 
-      t.id === taskId ? { ...t, completed: parentCompletedState, subtasks: newSubtasks } : t
-    );
-    setDailyLogs(prev => ({ ...prev, [selectedDate]: { ...currentDailyLog, tasks: newTasks } }));
+      // Update parent task in DB if its state changed
+      if (parentCompletedState !== undefined && task.completed !== parentCompletedState) {
+        supabase.from('tasks').update({ completed: parentCompletedState }).eq('id', taskId).then();
+      }
+
+      return { ...prev, [selectedDate]: { ...log, tasks: newTasks } };
+    });
   };
 
 
-  // --- Category Management ---
+  // --- Category Management (ALL UPDATED WITH FUNCTIONAL STATE) ---
   const handleAddCategory = async (name: string, color: string) => {
     const { data, error } = await supabase.from('categories').insert({ name, color, id: crypto.randomUUID() }).select().single();
     if (error) throw error;
-    setCategories([...categories, { ...data, recurringTasks: [] }]);
+    setCategories(prev => [...prev, { ...data, recurringTasks: [] }]);
   };
   const handleUpdateCategory = async (id: string, name: string, color: string) => {
     await supabase.from('categories').update({ name, color }).eq('id', id);
-    setCategories(categories.map(cat => cat.id === id ? { ...cat, name, color } : cat));
+    setCategories(prev => prev.map(cat => cat.id === id ? { ...cat, name, color } : cat));
   };
   const handleDeleteCategory = async (id: string) => {
     if (id === 'uncategorized') return;
@@ -381,8 +446,8 @@ function App() {
     await supabase.from('day_type_categories').delete().eq('category_id', id);
     await supabase.from('categories').delete().eq('id', id);
     
-    setCategories(categories.filter(cat => cat.id !== id));
-    setDayTypes(prevDayTypes => prevDayTypes.map(dt => ({
+    setCategories(prev => prev.filter(cat => cat.id !== id));
+    setDayTypes(prev => prev.map(dt => ({
       ...dt,
       categoryIds: dt.categoryIds.filter(catId => catId !== id)
     })));
@@ -397,19 +462,18 @@ function App() {
       id: data.id, text: data.text, categoryId: data.category_id, 
       daysOfWeek: data.days_of_week, subtaskTemplates: [] 
     };
-    setCategories(categories.map(cat => 
+    setCategories(prev => prev.map(cat => 
       cat.id === categoryId ? { ...cat, recurringTasks: [...cat.recurringTasks, newTask] } : cat
     ));
   };
   const onDeleteRecurringTask = async (taskId: string) => {
     await supabase.from('recurring_task_templates').delete().eq('id', taskId);
-    setCategories(categories.map(cat => ({
+    setCategories(prev => prev.map(cat => ({
       ...cat,
       recurringTasks: cat.recurringTasks.filter(rt => rt.id !== taskId)
     })));
   };
 
-  // --- BUG FIX IS HERE: Using functional update `prevCategories` ---
   const onUpdateRecurringTask = async (task: RecurringTaskTemplate) => {
     await supabase.from('recurring_task_templates')
       .update({ days_of_week: task.daysOfWeek })
@@ -421,7 +485,6 @@ function App() {
     })));
   };
 
-  // --- NEW: Handler for Editing Recurring Task Text ---
   const handleUpdateRecurringTaskText = async (taskId: string, newText: string) => {
     await supabase.from('recurring_task_templates').update({ text: newText }).eq('id', taskId);
 
@@ -463,7 +526,6 @@ function App() {
     })));
   };
 
-  // --- NEW: Handler for Editing Recurring Subtask Text ---
   const handleUpdateRecurringSubtaskText = async (subtaskTemplateId: string, newText: string) => {
     await supabase.from('recurring_subtask_templates').update({ text: newText }).eq('id', subtaskTemplateId);
 
@@ -478,23 +540,23 @@ function App() {
     })));
   };
 
-  // --- Day Type Management ---
+  // --- Day Type Management (ALL UPDATED WITH FUNCTIONAL STATE) ---
   const handleAddDayType = async (name: string) => {
     const { data, error } = await supabase.from('day_types').insert({ name, id: crypto.randomUUID() }).select().single();
     if (error) throw error;
-    setDayTypes([...dayTypes, { ...data, categoryIds: [] }]);
+    setDayTypes(prev => [...prev, { ...data, categoryIds: [] }]);
   };
   const handleUpdateDayType = async (id: string, name: string) => {
     await supabase.from('day_types').update({ name }).eq('id', id);
-    setDayTypes(dayTypes.map(dt => dt.id === id ? { ...dt, name } : dt));
+    setDayTypes(prev => prev.map(dt => dt.id === id ? { ...dt, name } : dt));
   };
   const handleDeleteDayType = async (id: string) => {
     await supabase.from('day_types').delete().eq('id', id);
-    setDayTypes(dayTypes.filter(dt => dt.id !== id));
+    setDayTypes(prev => prev.filter(dt => dt.id !== id));
   };
   const handleAddCategoryToDayType = async (dayTypeId: string, categoryId: string) => {
     await supabase.from('day_type_categories').insert({ day_type_id: dayTypeId, category_id: categoryId });
-    setDayTypes(dayTypes.map(dt =>
+    setDayTypes(prev => prev.map(dt =>
       dt.id === dayTypeId ? { ...dt, categoryIds: [...dt.categoryIds, categoryId] } : dt
     ));
   };
@@ -502,7 +564,7 @@ function App() {
     await supabase.from('day_type_categories').delete()
       .eq('day_type_id', dayTypeId)
       .eq('category_id', categoryId);
-    setDayTypes(dayTypes.map(dt =>
+    setDayTypes(prev => prev.map(dt =>
       dt.id === dayTypeId ? { ...dt, categoryIds: dt.categoryIds.filter(cId => cId !== categoryId) } : dt
     ));
   };
@@ -570,7 +632,6 @@ function App() {
             onToggleSubtask={handleToggleSubtask}
             onDeleteSubtask={handleDeleteSubtask}
             onAddSubtask={handleAddSubtask}
-            // NEW: Pass text update handlers
             onUpdateTaskText={handleUpdateTaskText}
             onUpdateSubtaskText={handleUpdateSubtaskText}
           />
@@ -601,7 +662,6 @@ function App() {
           onUpdateRecurringTask={onUpdateRecurringTask}
           onAddRecurringSubtask={onAddRecurringSubtask}
           onDeleteRecurringSubtask={onDeleteRecurringSubtask}
-          // NEW: Pass text update handlers
           onUpdateRecurringTaskText={handleUpdateRecurringTaskText}
           onUpdateRecurringSubtaskText={handleUpdateRecurringSubtaskText}
         />
