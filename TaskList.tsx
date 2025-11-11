@@ -234,7 +234,24 @@ const TaskList: React.FC<TaskListProps> = ({
           </div>
         );
       })}
-      {/* ... Uncategorized tasks (can be updated with the same logic) ... */}
+      {/* ... Uncategorized tasks logic (remains same) ... */}
+       {uncategorizedTasks.length > 0 && (
+         <div>
+            <h2 className="text-xl font-bold text-gray-400 mb-3">Uncategorized</h2>
+            {uncategorizedTasks.map(task => (
+              <TaskItem
+                key={task.id}
+                task={task}
+                categoryColor="#6b7280"
+                onToggle={onToggleTask}
+                onDelete={onDeleteTask}
+                onToggleSubtask={onToggleSubtask}
+                onDeleteSubtask={onDeleteSubtask}
+                onAddSubtask={onAddSubtask}
+              />
+            ))}
+          </div>
+      )}
     </div>
   );
 };
