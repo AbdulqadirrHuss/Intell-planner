@@ -2,32 +2,66 @@
 
 import React, { useState, useMemo } from 'react';
 import { Task, Category, Subtask } from '../types';
-import { TrashIcon, PlusIcon } from './icons';
+import { TrashIcon, PlusIcon, EditIcon, CheckIcon } from './icons'; // NEW: Added EditIcon and CheckIcon
 
-// --- NEW: SubtaskItem Component ---
+// --- MODIFIED: SubtaskItem Component ---
 interface SubtaskItemProps {
   task: Task;
   subtask: Subtask;
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
   onDeleteSubtask: (subtaskId: string) => void;
+  onUpdateSubtaskText: (taskId: string, subtaskId: string, newText: string) => void; // NEW
 }
 
-const SubtaskItem: React.FC<SubtaskItemProps> = ({ task, subtask, onToggleSubtask, onDeleteSubtask }) => (
-  <div className="flex items-center pl-8 pr-3 py-2 bg-gray-900 rounded-md">
-    <input
-      type="checkbox"
-      checked={subtask.completed}
-      onChange={() => onToggleSubtask(task.id, subtask.id)}
-      className="w-4 h-4 text-indigo-500 bg-gray-700 border-gray-600 rounded focus:ring-indigo-600 ring-offset-gray-900 focus:ring-2"
-    />
-    <span className={`ml-3 flex-1 text-sm ${subtask.completed ? 'line-through text-gray-500' : 'text-gray-300'}`}>
-      {subtask.text}
-    </span>
-    <button onClick={() => onDeleteSubtask(subtask.id)} className="text-gray-600 hover:text-red-500 transition-colors">
-      <TrashIcon className="w-4 h-4" />
-    </button>
-  </div>
-);
+const SubtaskItem: React.FC<SubtaskItemProps> = ({ task, subtask, onToggleSubtask, onDeleteSubtask, onUpdateSubtaskText }) => {
+  // NEW: State for editing subtask text
+  const [isEditing, setIsEditing] = useState(false);
+  const [text, setText] = useState(subtask.text);
+
+  const handleUpdate = () => {
+    if (text.trim() && text !== subtask.text) {
+      onUpdateSubtaskText(task.id, subtask.id, text.trim());
+    }
+    setIsEditing(false);
+  };
+
+  return (
+    <div className="flex items-center pl-8 pr-3 py-2 bg-gray-900 rounded-md">
+      <input
+        type="checkbox"
+        checked={subtask.completed}
+        onChange={() => onToggleSubtask(task.id, subtask.id)}
+        className="w-4 h-4 text-indigo-500 bg-gray-700 border-gray-600 rounded focus:ring-indigo-600 ring-offset-gray-900 focus:ring-2"
+      />
+      
+      {isEditing ? (
+        <input
+          type="text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={handleUpdate}
+          onKeyDown={(e) => e.key === 'Enter' && handleUpdate()}
+          className="ml-3 flex-1 text-sm bg-gray-700 text-white rounded p-0.5"
+          autoFocus
+        />
+      ) : (
+        <span className={`ml-3 flex-1 text-sm ${subtask.completed ? 'line-through text-gray-500' : 'text-gray-300'}`}>
+          {subtask.text}
+        </span>
+      )}
+
+      {isEditing ? (
+        <button onClick={handleUpdate} className="ml-2 text-green-400 hover:text-green-300"><CheckIcon className="w-4 h-4"/></button>
+      ) : (
+        <button onClick={() => setIsEditing(true)} className="ml-2 text-gray-500 hover:text-white"><EditIcon className="w-4 h-4"/></button>
+      )}
+      <button onClick={() => onDeleteSubtask(subtask.id)} className="text-gray-600 hover:text-red-500 transition-colors">
+        <TrashIcon className="w-4 h-4" />
+      </button>
+    </div>
+  );
+};
+
 
 // --- MODIFIED: TaskItem Component ---
 interface TaskItemProps {
@@ -35,17 +69,22 @@ interface TaskItemProps {
   categoryColor: string;
   onToggleTask: (id: string) => void;
   onDeleteTask: (id: string) => void;
-  // NEW: Props for subtasks
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
   onDeleteSubtask: (subtaskId: string) => void;
   onAddSubtask: (taskId: string, text: string) => void;
+  onUpdateTaskText: (taskId: string, newText: string) => void; // NEW
+  onUpdateSubtaskText: (taskId: string, subtaskId: string, newText: string) => void; // NEW
 }
 
 const TaskItem: React.FC<TaskItemProps> = ({ 
   task, categoryColor, onToggleTask, onDeleteTask, 
-  onToggleSubtask, onDeleteSubtask, onAddSubtask 
+  onToggleSubtask, onDeleteSubtask, onAddSubtask,
+  onUpdateTaskText, onUpdateSubtaskText
 }) => {
   const [newSubtaskText, setNewSubtaskText] = useState('');
+  // NEW: State for editing parent task text
+  const [isEditing, setIsEditing] = useState(false);
+  const [text, setText] = useState(task.text);
 
   const hasSubtasks = task.subtasks.length > 0;
 
@@ -57,6 +96,13 @@ const TaskItem: React.FC<TaskItemProps> = ({
     }
   };
 
+  const handleUpdate = () => {
+    if (text.trim() && text !== task.text) {
+      onUpdateTaskText(task.id, text.trim());
+    }
+    setIsEditing(false);
+  };
+
   return (
     <div className={`p-3 bg-gray-800 rounded-lg mb-2 border-l-4`} style={{ borderColor: categoryColor }}>
       {/* Parent Task Row */}
@@ -64,22 +110,40 @@ const TaskItem: React.FC<TaskItemProps> = ({
         <input
           type="checkbox"
           checked={task.completed}
-          // MODIFIED: If it has subtasks, the parent checkbox is for visual only and disabled.
-          // If it has NO subtasks, it's clickable.
           disabled={hasSubtasks}
           onChange={() => onToggleTask(task.id)}
           className={`w-5 h-5 text-indigo-500 bg-gray-700 border-gray-600 rounded focus:ring-indigo-600 ring-offset-gray-800 focus:ring-2 ${hasSubtasks ? 'opacity-70 cursor-not-allowed' : ''}`}
         />
-        <span className={`ml-4 flex-1 ${task.completed ? 'line-through text-gray-500' : 'text-gray-100'}`}>
-          {task.text}
-        </span>
+        
+        {isEditing ? (
+          <input
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onBlur={handleUpdate}
+            onKeyDown={(e) => e.key === 'Enter' && handleUpdate()}
+            className="ml-4 flex-1 bg-gray-700 text-white rounded p-0.5"
+            autoFocus
+          />
+        ) : (
+          <span className={`ml-4 flex-1 ${task.completed ? 'line-through text-gray-500' : 'text-gray-100'}`}>
+            {task.text}
+          </span>
+        )}
+        
         {task.isRecurring && <span className="text-xs bg-gray-700 text-indigo-300 px-2 py-1 rounded-full mr-3">Recurring</span>}
+        
+        {isEditing ? (
+          <button onClick={handleUpdate} className="ml-2 text-green-400 hover:text-green-300"><CheckIcon className="w-5 h-5"/></button>
+        ) : (
+          <button onClick={() => setIsEditing(true)} className="ml-2 text-gray-500 hover:text-white"><EditIcon className="w-5 h-5"/></button>
+        )}
         <button onClick={() => onDeleteTask(task.id)} className="text-gray-500 hover:text-red-500 transition-colors">
           <TrashIcon className="w-5 h-5" />
         </button>
       </div>
 
-      {/* NEW: Subtask List */}
+      {/* Subtask List */}
       <div className="mt-2 space-y-1">
         {task.subtasks.map(subtask => (
           <SubtaskItem 
@@ -88,11 +152,12 @@ const TaskItem: React.FC<TaskItemProps> = ({
             subtask={subtask}
             onToggleSubtask={onToggleSubtask}
             onDeleteSubtask={onDeleteSubtask}
+            onUpdateSubtaskText={onUpdateSubtaskText} // NEW: Pass handler down
           />
         ))}
       </div>
 
-      {/* NEW: Add Subtask Form */}
+      {/* Add Subtask Form */}
       <form onSubmit={handleAddSubtask} className="flex gap-2 items-center mt-2 pl-8">
         <input
           type="text"
@@ -111,17 +176,17 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
 // --- MODIFIED: TaskList Component ---
 interface TaskListProps {
-  tasks: Task[]; // These are parent tasks
+  tasks: Task[];
   categories: Category[];
   onToggleTask: (id: string) => void;
   onDeleteTask: (id: string) => void;
-  // NEW: Subtask handlers
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
   onDeleteSubtask: (subtaskId: string) => void;
   onAddSubtask: (taskId: string, text: string) => void;
+  onUpdateTaskText: (taskId: string, newText: string) => void; // NEW
+  onUpdateSubtaskText: (taskId: string, subtaskId: string, newText: string) => void; // NEW
 }
 
-// NEW: Hierarchical progress calculation logic
 const calculateProgress = (tasks: Task[]): number => {
   const totalParentTasks = tasks.length;
   if (totalParentTasks === 0) return 0;
@@ -130,10 +195,9 @@ const calculateProgress = (tasks: Task[]): number => {
 
   const totalProgress = tasks.reduce((acc, task) => {
     if (task.subtasks.length === 0) {
-      // No subtasks: parent task completion counts
       return acc + (task.completed ? progressPerParent : 0);
     } else {
-      // Has subtasks: progress is based on subtasks
+      if (task.subtasks.length === 0) return acc;
       const progressPerSubtask = progressPerParent / task.subtasks.length;
       const completedSubtasks = task.subtasks.filter(st => st.completed).length;
       return acc + (completedSubtasks * progressPerSubtask);
@@ -145,9 +209,9 @@ const calculateProgress = (tasks: Task[]): number => {
 
 const TaskList: React.FC<TaskListProps> = ({ 
   tasks, categories, onToggleTask, onDeleteTask,
-  onToggleSubtask, onDeleteSubtask, onAddSubtask 
+  onToggleSubtask, onDeleteSubtask, onAddSubtask,
+  onUpdateTaskText, onUpdateSubtaskText // NEW: Get handlers
 }) => {
-  // NEW: State for collapsible categories
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
 
   const groupedTasks = tasks.reduce<Record<string, Task[]>>((acc, task) => {
@@ -170,7 +234,6 @@ const TaskList: React.FC<TaskListProps> = ({
     );
   }
 
-  // NEW: Toggle function for category visibility
   const toggleCategory = (categoryId: string) => {
     setCollapsedCategories(prev => ({
       ...prev,
@@ -184,13 +247,11 @@ const TaskList: React.FC<TaskListProps> = ({
         const category = categoryMap.get(categoryId);
         if (!category) return null;
 
-        // NEW: Calculate progress for this specific category
         const categoryProgress = calculateProgress(tasksInCategory);
         const isCollapsed = collapsedCategories[categoryId];
 
         return (
           <div key={categoryId}>
-            {/* MODIFIED: Category Header is now a button */}
             <button
               onClick={() => toggleCategory(categoryId)}
               className="w-full flex justify-between items-center mb-3 cursor-pointer group"
@@ -209,7 +270,6 @@ const TaskList: React.FC<TaskListProps> = ({
               <span className="text-sm font-medium" style={{ color: category.color }}>{categoryProgress}%</span>
             </button>
             
-            {/* NEW: Category Progress Bar */}
             <div className="w-full bg-gray-700 rounded-full h-1.5 mb-3">
               <div
                 className="h-1.5 rounded-full transition-all duration-300"
@@ -217,7 +277,6 @@ const TaskList: React.FC<TaskListProps> = ({
               ></div>
             </div>
 
-            {/* NEW: Collapsible Task List */}
             {!isCollapsed && tasksInCategory.map(task => (
               <TaskItem
                 key={task.id}
@@ -225,16 +284,16 @@ const TaskList: React.FC<TaskListProps> = ({
                 categoryColor={category.color}
                 onToggle={onToggleTask}
                 onDelete={onDeleteTask}
-                // NEW: Pass subtask handlers
                 onToggleSubtask={onToggleSubtask}
                 onDeleteSubtask={onDeleteSubtask}
                 onAddSubtask={onAddSubtask}
+                onUpdateTaskText={onUpdateTaskText} // NEW: Pass handler
+                onUpdateSubtaskText={onUpdateSubtaskText} // NEW: Pass handler
               />
             ))}
           </div>
         );
       })}
-      {/* ... Uncategorized tasks logic (remains same) ... */}
        {uncategorizedTasks.length > 0 && (
          <div>
             <h2 className="text-xl font-bold text-gray-400 mb-3">Uncategorized</h2>
@@ -248,6 +307,8 @@ const TaskList: React.FC<TaskListProps> = ({
                 onToggleSubtask={onToggleSubtask}
                 onDeleteSubtask={onDeleteSubtask}
                 onAddSubtask={onAddSubtask}
+                onUpdateTaskText={onUpdateTaskText} // NEW: Pass handler
+                onUpdateSubtaskText={onUpdateSubtaskText} // NEW: Pass handler
               />
             ))}
           </div>
