@@ -227,8 +227,7 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
                     className="flex-grow bg-gray-600 border-gray-500 rounded-md p-2 text-white"
                   />
                   <button type="submit" className="p-2 bg-indigo-500 hover:bg-indigo-600 rounded-md"><PlusIcon className="w-4 h-4"/></button>
-Next, I will analyze the directory structure and generate the `package.json` file.
-</form>
+                </form>
               </div>
             ))}
           </div>
