@@ -1,12 +1,13 @@
 // abdulqadirrhuss/intell-planner/Intell-planner-e4eec65ae3452797ce24afb321a4c1a7a0f5cce3/types.ts
 
-// NEW: Defines a subtask, which belongs to a parent task
+// Defines a subtask, which belongs to a parent task
 export interface Subtask {
   id: string;
-  parent_task_id: string; // ID of the Task it belongs to
-  log_date: string;       // Helps with Supabase queries
+  parent_task_id: string;
+  log_date: string;
   text: string;
   completed: boolean;
+  isRecurring: boolean; // NEW: Track if this subtask is recurring
 }
 
 export interface Task {
@@ -15,13 +16,13 @@ export interface Task {
   completed: boolean;
   categoryId: string;
   isRecurring: boolean;
-  subtasks: Subtask[]; // MODIFIED: Task now owns an array of Subtasks
+  subtasks: Subtask[];
 }
 
-// NEW: Defines a template for creating subtasks under a recurring task
+// Defines a template for creating subtasks under a recurring task
 export interface RecurringSubtaskTemplate {
   id: string;
-  parent_template_id: string; // ID of the RecurringTaskTemplate it belongs to
+  parent_template_id: string;
   text: string;
 }
 
@@ -29,15 +30,15 @@ export interface RecurringTaskTemplate {
   id: string;
   text: string;
   categoryId: string;
-  daysOfWeek: number[]; // NEW: Array of numbers (0-6) for Sun-Sat
-  subtaskTemplates: RecurringSubtaskTemplate[]; // NEW: Recurring tasks can have subtask templates
+  daysOfWeek: number[];
+  subtaskTemplates: RecurringSubtaskTemplate[];
 }
 
 export interface Category {
   id: string;
   name: string;
   color: string;
-  recurringTasks: RecurringTaskTemplate[]; // This now contains the new, richer RecurringTaskTemplate
+  recurringTasks: RecurringTaskTemplate[];
 }
 
 export interface DayType {
@@ -49,5 +50,5 @@ export interface DayType {
 export interface DailyLog {
   date: string;
   dayTypeId: string | null;
-  tasks: Task[]; // This will be a list of parent tasks, each containing its subtasks
+  tasks: Task[];
 }
