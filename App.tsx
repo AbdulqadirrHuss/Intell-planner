@@ -91,19 +91,15 @@ function App() {
   }, []);
 
   // --- Regenerate Task List Function ---
-  // This function now correctly reads the *previous* state to get non-recurring tasks
   const regenerateTasks = useCallback(async (dayTypeId: string, date: string) => {
     const selectedDayType = dayTypes.find(dt => dt.id === dayTypeId);
     if (!selectedDayType) return;
 
     const currentDayOfWeek = new Date(date + 'T00:00:00').getDay();
     
-    let nonRecurringTasks: Task[] = [];
-    setDailyLogs(prev => {
-        const log = prev[date] || { date: date, dayTypeId: null, tasks: [] };
-        nonRecurringTasks = log.tasks.filter(t => !t.isRecurring);
-        return prev;
-    });
+    // Get non-recurring tasks from the current state
+    const log = dailyLogs[date] || { date: date, dayTypeId: null, tasks: [] };
+    const nonRecurringTasks = log.tasks.filter(t => !t.isRecurring);
 
     const categoryIdsForDayType = selectedDayType.categoryIds;
     
@@ -133,7 +129,7 @@ function App() {
        await supabase.from('daily_logs').update({ day_type_id: dayTypeId }).eq('date', date);
        setDailyLogs(prev => ({
          ...prev,
-         [date]: { ...prev[date], dayTypeId: dayTypeId, tasks: nonRecurringTasks }
+         [date]: { ...log, dayTypeId: dayTypeId, tasks: nonRecurringTasks }
        }));
        return;
     }
@@ -182,12 +178,12 @@ function App() {
     setDailyLogs(prev => ({
       ...prev,
       [date]: {
-        ...prev[date],
+        ...log,
         dayTypeId: dayTypeId,
         tasks: [...nonRecurringTasks, ...newTasks]
       }
     }));
-  }, [categories, dayTypes]); // Removed `dailyLogs` to prevent stale closures
+  }, [categories, dayTypes, dailyLogs]); // Re-added dailyLogs dependency
 
 
   // --- Daily Log Loading ---
@@ -250,7 +246,7 @@ function App() {
     regenerateTasks(dayTypeId, selectedDate);
   };
 
-  // --- Task Handlers (ALL UPDATED WITH FUNCTIONAL STATE) ---
+  // --- Task Handlers (ALL UPDATED WITH CORRECTED LOGIC) ---
   const handleAddTask = async (text: string, categoryId: string) => {
     const newTaskForDb = {
       log_date: selectedDate, text: text, category_id: categoryId,
@@ -273,29 +269,32 @@ function App() {
     });
   };
 
+  // *** THIS IS THE FIX ***
   const handleToggleTask = async (id: string) => {
-    let taskToToggle: Task | undefined;
+    // Step 1: Read the state *outside* of the setter
+    const log = dailyLogs[selectedDate] || { date: selectedDate, dayTypeId: null, tasks: [] };
+    const taskToToggle = log.tasks.find(t => t.id === id);
+
+    // Step 2: Run guards
+    if (!taskToToggle || taskToToggle.subtasks.length > 0) {
+      return; // Do nothing if task not found, or if it has subtasks
+    }
     
-    // *** FIX: Use functional update to READ the state ***
+    const newCompletedState = !taskToToggle.completed;
+    
+    // Step 3: Update database
+    await supabase.from('tasks').update({ completed: newCompletedState }).eq('id', id);
+    
+    // Step 4: Update state functionally
     setDailyLogs(prev => {
-      const log = prev[selectedDate] || { date: selectedDate, dayTypeId: null, tasks: [] };
-      taskToToggle = log.tasks.find(t => t.id === id);
-      
-      if (!taskToToggle || taskToToggle.subtasks.length > 0) {
-        return prev; // No change
-      }
-      
-      const newCompletedState = !taskToToggle.completed;
-      // Update DB
-      supabase.from('tasks').update({ completed: newCompletedState }).eq('id', id).then();
-      
-      // Update local state
-      const newTasks = log.tasks.map(task =>
+      const currentLog = prev[selectedDate] || { date: selectedDate, dayTypeId: null, tasks: [] };
+      const newTasks = currentLog.tasks.map(task =>
         task.id === id ? { ...task, completed: newCompletedState } : task
       );
-      return { ...prev, [selectedDate]: { ...log, tasks: newTasks } };
+      return { ...prev, [selectedDate]: { ...currentLog, tasks: newTasks } };
     });
   };
+  // *** END OF FIX ***
 
   const handleDeleteTask = async (id: string) => {
     await supabase.from('subtasks').delete().eq('parent_task_id', id);
@@ -320,7 +319,7 @@ function App() {
     });
   };
 
-  // --- Subtask Handlers (ALL UPDATED WITH FUNCTIONAL STATE) ---
+  // --- Subtask Handlers (ALL UPDATED WITH CORRECTED LOGIC) ---
   const handleAddSubtask = async (taskId: string, text: string) => {
     const { data, error } = await supabase.from('subtasks').insert({
       parent_task_id: taskId,
@@ -373,31 +372,31 @@ function App() {
   };
 
   const handleToggleSubtask = async (taskId: string, subtaskId: string) => {
-    // *** FIX: This function now uses functional updates to prevent stale state ***
-    
-    let newSubtaskState: boolean | undefined;
-    let parentCompletedState: boolean | undefined;
-    let originalParentState: boolean | undefined;
+    // *** FIX: Read state directly ***
+    const log = dailyLogs[selectedDate] || { date: selectedDate, dayTypeId: null, tasks: [] };
+    const task = log.tasks.find(t => t.id === taskId);
+    if (!task) return;
+    const subtask = task.subtasks.find(st => st.id === subtaskId);
+    if (!subtask) return;
 
+    const newSubtaskState = !subtask.completed;
+    await supabase.from('subtasks').update({ completed: newSubtaskState }).eq('id', subtaskId);
+
+    // Now update state functionally
     setDailyLogs(prev => {
-      const log = prev[selectedDate] || { date: selectedDate, dayTypeId: null, tasks: [] };
-      const task = log.tasks.find(t => t.id === taskId);
-      if (!task) return prev;
-      
-      const subtask = task.subtasks.find(st => st.id === subtaskId);
-      if (!subtask) return prev;
-      
-      newSubtaskState = !subtask.completed;
-      originalParentState = task.completed;
-      parentCompletedState = originalParentState;
+      const currentLog = prev[selectedDate] || { date: selectedDate, dayTypeId: null, tasks: [] };
+      let parentCompletedState = task.completed; // Start with current parent state
 
-      const newTasks = log.tasks.map(t => {
+      const newTasks = currentLog.tasks.map(t => {
         if (t.id === taskId) {
+          // Find the task and update its subtask
           const newSubtasks = t.subtasks.map(st => 
-            st.id === subtaskId ? { ...st, completed: newSubtaskState! } : st
+            st.id === subtaskId ? { ...st, completed: newSubtaskState } : st
           );
           
+          // Check if parent state needs to change
           const allSubtasksComplete = newSubtasks.every(st => st.completed);
+          parentCompletedState = t.completed; // Use outer scope task's completed state
 
           if (allSubtasksComplete && !t.completed) {
             parentCompletedState = true;
@@ -409,15 +408,13 @@ function App() {
         }
         return t;
       });
-      
-      // Now that we have the new state, send DB updates
-      supabase.from('subtasks').update({ completed: newSubtaskState }).eq('id', subtaskId).then();
-      
-      if (originalParentState !== parentCompletedState) {
+
+      // If parent state changed, send update to DB
+      if (task.completed !== parentCompletedState) {
         supabase.from('tasks').update({ completed: parentCompletedState }).eq('id', taskId).then();
       }
 
-      return { ...prev, [selectedDate]: { ...log, tasks: newTasks } };
+      return { ...prev, [selectedDate]: { ...currentLog, tasks: newTasks } };
     });
   };
 
