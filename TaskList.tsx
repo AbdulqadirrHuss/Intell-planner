@@ -2,19 +2,18 @@
 
 import React, { useState, useMemo } from 'react';
 import { Task, Category, Subtask } from '../types';
-import { TrashIcon, PlusIcon, EditIcon, CheckIcon } from './icons'; // NEW: Added EditIcon and CheckIcon
+import { TrashIcon, PlusIcon, EditIcon, CheckIcon } from './icons';
 
-// --- MODIFIED: SubtaskItem Component ---
+// --- SubtaskItem Component ---
 interface SubtaskItemProps {
   task: Task;
   subtask: Subtask;
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
   onDeleteSubtask: (subtaskId: string) => void;
-  onUpdateSubtaskText: (taskId: string, subtaskId: string, newText: string) => void; // NEW
+  onUpdateSubtaskText: (taskId: string, subtaskId: string, newText: string) => void;
 }
 
 const SubtaskItem: React.FC<SubtaskItemProps> = ({ task, subtask, onToggleSubtask, onDeleteSubtask, onUpdateSubtaskText }) => {
-  // NEW: State for editing subtask text
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(subtask.text);
 
@@ -63,7 +62,7 @@ const SubtaskItem: React.FC<SubtaskItemProps> = ({ task, subtask, onToggleSubtas
 };
 
 
-// --- MODIFIED: TaskItem Component ---
+// --- TaskItem Component ---
 interface TaskItemProps {
   task: Task;
   categoryColor: string;
@@ -72,8 +71,8 @@ interface TaskItemProps {
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
   onDeleteSubtask: (subtaskId: string) => void;
   onAddSubtask: (taskId: string, text: string) => void;
-  onUpdateTaskText: (taskId: string, newText: string) => void; // NEW
-  onUpdateSubtaskText: (taskId: string, subtaskId: string, newText: string) => void; // NEW
+  onUpdateTaskText: (taskId: string, newText: string) => void;
+  onUpdateSubtaskText: (taskId: string, subtaskId: string, newText: string) => void;
 }
 
 const TaskItem: React.FC<TaskItemProps> = ({ 
@@ -82,7 +81,6 @@ const TaskItem: React.FC<TaskItemProps> = ({
   onUpdateTaskText, onUpdateSubtaskText
 }) => {
   const [newSubtaskText, setNewSubtaskText] = useState('');
-  // NEW: State for editing parent task text
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(task.text);
 
@@ -152,7 +150,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
             subtask={subtask}
             onToggleSubtask={onToggleSubtask}
             onDeleteSubtask={onDeleteSubtask}
-            onUpdateSubtaskText={onUpdateSubtaskText} // NEW: Pass handler down
+            onUpdateSubtaskText={onUpdateSubtaskText}
           />
         ))}
       </div>
@@ -174,7 +172,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
   );
 };
 
-// --- MODIFIED: TaskList Component ---
+// --- TaskList Component ---
 interface TaskListProps {
   tasks: Task[];
   categories: Category[];
@@ -183,8 +181,8 @@ interface TaskListProps {
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
   onDeleteSubtask: (subtaskId: string) => void;
   onAddSubtask: (taskId: string, text: string) => void;
-  onUpdateTaskText: (taskId: string, newText: string) => void; // NEW
-  onUpdateSubtaskText: (taskId: string, subtaskId: string, newText: string) => void; // NEW
+  onUpdateTaskText: (taskId: string, newText: string) => void;
+  onUpdateSubtaskText: (taskId: string, subtaskId: string, newText: string) => void;
 }
 
 const calculateProgress = (tasks: Task[]): number => {
@@ -210,7 +208,7 @@ const calculateProgress = (tasks: Task[]): number => {
 const TaskList: React.FC<TaskListProps> = ({ 
   tasks, categories, onToggleTask, onDeleteTask,
   onToggleSubtask, onDeleteSubtask, onAddSubtask,
-  onUpdateTaskText, onUpdateSubtaskText // NEW: Get handlers
+  onUpdateTaskText, onUpdateSubtaskText
 }) => {
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
 
@@ -282,13 +280,13 @@ const TaskList: React.FC<TaskListProps> = ({
                 key={task.id}
                 task={task}
                 categoryColor={category.color}
-                onToggle={onToggleTask}
-                onDelete={onDeleteTask}
+                onToggleTask={onToggleTask}
+                onDeleteTask={onDeleteTask}
                 onToggleSubtask={onToggleSubtask}
                 onDeleteSubtask={onDeleteSubtask}
                 onAddSubtask={onAddSubtask}
-                onUpdateTaskText={onUpdateTaskText} // NEW: Pass handler
-                onUpdateSubtaskText={onUpdateSubtaskText} // NEW: Pass handler
+                onUpdateTaskText={onUpdateTaskText}
+                onUpdateSubtaskText={onUpdateSubtaskText}
               />
             ))}
           </div>
@@ -302,13 +300,13 @@ const TaskList: React.FC<TaskListProps> = ({
                 key={task.id}
                 task={task}
                 categoryColor="#6b7280"
-                onToggle={onToggleTask}
-                onDelete={onDeleteTask}
+                onToggleTask={onToggleTask}
+                onDeleteTask={onDeleteTask}
                 onToggleSubtask={onToggleSubtask}
                 onDeleteSubtask={onDeleteSubtask}
                 onAddSubtask={onAddSubtask}
-                onUpdateTaskText={onUpdateTaskText} // NEW: Pass handler
-                onUpdateSubtaskText={onUpdateSubtaskText} // NEW: Pass handler
+                onUpdateTaskText={onUpdateTaskText}
+                onUpdateSubtaskText={onUpdateSubtaskText}
               />
             ))}
           </div>
