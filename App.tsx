@@ -99,6 +99,7 @@ function App() {
 
     const currentDayOfWeek = new Date(date + 'T00:00:00').getDay();
     
+    // Get non-recurring tasks from the current state
     const log = dailyLogs[date] || { date: date, dayTypeId: null, tasks: [] };
     const nonRecurringTasks = log.tasks.filter(t => !t.isRecurring);
 
@@ -204,7 +205,7 @@ function App() {
       if (newLogError) throw newLogError;
       logData = newLogData;
     }
-
+    
     const { data: taskData, error: taskError } = await supabase
       .from('tasks').select('*').eq('log_date', date);
     if (taskError) throw taskError;
