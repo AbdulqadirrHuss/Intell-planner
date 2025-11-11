@@ -93,19 +93,15 @@ function App() {
   }, []);
 
   // --- Regenerate Task List Function ---
-  // This is now fully self-contained and uses a functional update
   const regenerateTasks = useCallback(async (dayTypeId: string, date: string) => {
     const selectedDayType = dayTypes.find(dt => dt.id === dayTypeId);
     if (!selectedDayType) return;
 
     const currentDayOfWeek = new Date(date + 'T00:00:00').getDay();
     
-    let nonRecurringTasks: Task[] = [];
-    setDailyLogs(prev => {
-        const log = prev[date] || { date: date, dayTypeId: null, tasks: [] };
-        nonRecurringTasks = log.tasks.filter(t => !t.isRecurring);
-        return prev;
-    });
+    // Get non-recurring tasks from the current state
+    const log = dailyLogs[date] || { date: date, dayTypeId: null, tasks: [] };
+    const nonRecurringTasks = log.tasks.filter(t => !t.isRecurring);
 
     const categoryIdsForDayType = selectedDayType.categoryIds;
     
@@ -135,7 +131,7 @@ function App() {
        await supabase.from('daily_logs').update({ day_type_id: dayTypeId }).eq('date', date);
        setDailyLogs(prev => ({
          ...prev,
-         [date]: { ...prev[date], dayTypeId: dayTypeId, tasks: nonRecurringTasks }
+         [date]: { ...log, dayTypeId: dayTypeId, tasks: nonRecurringTasks }
        }));
        return;
     }
@@ -184,12 +180,12 @@ function App() {
     setDailyLogs(prev => ({
       ...prev,
       [date]: {
-        ...prev[date],
+        ...log,
         dayTypeId: dayTypeId,
         tasks: [...nonRecurringTasks, ...newTasks]
       }
     }));
-  }, [categories, dayTypes]); // Removed `dailyLogs` to prevent stale state/loops
+  }, [categories, dayTypes, dailyLogs]); 
 
 
   // --- Daily Log Loading ---
@@ -209,8 +205,7 @@ function App() {
       if (newLogError) throw newLogError;
       logData = newLogData;
     }
-    
-    // *** THIS IS THE FIX: This function *only* loads data. It does not regenerate. ***
+
     const { data: taskData, error: taskError } = await supabase
       .from('tasks').select('*').eq('log_date', date);
     if (taskError) throw taskError;
@@ -247,11 +242,10 @@ function App() {
   
   // Handler for the dropdown menu
   const handleSelectDayTypeFromDropdown = (dayTypeId: string) => {
-    // This is now the ONLY place that calls regenerateTasks
     regenerateTasks(dayTypeId, selectedDate);
   };
 
-  // --- Task Handlers (ALL UPDATED WITH CORRECTED LOGIC) ---
+  // --- Task Handlers ---
   const handleAddTask = async (text: string, categoryId: string) => {
     const newTaskForDb = {
       log_date: selectedDate, text: text, category_id: categoryId,
@@ -324,7 +318,7 @@ function App() {
     });
   };
 
-  // --- Subtask Handlers (ALL UPDATED WITH CORRECTED LOGIC) ---
+  // --- Subtask Handlers ---
   const handleAddSubtask = async (taskId: string, text: string) => {
     const { data, error } = await supabase.from('subtasks').insert({
       parent_task_id: taskId,
