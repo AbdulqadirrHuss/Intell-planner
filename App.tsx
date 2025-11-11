@@ -11,22 +11,19 @@ import { SettingsIcon, EditIcon } from './icons';
 import DateNavigator from './DateNavigator';
 import { createClient } from '@supabase/supabase-js';
 
-// --- Supabase Setup ---
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-// ----------------------
 
 const getTodayDateString = () => new Date().toISOString().split('T')[0];
 
-// --- Type Mappings for Supabase ---
 interface SupabaseTask extends Omit<Task, 'categoryId' | 'isRecurring' | 'subtasks'> { category_id: string; is_recurring: boolean; log_date: string; }
-interface SupabaseSubtask extends Omit<Subtask, 'parent_task_id'> { parent_task_id: string; log_date: string; }
+interface SupabaseSubtask extends Omit<Subtask, 'parent_task_id' | 'isRecurring'> { parent_task_id: string; log_date: string; is_recurring: boolean; }
 interface SupabaseRecurringTask extends Omit<RecurringTaskTemplate, 'categoryId' | 'daysOfWeek' | 'subtaskTemplates'> { 
   category_id: string; 
   days_of_week: number[];
 }
-interface SupabaseRecurringSubtaskTemplate extends Omit<RecurringTaskTemplate, 'parent_template_id'> { parent_template_id: string; }
+interface SupabaseRecurringSubtaskTemplate extends Omit<RecurringSubtaskTemplate, 'parentTemplateId'> { parent_template_id: string; }
 interface SupabaseDayTypeCategoryLink { day_type_id: string; category_id: string; }
 
 function App() {
@@ -39,7 +36,6 @@ function App() {
   const [isCategoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false); 
 
-  // --- Data Loading from Supabase ---
   useEffect(() => {
     async function loadInitialData() {
       try {
@@ -92,14 +88,12 @@ function App() {
     loadInitialData();
   }, []);
 
-  // --- Regenerate Task List Function ---
   const regenerateTasks = useCallback(async (dayTypeId: string, date: string) => {
     const selectedDayType = dayTypes.find(dt => dt.id === dayTypeId);
     if (!selectedDayType) return;
 
     const currentDayOfWeek = new Date(date + 'T00:00:00').getDay();
     
-    // Get non-recurring tasks from the current state
     const log = dailyLogs[date] || { date: date, dayTypeId: null, tasks: [] };
     const nonRecurringTasks = log.tasks.filter(t => !t.isRecurring);
 
@@ -152,7 +146,8 @@ function App() {
         newSubtasksForDb.push({
           parent_task_id: t.id,
           text: rst.text,
-          log_date: date
+          log_date: date,
+          is_recurring: true
         });
       });
       return {
@@ -167,7 +162,7 @@ function App() {
           .from('subtasks').insert(newSubtasksForDb).select();
         if (newSubtasksError) throw newSubtasksError;
         newSubtasks = newSubtasksData.map((st: SupabaseSubtask) => ({
-          id: st.id, parent_task_id: st.parent_task_id, log_date: st.log_date, text: st.text, completed: st.completed
+          id: st.id, parent_task_id: st.parent_task_id, log_date: st.log_date, text: st.text, completed: st.completed, isRecurring: st.is_recurring
         }));
     }
 
@@ -188,7 +183,6 @@ function App() {
   }, [categories, dayTypes, dailyLogs]); 
 
 
-  // --- Daily Log Loading ---
   const fetchDailyLog = useCallback(async (date: string) => {
     if (!isDataLoaded) { 
       setTimeout(() => fetchDailyLog(date), 100);
@@ -214,7 +208,7 @@ function App() {
     if (subtaskError) throw subtaskError;
 
     const subtasks: Subtask[] = subtaskData.map((st: SupabaseSubtask) => ({
-      id: st.id, parent_task_id: st.parent_task_id, log_date: st.log_date, text: st.text, completed: st.completed
+      id: st.id, parent_task_id: st.parent_task_id, log_date: st.log_date, text: st.text, completed: st.completed, isRecurring: st.is_recurring || false
     }));
     const formattedTasks: Task[] = taskData.map((t: SupabaseTask) => ({
       id: t.id, text: t.text, completed: t.completed, categoryId: t.category_id, isRecurring: t.is_recurring,
@@ -240,12 +234,10 @@ function App() {
     return dailyLogs[selectedDate] || { date: selectedDate, dayTypeId: null, tasks: [] };
   }, [dailyLogs, selectedDate]);
   
-  // Handler for the dropdown menu
   const handleSelectDayTypeFromDropdown = (dayTypeId: string) => {
     regenerateTasks(dayTypeId, selectedDate);
   };
 
-  // --- Task Handlers ---
   const handleAddTask = async (text: string, categoryId: string) => {
     const newTaskForDb = {
       log_date: selectedDate, text: text, category_id: categoryId,
@@ -268,32 +260,25 @@ function App() {
     });
   };
 
-  // *** THIS IS THE FIX ***
-  // This function now correctly uses the functional updater `prev`.
-  // It was failing because it was reading a stale `dailyLogs` from the outer scope.
   const handleToggleTask = async (id: string) => {
     setDailyLogs(prev => {
       const log = prev[selectedDate] || { date: selectedDate, dayTypeId: null, tasks: [] };
       const taskToToggle = log.tasks.find(t => t.id === id);
 
-      // Guard: If task not found, or it has subtasks, do nothing.
       if (!taskToToggle || (taskToToggle.subtasks && taskToToggle.subtasks.length > 0)) {
-        return prev; // No change
+        return prev;
       }
       
       const newCompletedState = !taskToToggle.completed;
       
-      // Update DB (don't wait for it)
       supabase.from('tasks').update({ completed: newCompletedState }).eq('id', id).then();
       
-      // Update local state
       const newTasks = log.tasks.map(task =>
         task.id === id ? { ...task, completed: newCompletedState } : task
       );
       return { ...prev, [selectedDate]: { ...log, tasks: newTasks } };
     });
   };
-  // *** END OF FIX ***
 
   const handleDeleteTask = async (id: string) => {
     await supabase.from('subtasks').delete().eq('parent_task_id', id);
@@ -318,17 +303,17 @@ function App() {
     });
   };
 
-  // --- Subtask Handlers ---
   const handleAddSubtask = async (taskId: string, text: string) => {
     const { data, error } = await supabase.from('subtasks').insert({
       parent_task_id: taskId,
       log_date: selectedDate,
-      text: text
+      text: text,
+      is_recurring: false
     }).select().single();
     if (error) throw error;
     
     const newSubtask: Subtask = {
-      id: data.id, parent_task_id: data.parent_task_id, log_date: data.log_date, text: data.text, completed: data.completed
+      id: data.id, parent_task_id: data.parent_task_id, log_date: data.log_date, text: data.text, completed: data.completed, isRecurring: false
     };
     
     setDailyLogs(prev => {
@@ -413,8 +398,65 @@ function App() {
     });
   };
 
+  // NEW: Toggle subtask recurring status
+  const handleToggleSubtaskRecurring = async (taskId: string, subtaskId: string) => {
+    setDailyLogs(prev => {
+      const log = prev[selectedDate] || { date: selectedDate, dayTypeId: null, tasks: [] };
+      const task = log.tasks.find(t => t.id === taskId);
+      if (!task) return prev;
+      
+      const subtask = task.subtasks.find(st => st.id === subtaskId);
+      if (!subtask) return prev;
+      
+      const newRecurringState = !subtask.isRecurring;
+      
+      // Update database
+      supabase.from('subtasks').update({ is_recurring: newRecurringState }).eq('id', subtaskId).then();
+      
+      // If making recurring and parent is recurring, add to template
+      if (newRecurringState && task.isRecurring) {
+        const category = categories.find(c => c.id === task.categoryId);
+        const recurringTask = category?.recurringTasks.find(rt => rt.text === task.text);
+        if (recurringTask) {
+          supabase.from('recurring_subtask_templates').insert({
+            parent_template_id: recurringTask.id,
+            text: subtask.text
+          }).then(({ data }) => {
+            if (data) {
+              setCategories(prevCats => prevCats.map(cat => ({
+                ...cat,
+                recurringTasks: cat.recurringTasks.map(rt =>
+                  rt.id === recurringTask.id ? {
+                    ...rt,
+                    subtaskTemplates: [...rt.subtaskTemplates, {
+                      id: data[0].id,
+                      text: subtask.text,
+                      parentTemplateId: recurringTask.id
+                    }]
+                  } : rt
+                )
+              })));
+            }
+          });
+        }
+      }
+      
+      const newTasks = log.tasks.map(t => {
+        if (t.id === taskId) {
+          return {
+            ...t,
+            subtasks: t.subtasks.map(st =>
+              st.id === subtaskId ? { ...st, isRecurring: newRecurringState } : st
+            )
+          };
+        }
+        return t;
+      });
+      
+      return { ...prev, [selectedDate]: { ...log, tasks: newTasks } };
+    });
+  };
 
-  // --- Category Management (All correct) ---
   const handleAddCategory = async (name: string, color: string) => {
     const { data, error } = await supabase.from('categories').insert({ name, color, id: crypto.randomUUID() }).select().single();
     if (error) throw error;
@@ -524,7 +566,6 @@ function App() {
     })));
   };
 
-  // --- Day Type Management (All correct) ---
   const handleAddDayType = async (name: string) => {
     const { data, error } = await supabase.from('day_types').insert({ name, id: crypto.randomUUID() }).select().single();
     if (error) throw error;
@@ -553,7 +594,6 @@ function App() {
     ));
   };
 
-  // --- Progress Calculation ---
   const completionPercentage = useMemo(() => {
     const tasks = currentDailyLog.tasks;
     const totalParentTasks = tasks.length;
@@ -590,7 +630,7 @@ function App() {
                 <select
                   id="day-type"
                   value={currentDailyLog.dayTypeId || ''}
-                  onChange={(e) => handleSelectDayTypeFromDropdown(e.target.value)} // Use the wrapper
+                  onChange={(e) => handleSelectDayTypeFromDropdown(e.target.value)}
                   className="bg-gray-700 border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"
                 >
                   <option value="" disabled>Choose a day type...</option>
@@ -618,6 +658,7 @@ function App() {
             onAddSubtask={handleAddSubtask}
             onUpdateTaskText={handleUpdateTaskText}
             onUpdateSubtaskText={handleUpdateSubtaskText}
+            onToggleSubtaskRecurring={handleToggleSubtaskRecurring}
           />
           <AddTaskForm categories={categories} onAddTask={handleAddTask} />
         
