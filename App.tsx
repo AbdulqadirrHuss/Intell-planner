@@ -22,7 +22,7 @@ const getTodayDateString = () => new Date().toISOString().split('T')[0];
 
 // --- MODIFIED: Type Mappings for Supabase ---
 interface SupabaseTask extends Omit<Task, 'categoryId' | 'isRecurring' | 'subtasks'> { category_id: string; is_recurring: boolean; log_date: string; }
-interface SupabaseSubtask extends Omit<Subtask, 'parent_task_id'> { parent_task_id: string; }
+interface SupabaseSubtask extends Omit<Subtask, 'parent_task_id'> { parent_task_id: string; log_date: string; }
 interface SupabaseRecurringTask extends Omit<RecurringTaskTemplate, 'categoryId' | 'daysOfWeek' | 'subtaskTemplates'> { 
   category_id: string; 
   days_of_week: number[]; // NEW
@@ -70,11 +70,15 @@ function App() {
         }));
         setCategories(formattedCategories);
 
-        // ... (Steps 2-4 for DayTypes are unchanged) ...
+        // 2. Fetch Day Types
         const { data: dtData, error: dtError } = await supabase.from('day_types').select('*');
         if (dtError) throw dtError;
+        
+        // 3. Fetch the links between Day Types and Categories
         const { data: linksData, error: linksError } = await supabase.from('day_type_categories').select('*');
         if (linksError) throw linksError;
+
+        // 4. Combine Day Types with their category IDs
         const formattedDayTypes: DayType[] = dtData.map(dt => ({
           id: dt.id,
           name: dt.name,
@@ -196,13 +200,14 @@ function App() {
     if (newTasksError) throw newTasksError;
 
     // 7. Create new subtasks in DB
-    const newSubtasksForDb: Omit<SupabaseSubtask, 'id' | 'completed' | 'log_date'>[] = [];
+    const newSubtasksForDb: Omit<SupabaseSubtask, 'id' | 'completed'>[] = [];
     const newTasks: Task[] = newTasksData.map((t: SupabaseTask, index: number) => {
       const template = allRecurringTaskTemplates[index];
       template.subtaskTemplates.forEach(rst => {
         newSubtasksForDb.push({
           parent_task_id: t.id,
           text: rst.text,
+          log_date: selectedDate
         });
       });
       return {
@@ -355,7 +360,18 @@ function App() {
     await supabase.from('categories').update({ name, color }).eq('id', id);
     setCategories(categories.map(cat => cat.id === id ? { ...cat, name, color } : cat));
   };
-  const handleDeleteCategory = async (id: string) => { /* ... no change ... */ };
+  const handleDeleteCategory = async (id: string) => {
+    if (id === 'uncategorized') return;
+    await supabase.from('tasks').update({ category_id: 'uncategorized' }).eq('category_id', id);
+    await supabase.from('day_type_categories').delete().eq('category_id', id);
+    await supabase.from('categories').delete().eq('id', id);
+    
+    setCategories(categories.filter(cat => cat.id !== id));
+    setDayTypes(prevDayTypes => prevDayTypes.map(dt => ({
+      ...dt,
+      categoryIds: dt.categoryIds.filter(catId => catId !== id)
+    })));
+  };
   
   const handleAddRecurringTask = async (categoryId: string, text: string) => {
     const { data, error } = await supabase.from('recurring_task_templates').insert({ 
@@ -370,7 +386,13 @@ function App() {
       cat.id === categoryId ? { ...cat, recurringTasks: [...cat.recurringTasks, newTask] } : cat
     ));
   };
-  const onDeleteRecurringTask = async (taskId: string) => { /* ... no change ... */ };
+  const onDeleteRecurringTask = async (taskId: string) => {
+    await supabase.from('recurring_task_templates').delete().eq('id', taskId);
+    setCategories(categories.map(cat => ({
+      ...cat,
+      recurringTasks: cat.recurringTasks.filter(rt => rt.id !== taskId)
+    })));
+  };
 
   // --- NEW: Handlers for recurring task details ---
   const onUpdateRecurringTask = async (task: RecurringTaskTemplate) => {
@@ -415,11 +437,33 @@ function App() {
   };
 
   // --- Day Type Management (no change to handlers) ---
-  const handleAddDayType = async (name: string) => { /* ... no change ... */ };
-  const handleUpdateDayType = async (id: string, name: string) => { /* ... no change ... */ };
-  const handleDeleteDayType = async (id: string) => { /* ... no change ... */ };
-  const handleAddCategoryToDayType = async (dayTypeId: string, categoryId: string) => { /* ... no change ... */ };
-  const onRemoveCategoryFromDayType = async (dayTypeId: string, categoryId: string) => { /* ... no change ... */ };
+  const handleAddDayType = async (name: string) => {
+    const { data, error } = await supabase.from('day_types').insert({ name, id: crypto.randomUUID() }).select().single();
+    if (error) throw error;
+    setDayTypes([...dayTypes, { ...data, categoryIds: [] }]);
+  };
+  const handleUpdateDayType = async (id: string, name: string) => {
+    await supabase.from('day_types').update({ name }).eq('id', id);
+    setDayTypes(dayTypes.map(dt => dt.id === id ? { ...dt, name } : dt));
+  };
+  const handleDeleteDayType = async (id: string) => {
+    await supabase.from('day_types').delete().eq('id', id);
+    setDayTypes(dayTypes.filter(dt => dt.id !== id));
+  };
+  const handleAddCategoryToDayType = async (dayTypeId: string, categoryId: string) => {
+    await supabase.from('day_type_categories').insert({ day_type_id: dayTypeId, category_id: categoryId });
+    setDayTypes(dayTypes.map(dt =>
+      dt.id === dayTypeId ? { ...dt, categoryIds: [...dt.categoryIds, categoryId] } : dt
+    ));
+  };
+  const onRemoveCategoryFromDayType = async (dayTypeId: string, categoryId: string) => {
+    await supabase.from('day_type_categories').delete()
+      .eq('day_type_id', dayTypeId)
+      .eq('category_id', categoryId);
+    setDayTypes(dayTypes.map(dt =>
+      dt.id === dayTypeId ? { ...dt, categoryIds: dt.categoryIds.filter(cId => cId !== categoryId) } : dt
+    ));
+  };
 
   // --- MODIFIED: Hierarchical Progress Calculation ---
   const completionPercentage = useMemo(() => {
@@ -435,6 +479,7 @@ function App() {
         return acc + (task.completed ? progressPerParent : 0);
       } else {
         // Has subtasks: progress is based on subtasks
+        if (task.subtasks.length === 0) return acc; // Avoid division by zero
         const progressPerSubtask = progressPerParent / task.subtasks.length;
         const completedSubtasks = task.subtasks.filter(st => st.completed).length;
         return acc + (completedSubtasks * progressPerSubtask);
@@ -447,22 +492,63 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 font-sans p-4 sm:p-6 lg:p-8">
       <div className="max-w-3xl mx-auto">
-        {/* ... (Header, DateNavigator, Day Type Selector - no change) ... */}
         
-        <TaskList
-          tasks={currentDailyLog.tasks}
+        {/* === THIS IS THE PART THAT WAS MISSING === */}
+        <Header completionPercentage={completionPercentage} selectedDate={selectedDate} />
+        <DateNavigator selectedDate={selectedDate} onDateChange={setSelectedDate} />
+        
+        <main>
+          {/* === THIS IS THE OTHER PART THAT WAS MISSING === */}
+          <div className="p-6 bg-gray-800 rounded-lg shadow-lg mb-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <label htmlFor="day-type" className="block mb-2 text-sm font-medium text-gray-300">Select Day's Focus</label>
+                <select
+                  id="day-type"
+                  value={currentDailyLog.dayTypeId || ''}
+                  onChange={(e) => handleSelectDayType(e.target.value)}
+                  className="bg-gray-700 border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"
+                >
+                  <option value="" disabled>Choose a day type...</option>
+                  {dayTypes.map(dt => <option key={dt.id} value={dt.id}>{dt.name}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mt-2 sm:mt-6 items-end">
+                 <button onClick={() => setDayTypeManagerOpen(true)} className="flex items-center gap-2 text-sm text-indigo-300 hover:text-indigo-200">
+                   <EditIcon className="w-4 h-4" /> Manage Day Types
+                </button>
+                 <button onClick={() => setCategoryManagerOpen(true)} className="flex items-center gap-2 text-sm text-indigo-300 hover:text-indigo-200">
+                   <SettingsIcon className="w-4 h-4" /> Manage Categories
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <TaskList
+            tasks={currentDailyLog.tasks}
+            categories={categories}
+            onToggleTask={handleToggleTask}
+            onDeleteTask={handleDeleteTask}
+            // NEW: Pass subtask handlers
+            onToggleSubtask={handleToggleSubtask}
+            onDeleteSubtask={handleDeleteSubtask}
+            onAddSubtask={handleAddSubtask}
+          />
+          <AddTaskForm categories={categories} onAddTask={handleAddTask} />
+        
+        </main>
+        
+        <DayTypeManager
+          isOpen={isDayTypeManagerOpen}
+          onClose={() => setDayTypeManagerOpen(false)}
+          dayTypes={dayTypes}
           categories={categories}
-          onToggleTask={handleToggleTask}
-          onDeleteTask={handleDeleteTask}
-          // NEW: Pass subtask handlers
-          onToggleSubtask={handleToggleSubtask}
-          onDeleteSubtask={handleDeleteSubtask}
-          onAddSubtask={handleAddSubtask}
+          onAddDayType={handleAddDayType}
+          onUpdateDayType={handleUpdateDayType}
+          onDeleteDayType={handleDeleteDayType}
+          onAddCategoryToDayType={handleAddCategoryToDayType}
+          onRemoveCategoryFromDayType={onRemoveCategoryFromDayType}
         />
-        <AddTaskForm categories={categories} onAddTask={handleAddTask} />
-        
-        {/* ... (DayTypeManager - no change) ... */}
-
         <CategoryManager
           isOpen={isCategoryManagerOpen}
           onClose={() => setCategoryManagerOpen(false)}
