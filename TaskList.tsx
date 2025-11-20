@@ -1,29 +1,42 @@
-// abdulqadirrhuss/intell-planner/Intell-planner-e4eec65ae3452797ce24afb321a4c1a7a0f5cce3/TaskList.tsx
-
-import React, { useState } from 'react';
-import { Task, Category, Subtask } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import { Task, Category } from '../types';
 import { TrashIcon, PlusIcon, EditIcon, CheckIcon } from './icons';
 
-// NEW: Icon for recurring indicator
-const RecurringIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
+// --- Icons ---
+
+// Icon for the drag handle (six dots)
+const DragHandleIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
   </svg>
 );
 
-// --- SubtaskItem Component ---
+// Icon for the dropdown arrow (chevron)
+const ChevronDownIcon = ({ className = "w-4 h-4", isOpen }: { className?: string, isOpen: boolean }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    fill="none" 
+    viewBox="0 0 24 24" 
+    strokeWidth={1.5} 
+    stroke="currentColor" 
+    className={`${className} transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+  </svg>
+);
+
+// --- Components ---
+
+// 1. Subtask Item Component
 interface SubtaskItemProps {
   task: Task;
-  subtask: Subtask;
+  subtask: any; // Using 'any' briefly to match your types, or import Subtask type
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
   onDeleteSubtask: (subtaskId: string) => void;
   onUpdateSubtaskText: (taskId: string, subtaskId: string, newText: string) => void;
-  onToggleSubtaskRecurring: (taskId: string, subtaskId: string) => void;
 }
 
-const SubtaskItem: React.FC<SubtaskItemProps> = ({ 
-  task, subtask, onToggleSubtask, onDeleteSubtask, onUpdateSubtaskText, onToggleSubtaskRecurring 
-}) => {
+const SubtaskItem: React.FC<SubtaskItemProps> = ({ task, subtask, onToggleSubtask, onDeleteSubtask, onUpdateSubtaskText }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(subtask.text);
 
@@ -35,7 +48,7 @@ const SubtaskItem: React.FC<SubtaskItemProps> = ({
   };
 
   return (
-    <div className="flex items-center pl-8 pr-3 py-2 bg-gray-900 rounded-md">
+    <div className="flex items-center pl-8 pr-3 py-2 bg-gray-900 rounded-md border border-gray-800/50">
       <input
         type="checkbox"
         checked={subtask.completed}
@@ -50,7 +63,7 @@ const SubtaskItem: React.FC<SubtaskItemProps> = ({
           onChange={(e) => setText(e.target.value)}
           onBlur={handleUpdate}
           onKeyDown={(e) => e.key === 'Enter' && handleUpdate()}
-          className="ml-3 flex-1 text-sm bg-gray-700 text-white rounded p-0.5"
+          className="ml-3 flex-1 text-sm bg-gray-700 text-white rounded p-0.5 border border-indigo-500"
           autoFocus
         />
       ) : (
@@ -59,29 +72,17 @@ const SubtaskItem: React.FC<SubtaskItemProps> = ({
         </span>
       )}
 
-      {/* NEW: Recurring toggle button */}
-      <button 
-        onClick={() => onToggleSubtaskRecurring(task.id, subtask.id)}
-        className={`ml-2 ${subtask.isRecurring ? 'text-indigo-400' : 'text-gray-600'} hover:text-indigo-300`}
-        title={subtask.isRecurring ? "Recurring subtask" : "Make recurring"}
-      >
-        <RecurringIcon className="w-4 h-4" />
-      </button>
-
       {isEditing ? (
         <button onClick={handleUpdate} className="ml-2 text-green-400 hover:text-green-300"><CheckIcon className="w-4 h-4"/></button>
       ) : (
-        <button onClick={() => setIsEditing(true)} className="ml-2 text-gray-500 hover:text-white"><EditIcon className="w-4 h-4"/></button>
+        <button onClick={() => setIsEditing(true)} className="ml-2 text-gray-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"><EditIcon className="w-3 h-3"/></button>
       )}
-      <button onClick={() => onDeleteSubtask(subtask.id)} className="text-gray-600 hover:text-red-500 transition-colors">
-        <TrashIcon className="w-4 h-4" />
-      </button>
+      <button onClick={() => onDeleteSubtask(subtask.id)} className="ml-2 text-gray-600 hover:text-red-500 transition-colors"><TrashIcon className="w-3 h-3" /></button>
     </div>
   );
 };
 
-
-// --- TaskItem Component ---
+// 2. Task Item Component
 interface TaskItemProps {
   task: Task;
   categoryColor: string;
@@ -92,19 +93,18 @@ interface TaskItemProps {
   onAddSubtask: (taskId: string, text: string) => void;
   onUpdateTaskText: (taskId: string, newText: string) => void;
   onUpdateSubtaskText: (taskId: string, subtaskId: string, newText: string) => void;
-  onToggleSubtaskRecurring: (taskId: string, subtaskId: string) => void;
 }
 
 const TaskItem: React.FC<TaskItemProps> = ({ 
   task, categoryColor, onToggleTask, onDeleteTask, 
   onToggleSubtask, onDeleteSubtask, onAddSubtask,
-  onUpdateTaskText, onUpdateSubtaskText, onToggleSubtaskRecurring
+  onUpdateTaskText, onUpdateSubtaskText
 }) => {
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(task.text);
 
-  const hasSubtasks = task.subtasks.length > 0;
+  const hasSubtasks = task.subtasks && task.subtasks.length > 0;
 
   const handleAddSubtask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,7 +122,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
   };
 
   return (
-    <div className={`p-3 bg-gray-800 rounded-lg mb-2 border-l-4`} style={{ borderColor: categoryColor }}>
+    <div className={`group p-3 bg-gray-800 rounded-lg mb-2 border-l-4 shadow-sm transition-all hover:shadow-md`} style={{ borderColor: categoryColor }}>
       {/* Parent Task Row */}
       <div className="flex items-center">
         <input
@@ -130,7 +130,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
           checked={task.completed}
           disabled={hasSubtasks}
           onChange={() => onToggleTask(task.id)}
-          className={`w-5 h-5 text-indigo-500 bg-gray-700 border-gray-600 rounded focus:ring-indigo-600 ring-offset-gray-800 focus:ring-2 ${hasSubtasks ? 'opacity-70 cursor-not-allowed' : ''}`}
+          className={`w-5 h-5 text-indigo-500 bg-gray-700 border-gray-600 rounded focus:ring-indigo-600 ring-offset-gray-800 focus:ring-2 ${hasSubtasks ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
         />
         
         {isEditing ? (
@@ -140,30 +140,32 @@ const TaskItem: React.FC<TaskItemProps> = ({
             onChange={(e) => setText(e.target.value)}
             onBlur={handleUpdate}
             onKeyDown={(e) => e.key === 'Enter' && handleUpdate()}
-            className="ml-4 flex-1 bg-gray-700 text-white rounded p-0.5"
+            className="ml-4 flex-1 bg-gray-700 text-white rounded p-1 border border-indigo-500"
             autoFocus
           />
         ) : (
-          <span className={`ml-4 flex-1 ${task.completed ? 'line-through text-gray-500' : 'text-gray-100'}`}>
+          <span className={`ml-4 flex-1 font-medium ${task.completed ? 'line-through text-gray-500' : 'text-gray-100'}`}>
             {task.text}
           </span>
         )}
         
-        {task.isRecurring && <span className="text-xs bg-gray-700 text-indigo-300 px-2 py-1 rounded-full mr-3">Recurring</span>}
+        {task.isRecurring && <span className="text-xs bg-gray-700 text-indigo-300 px-2 py-1 rounded-full mr-3 border border-gray-600">Recurring</span>}
         
-        {isEditing ? (
-          <button onClick={handleUpdate} className="ml-2 text-green-400 hover:text-green-300"><CheckIcon className="w-5 h-5"/></button>
-        ) : (
-          <button onClick={() => setIsEditing(true)} className="ml-2 text-gray-500 hover:text-white"><EditIcon className="w-5 h-5"/></button>
-        )}
-        <button onClick={() => onDeleteTask(task.id)} className="text-gray-500 hover:text-red-500 transition-colors">
-          <TrashIcon className="w-5 h-5" />
-        </button>
+        <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+           {isEditing ? (
+            <button onClick={handleUpdate} className="ml-2 text-green-400 hover:text-green-300"><CheckIcon className="w-5 h-5"/></button>
+          ) : (
+            <button onClick={() => setIsEditing(true)} className="ml-2 text-gray-500 hover:text-white"><EditIcon className="w-4 h-4"/></button>
+          )}
+          <button onClick={() => onDeleteTask(task.id)} className="ml-2 text-gray-500 hover:text-red-500 transition-colors">
+            <TrashIcon className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Subtask List */}
       <div className="mt-2 space-y-1">
-        {task.subtasks.map(subtask => (
+        {task.subtasks && task.subtasks.map(subtask => (
           <SubtaskItem 
             key={subtask.id}
             task={task}
@@ -171,29 +173,28 @@ const TaskItem: React.FC<TaskItemProps> = ({
             onToggleSubtask={onToggleSubtask}
             onDeleteSubtask={onDeleteSubtask}
             onUpdateSubtaskText={onUpdateSubtaskText}
-            onToggleSubtaskRecurring={onToggleSubtaskRecurring}
           />
         ))}
       </div>
 
-      {/* Add Subtask Form */}
-      <form onSubmit={handleAddSubtask} className="flex gap-2 items-center mt-2 pl-8">
-        <input
-          type="text"
-          value={newSubtaskText}
-          onChange={(e) => setNewSubtaskText(e.target.value)}
-          placeholder="Add a subtask..."
-          className="flex-grow bg-gray-700 border-gray-600 text-white placeholder-gray-500 text-sm rounded-md focus:ring-indigo-500 focus:border-indigo-500 block w-full p-1.5"
-        />
-        <button type="submit" className="p-1.5 text-white bg-indigo-600 hover:bg-indigo-700 rounded-md">
-          <PlusIcon className="w-4 h-4" />
-        </button>
-      </form>
+      {/* Add Subtask Form - Only show if not completed */}
+      {!task.completed && (
+        <form onSubmit={handleAddSubtask} className="flex gap-2 items-center mt-3 pl-9 opacity-50 hover:opacity-100 transition-opacity">
+          <PlusIcon className="w-4 h-4 text-gray-500" />
+          <input
+            type="text"
+            value={newSubtaskText}
+            onChange={(e) => setNewSubtaskText(e.target.value)}
+            placeholder="Add subtask..."
+            className="flex-grow bg-transparent border-none text-gray-400 text-sm placeholder-gray-600 focus:ring-0 focus:text-white p-0"
+          />
+        </form>
+      )}
     </div>
   );
 };
 
-// --- TaskList Component ---
+// --- Main TaskList Component ---
 interface TaskListProps {
   tasks: Task[];
   categories: Category[];
@@ -204,7 +205,6 @@ interface TaskListProps {
   onAddSubtask: (taskId: string, text: string) => void;
   onUpdateTaskText: (taskId: string, newText: string) => void;
   onUpdateSubtaskText: (taskId: string, subtaskId: string, newText: string) => void;
-  onToggleSubtaskRecurring: (taskId: string, subtaskId: string) => void;
 }
 
 const calculateProgress = (tasks: Task[]): number => {
@@ -214,7 +214,7 @@ const calculateProgress = (tasks: Task[]): number => {
   const progressPerParent = 100 / totalParentTasks;
 
   const totalProgress = tasks.reduce((acc, task) => {
-    if (task.subtasks.length === 0) {
+    if (!task.subtasks || task.subtasks.length === 0) {
       return acc + (task.completed ? progressPerParent : 0);
     } else {
       const progressPerSubtask = progressPerParent / task.subtasks.length;
@@ -229,94 +229,188 @@ const calculateProgress = (tasks: Task[]): number => {
 const TaskList: React.FC<TaskListProps> = ({ 
   tasks, categories, onToggleTask, onDeleteTask,
   onToggleSubtask, onDeleteSubtask, onAddSubtask,
-  onUpdateTaskText, onUpdateSubtaskText, onToggleSubtaskRecurring
+  onUpdateTaskText, onUpdateSubtaskText
 }) => {
+  // Local state for collapsing categories (headers)
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
+  // Local state for expanding the "Completed" dropdowns
+  const [expandedCompletedSections, setExpandedCompletedSections] = useState<Record<string, boolean>>({});
+  
+  // Local state for drag and drop ordering of categories
+  const [orderedCategories, setOrderedCategories] = useState<Category[]>([]);
 
+  // Sync local orderedCategories with incoming categories prop on load/change
+  useEffect(() => {
+    // If we already have an order, try to preserve it. If new cats appear, append them.
+    if (orderedCategories.length === 0) {
+      setOrderedCategories(categories);
+    } else {
+      const newCats = categories.filter(c => !orderedCategories.find(oc => oc.id === c.id));
+      const existingCats = orderedCategories.filter(oc => categories.find(c => c.id === oc.id));
+      // Update existing cats with new data (like name/color changes) while keeping order
+      const updatedExisting = existingCats.map(oc => categories.find(c => c.id === oc.id)!);
+      setOrderedCategories([...updatedExisting, ...newCats]);
+    }
+  }, [categories]);
+
+  // Group tasks by category
   const groupedTasks = tasks.reduce<Record<string, Task[]>>((acc, task) => {
     const categoryId = task.categoryId;
     (acc[categoryId] = acc[categoryId] || []).push(task);
     return acc;
   }, {});
 
-  const categoryMap = new Map(categories.map(cat => [cat.id, cat]));
-
   const uncategorizedTasks = groupedTasks['uncategorized'] || [];
-  delete groupedTasks['uncategorized'];
+
+  // Drag and Drop Handlers
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+
+  const handleSort = () => {
+    if (dragItem.current === null || dragOverItem.current === null) return;
+    
+    const _categories = [...orderedCategories];
+    const draggedItemContent = _categories.splice(dragItem.current, 1)[0];
+    _categories.splice(dragOverItem.current, 0, draggedItemContent);
+
+    dragItem.current = null;
+    dragOverItem.current = null;
+    setOrderedCategories(_categories);
+  };
+
+  const toggleCategory = (categoryId: string) => {
+    setCollapsedCategories(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
+  };
+
+  const toggleCompletedSection = (categoryId: string) => {
+    setExpandedCompletedSections(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
+  };
 
   if (tasks.length === 0) {
     return (
-        <div className="text-center py-12 px-6 bg-gray-800 rounded-lg">
+        <div className="text-center py-12 px-6 bg-gray-800 rounded-lg border border-gray-700">
             <h3 className="text-xl font-semibold text-gray-300">No tasks for this day!</h3>
             <p className="text-gray-500 mt-2">Select a Day Type or add a new task to get started.</p>
         </div>
     );
   }
 
-  const toggleCategory = (categoryId: string) => {
-    setCollapsedCategories(prev => ({
-      ...prev,
-      [categoryId]: !prev[categoryId]
-    }));
-  };
-
   return (
     <div className="space-y-6">
-      {Object.entries(groupedTasks).map(([categoryId, tasksInCategory]) => {
-        const category = categoryMap.get(categoryId);
-        if (!category) return null;
+      {orderedCategories.filter(c => c.id !== 'uncategorized').map((category, index) => {
+        const tasksInCategory = groupedTasks[category.id] || [];
+        if (tasksInCategory.length === 0) return null; // Or remove this if you want empty categories to show
 
         const categoryProgress = calculateProgress(tasksInCategory);
-        const isCollapsed = collapsedCategories[categoryId];
+        const isCollapsed = collapsedCategories[category.id];
+        
+        // Split active and completed tasks
+        const activeTasks = tasksInCategory.filter(t => !t.completed);
+        const completedTasks = tasksInCategory.filter(t => t.completed);
 
         return (
-          <div key={categoryId}>
-            <button
-              onClick={() => toggleCategory(categoryId)}
-              className="w-full flex justify-between items-center mb-3 cursor-pointer group"
-            >
-              <div className="flex items-center">
-                <h2 className="text-xl font-bold" style={{ color: category.color }}>
+          <div 
+            key={category.id}
+            draggable
+            onDragStart={(e) => { dragItem.current = index; e.currentTarget.classList.add('opacity-50'); }}
+            onDragEnter={(e) => { dragOverItem.current = index; }}
+            onDragEnd={(e) => { handleSort(); e.currentTarget.classList.remove('opacity-50'); }}
+            onDragOver={(e) => e.preventDefault()}
+            className="transition-all duration-200 ease-in-out"
+          >
+            {/* Category Header with Drag Handle */}
+            <div className="flex items-center justify-between mb-2 group">
+              <div className="flex items-center flex-grow cursor-pointer" onClick={() => toggleCategory(category.id)}>
+                <div className="mr-2 cursor-grab active:cursor-grabbing text-gray-600 hover:text-gray-400" onClick={(e) => e.stopPropagation()}>
+                  <DragHandleIcon />
+                </div>
+                <h2 className="text-xl font-bold flex items-center" style={{ color: category.color }}>
                   {category.name}
                 </h2>
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" 
-                  className={`w-5 h-5 ml-2 transition-transform ${isCollapsed ? '-rotate-90' : 'rotate-0'}`}
-                  style={{ color: category.color }}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                </svg>
+                <div className={`ml-2 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`}>
+                    <ChevronDownIcon isOpen={!isCollapsed} className="w-4 h-4 text-gray-500" />
+                </div>
               </div>
-              <span className="text-sm font-medium" style={{ color: category.color }}>{categoryProgress}%</span>
-            </button>
+              <span className="text-sm font-medium px-2 py-1 bg-gray-800 rounded-full" style={{ color: category.color }}>{categoryProgress}%</span>
+            </div>
             
-            <div className="w-full bg-gray-700 rounded-full h-1.5 mb-3">
+            {/* Progress Bar */}
+            <div className="w-full bg-gray-800 rounded-full h-1.5 mb-4 overflow-hidden">
               <div
-                className="h-1.5 rounded-full transition-all duration-300"
+                className="h-1.5 rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${categoryProgress}%`, backgroundColor: category.color }}
               ></div>
             </div>
 
-            {!isCollapsed && tasksInCategory.map(task => (
-              <TaskItem
-                key={task.id}
-                task={task}
-                categoryColor={category.color}
-                onToggleTask={onToggleTask}
-                onDeleteTask={onDeleteTask}
-                onToggleSubtask={onToggleSubtask}
-                onDeleteSubtask={onDeleteSubtask}
-                onAddSubtask={onAddSubtask}
-                onUpdateTaskText={onUpdateTaskText}
-                onUpdateSubtaskText={onUpdateSubtaskText}
-                onToggleSubtaskRecurring={onToggleSubtaskRecurring}
-              />
-            ))}
+            {/* Tasks Area */}
+            {!isCollapsed && (
+              <div className="space-y-3 transition-all duration-300 ease-in-out">
+                
+                {/* Active Tasks */}
+                {activeTasks.map(task => (
+                  <TaskItem
+                    key={task.id}
+                    task={task}
+                    categoryColor={category.color}
+                    onToggleTask={onToggleTask}
+                    onDeleteTask={onDeleteTask}
+                    onToggleSubtask={onToggleSubtask}
+                    onDeleteSubtask={onDeleteSubtask}
+                    onAddSubtask={onAddSubtask}
+                    onUpdateTaskText={onUpdateTaskText}
+                    onUpdateSubtaskText={onUpdateSubtaskText}
+                  />
+                ))}
+
+                {/* Completed Tasks Dropdown */}
+                {completedTasks.length > 0 && (
+                  <div className="mt-4">
+                    <button 
+                      onClick={() => toggleCompletedSection(category.id)}
+                      className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300 mb-2 transition-colors"
+                    >
+                      <ChevronDownIcon isOpen={!!expandedCompletedSections[category.id]} className="w-3 h-3" />
+                      Completed ({completedTasks.length})
+                    </button>
+                    
+                    {expandedCompletedSections[category.id] && (
+                      <div className="space-y-2 pl-2 border-l-2 border-gray-800">
+                        {completedTasks.map(task => (
+                          <TaskItem
+                            key={task.id}
+                            task={task}
+                            categoryColor="#374151" // Gray color for completed items
+                            onToggleTask={onToggleTask}
+                            onDeleteTask={onDeleteTask}
+                            onToggleSubtask={onToggleSubtask}
+                            onDeleteSubtask={onDeleteSubtask}
+                            onAddSubtask={onAddSubtask}
+                            onUpdateTaskText={onUpdateTaskText}
+                            onUpdateSubtaskText={onUpdateSubtaskText}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTasks.length === 0 && completedTasks.length === 0 && (
+                    <p className="text-sm text-gray-600 italic ml-8">No tasks in this category.</p>
+                )}
+              </div>
+            )}
           </div>
         );
       })}
+
+       {/* Uncategorized Tasks */}
        {uncategorizedTasks.length > 0 && (
-         <div>
-            <h2 className="text-xl font-bold text-gray-400 mb-3">Uncategorized</h2>
+         <div className="mt-8 pt-6 border-t border-gray-800">
+            <h2 className="text-xl font-bold text-gray-400 mb-3 flex items-center gap-2">
+                Uncategorized
+                <span className="text-xs bg-gray-800 px-2 py-1 rounded-full">{uncategorizedTasks.length}</span>
+            </h2>
+            <div className="space-y-3">
             {uncategorizedTasks.map(task => (
               <TaskItem
                 key={task.id}
@@ -329,9 +423,9 @@ const TaskList: React.FC<TaskListProps> = ({
                 onAddSubtask={onAddSubtask}
                 onUpdateTaskText={onUpdateTaskText}
                 onUpdateSubtaskText={onUpdateSubtaskText}
-                onToggleSubtaskRecurring={onToggleSubtaskRecurring}
               />
             ))}
+            </div>
           </div>
       )}
     </div>
