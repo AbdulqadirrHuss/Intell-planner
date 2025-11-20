@@ -251,19 +251,22 @@ const TaskList: React.FC<TaskListProps> = ({
   onToggleSubtask, onDeleteSubtask, onAddSubtask,
   onUpdateTaskText, onUpdateSubtaskText, onToggleSubtaskRecurring
 }) => {
-  // Local state for collapsing categories (headers)
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
-  // Local state for expanding the "Completed" dropdowns
   const [expandedCompletedSections, setExpandedCompletedSections] = useState<Record<string, boolean>>({});
-  
-  // Local state for drag and drop ordering of categories
   const [orderedCategories, setOrderedCategories] = useState<Category[]>([]);
+  const [forcedVisibleCategories, setForcedVisibleCategories] = useState<string[]>([]);
+  const [isAddCatDropdownOpen, setIsAddCatDropdownOpen] = useState(false);
 
-  // Sync local orderedCategories with incoming categories prop on load/change
+  // Drag and Drop State
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
   useEffect(() => {
     if (orderedCategories.length === 0) {
       setOrderedCategories(categories);
     } else {
+      // Maintain order but add new/update existing
       const newCats = categories.filter(c => !orderedCategories.find(oc => oc.id === c.id));
       const existingCats = orderedCategories.filter(oc => categories.find(c => c.id === oc.id));
       const updatedExisting = existingCats.map(oc => categories.find(c => c.id === oc.id)!);
@@ -279,13 +282,26 @@ const TaskList: React.FC<TaskListProps> = ({
 
   const uncategorizedTasks = groupedTasks['uncategorized'] || [];
 
-  // Drag and Drop Handlers
-  const dragItem = useRef<number | null>(null);
-  const dragOverItem = useRef<number | null>(null);
+  // --- Drag and Drop Handlers ---
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    dragItem.current = index;
+    setIsDragging(true);
+    // Create a ghost image or just rely on styling
+    e.currentTarget.classList.add('opacity-50');
+  };
 
-  const handleSort = () => {
-    if (dragItem.current === null || dragOverItem.current === null) return;
+  const handleDragEnter = (e: React.DragEvent, index: number) => {
+    dragOverItem.current = index;
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setIsDragging(false);
+    e.currentTarget.classList.remove('opacity-50');
     
+    if (dragItem.current === null || dragOverItem.current === null || dragItem.current === dragOverItem.current) {
+      return;
+    }
+
     const _categories = [...orderedCategories];
     const draggedItemContent = _categories.splice(dragItem.current, 1)[0];
     _categories.splice(dragOverItem.current, 0, draggedItemContent);
@@ -303,20 +319,52 @@ const TaskList: React.FC<TaskListProps> = ({
     setExpandedCompletedSections(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
   };
 
-  if (tasks.length === 0) {
+  const addCategoryToView = (categoryId: string) => {
+    if (!forcedVisibleCategories.includes(categoryId)) {
+      setForcedVisibleCategories(prev => [...prev, categoryId]);
+    }
+    setIsAddCatDropdownOpen(false);
+  };
+
+  if (tasks.length === 0 && forcedVisibleCategories.length === 0) {
     return (
         <div className="text-center py-12 px-6 bg-gray-800 rounded-lg border border-gray-700 shadow-lg">
             <h3 className="text-xl font-semibold text-gray-300">No tasks for this day!</h3>
             <p className="text-gray-500 mt-2">Select a Day Type or add a new task to get started.</p>
+            {/* Allow adding a category even when empty */}
+            <div className="mt-6">
+              <button onClick={() => setIsAddCatDropdownOpen(!isAddCatDropdownOpen)} className="text-indigo-400 hover:text-indigo-300 text-sm font-medium flex items-center justify-center gap-1 mx-auto">
+                <PlusIcon className="w-4 h-4" /> Add Category to Day
+              </button>
+               {isAddCatDropdownOpen && (
+                  <div className="mt-2 w-64 mx-auto bg-gray-700 rounded-lg shadow-xl border border-gray-600 z-10 overflow-hidden text-left">
+                    {categories.filter(c => c.id !== 'uncategorized').map(cat => (
+                      <div key={cat.id} onClick={() => addCategoryToView(cat.id)} className="px-4 py-2 hover:bg-gray-600 cursor-pointer text-sm text-gray-200">
+                        {cat.name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+            </div>
         </div>
     );
   }
 
+  // Get list of hidden categories for the dropdown
+  const hiddenCategories = categories.filter(c => 
+    c.id !== 'uncategorized' && 
+    (!groupedTasks[c.id] || groupedTasks[c.id].length === 0) &&
+    !forcedVisibleCategories.includes(c.id)
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24">
       {orderedCategories.filter(c => c.id !== 'uncategorized').map((category, index) => {
         const tasksInCategory = groupedTasks[category.id] || [];
-        if (tasksInCategory.length === 0) return null; 
+        
+        // Logic: Show if it has tasks OR if user manually added it
+        const isVisible = tasksInCategory.length > 0 || forcedVisibleCategories.includes(category.id);
+        if (!isVisible) return null;
 
         const categoryProgress = calculateProgress(tasksInCategory);
         const isCollapsed = collapsedCategories[category.id];
@@ -328,19 +376,19 @@ const TaskList: React.FC<TaskListProps> = ({
           <div 
             key={category.id}
             draggable
-            onDragStart={(e) => { dragItem.current = index; e.currentTarget.classList.add('opacity-50'); }}
-            onDragEnter={(e) => { dragOverItem.current = index; }}
-            onDragEnd={(e) => { handleSort(); e.currentTarget.classList.remove('opacity-50'); }}
-            onDragOver={(e) => e.preventDefault()}
-            className="transition-all duration-200 ease-in-out"
+            onDragStart={(e) => handleDragStart(e, index)}
+            onDragEnter={(e) => handleDragEnter(e, index)}
+            onDragEnd={handleDragEnd}
+            onDragOver={(e) => e.preventDefault()} // Necessary for drop
+            className={`transition-all duration-300 ease-in-out ${isDragging ? 'cursor-grabbing' : ''}`}
           >
-            {/* Category Header with Drag Handle */}
+            {/* Category Header */}
             <div className="flex items-center justify-between mb-3 group select-none">
               <div className="flex items-center flex-grow cursor-pointer" onClick={() => toggleCategory(category.id)}>
-                <div className="mr-3 cursor-grab active:cursor-grabbing text-gray-600 hover:text-gray-400 p-1 rounded hover:bg-gray-800 transition-colors" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => {
-                    // Only allow drag start from handle
-                    e.currentTarget.closest('[draggable]')?.setAttribute('draggable', 'true');
-                }}>
+                <div 
+                  className="mr-3 cursor-grab active:cursor-grabbing text-gray-600 hover:text-gray-400 p-1 rounded hover:bg-gray-800 transition-colors" 
+                  onMouseDown={(e) => e.stopPropagation()} // Prevent click propagation
+                >
                   <DragHandleIcon />
                 </div>
                 <h2 className="text-xl font-bold flex items-center" style={{ color: category.color }}>
@@ -350,7 +398,7 @@ const TaskList: React.FC<TaskListProps> = ({
                     <ChevronDownIcon isOpen={!isCollapsed} className="w-4 h-4 text-gray-500" />
                 </div>
               </div>
-              <span className="text-xs font-bold px-2.5 py-1 bg-gray-800 rounded-full border border-gray-700" style={{ color: category.color }}>{categoryProgress}%</span>
+              <span className="text-xs font-bold px-2.5 py-1 bg-gray-800 rounded-full border border-gray-700" style={{ color: category.color }}>{Math.round(categoryProgress)}%</span>
             </div>
             
             {/* Progress Bar */}
@@ -384,6 +432,13 @@ const TaskList: React.FC<TaskListProps> = ({
                   ))}
                 </div>
 
+                {/* Empty State for Manually Added Category */}
+                {activeTasks.length === 0 && completedTasks.length === 0 && (
+                    <div className="text-sm text-gray-500 italic ml-4 py-4 border-2 border-dashed border-gray-800 rounded-lg text-center">
+                        No tasks yet. Add a task below or drag one here.
+                    </div>
+                )}
+
                 {/* Completed Tasks Dropdown */}
                 {completedTasks.length > 0 && (
                   <div className="mt-6">
@@ -401,7 +456,7 @@ const TaskList: React.FC<TaskListProps> = ({
                           <TaskItem
                             key={task.id}
                             task={task}
-                            categoryColor="#4b5563" // Muted gray for completed
+                            categoryColor="#4b5563" // Muted gray
                             onToggleTask={onToggleTask}
                             onDeleteTask={onDeleteTask}
                             onToggleSubtask={onToggleSubtask}
@@ -415,10 +470,6 @@ const TaskList: React.FC<TaskListProps> = ({
                       </div>
                     )}
                   </div>
-                )}
-
-                {activeTasks.length === 0 && completedTasks.length === 0 && (
-                    <p className="text-sm text-gray-600 italic ml-4 py-2">No tasks in this category.</p>
                 )}
               </div>
             )}
@@ -451,6 +502,39 @@ const TaskList: React.FC<TaskListProps> = ({
             ))}
             </div>
           </div>
+      )}
+
+      {/* Add Category Button (Floating at bottom or inline) */}
+      {hiddenCategories.length > 0 && (
+         <div className="mt-8 flex justify-center">
+            <div className="relative">
+                <button 
+                  onClick={() => setIsAddCatDropdownOpen(!isAddCatDropdownOpen)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-full text-sm font-medium text-gray-300 transition-colors border border-gray-700 shadow-sm"
+                >
+                  <PlusIcon className="w-4 h-4" /> Add Category to View
+                </button>
+                
+                {isAddCatDropdownOpen && (
+                  <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-56 bg-gray-800 rounded-lg shadow-xl border border-gray-700 overflow-hidden z-20">
+                    <div className="py-1">
+                      {hiddenCategories.map(cat => (
+                        <button
+                          key={cat.id}
+                          onClick={() => addCategoryToView(cat.id)}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }}></span>
+                             {cat.name}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+            </div>
+         </div>
       )}
     </div>
   );
