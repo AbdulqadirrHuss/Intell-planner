@@ -27,7 +27,7 @@ interface SupabaseRecurringTask extends Omit<RecurringTaskTemplate, 'categoryId'
   days_of_week: number[];
 }
 interface SupabaseRecurringSubtaskTemplate extends Omit<RecurringTaskTemplate, 'parent_template_id'> { parent_template_id: string; }
-interface SupabaseDayTypeCategoryLink { day_type_id: string; category_id: string; }
+interface SupabaseDayTypeCategoryLink { day_type_id: string; category_id: string; sort_order: number; }
 
 function App() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -72,7 +72,12 @@ function App() {
         const { data: dtData, error: dtError } = await supabase.from('day_types').select('*');
         if (dtError) throw dtError;
         
-        const { data: linksData, error: linksError } = await supabase.from('day_type_categories').select('*');
+        // Fetch links ordered by sort_order
+        const { data: linksData, error: linksError } = await supabase
+          .from('day_type_categories')
+          .select('*')
+          .order('sort_order', { ascending: true });
+          
         if (linksError) throw linksError;
 
         const formattedDayTypes: DayType[] = dtData.map(dt => ({
@@ -130,7 +135,7 @@ function App() {
        await supabase.from('daily_logs').update({ day_type_id: dayTypeId }).eq('date', date);
        setDailyLogs(prev => ({
          ...prev,
-         [date]: { ...log, dayTypeId: dayTypeId, tasks: nonRecurringTasks }
+         [date]: { ...prev[date], dayTypeId: dayTypeId, tasks: nonRecurringTasks }
        }));
        return;
     }
@@ -184,10 +189,9 @@ function App() {
         tasks: [...nonRecurringTasks, ...newTasks]
       }
     }));
-  }, [categories, dayTypes, dailyLogs]); 
+  }, [categories, dayTypes]);
 
 
-  // --- Daily Log Loading ---
   const fetchDailyLog = useCallback(async (date: string) => {
     if (!isDataLoaded) { 
       setTimeout(() => fetchDailyLog(date), 100);
@@ -239,9 +243,41 @@ function App() {
     return dailyLogs[selectedDate] || { date: selectedDate, dayTypeId: null, tasks: [] };
   }, [dailyLogs, selectedDate]);
   
-  // Handler for the dropdown menu
   const handleSelectDayTypeFromDropdown = (dayTypeId: string) => {
     regenerateTasks(dayTypeId, selectedDate);
+  };
+
+  // --- Reorder Handler (NEW) ---
+  const handleReorderCategories = async (newOrderIds: string[]) => {
+    const currentLog = dailyLogs[selectedDate];
+    // Only save to DB if a Day Type is active
+    if (currentLog && currentLog.dayTypeId) {
+        const dayTypeId = currentLog.dayTypeId;
+        
+        // 1. Update Local State Immediately
+        setDayTypes(prev => prev.map(dt => 
+            dt.id === dayTypeId ? { ...dt, categoryIds: newOrderIds } : dt
+        ));
+
+        // 2. Update Database (Fire and forget)
+        // Only update the links for categories that belong to this day type
+        const dayType = dayTypes.find(dt => dt.id === dayTypeId);
+        if (!dayType) return;
+        
+        const updates = newOrderIds.map((catId, index) => {
+            // Only update if this category is actually linked to the day type in DB
+            if (dayType.categoryIds.includes(catId)) {
+                return supabase
+                    .from('day_type_categories')
+                    .update({ sort_order: index })
+                    .eq('day_type_id', dayTypeId)
+                    .eq('category_id', catId);
+            }
+            return null;
+        }).filter(Boolean);
+
+        await Promise.all(updates);
+    }
   };
 
   // --- Task Handlers ---
@@ -273,7 +309,7 @@ function App() {
       const taskToToggle = log.tasks.find(t => t.id === id);
 
       if (!taskToToggle || (taskToToggle.subtasks && taskToToggle.subtasks.length > 0)) {
-        return prev; 
+        return prev;
       }
       
       const newCompletedState = !taskToToggle.completed;
@@ -310,7 +346,6 @@ function App() {
     });
   };
 
-  // --- Subtask Handlers ---
   const handleAddSubtask = async (taskId: string, text: string) => {
     const { data, error } = await supabase.from('subtasks').insert({
       parent_task_id: taskId,
@@ -382,7 +417,6 @@ function App() {
           );
           
           const allSubtasksComplete = newSubtasks.every(st => st.completed);
-          parentCompletedState = t.completed; 
 
           if (allSubtasksComplete && !t.completed) {
             parentCompletedState = true;
@@ -406,7 +440,7 @@ function App() {
   };
 
 
-  // --- Category Management (All correct) ---
+  // --- Category Management ---
   const handleAddCategory = async (name: string, color: string) => {
     const { data, error } = await supabase.from('categories').insert({ name, color, id: crypto.randomUUID() }).select().single();
     if (error) throw error;
@@ -516,7 +550,7 @@ function App() {
     })));
   };
 
-  // --- Day Type Management (All correct) ---
+  // --- Day Type Management ---
   const handleAddDayType = async (name: string) => {
     const { data, error } = await supabase.from('day_types').insert({ name, id: crypto.randomUUID() }).select().single();
     if (error) throw error;
@@ -531,7 +565,15 @@ function App() {
     setDayTypes(prev => prev.filter(dt => dt.id !== id));
   };
   const handleAddCategoryToDayType = async (dayTypeId: string, categoryId: string) => {
-    await supabase.from('day_type_categories').insert({ day_type_id: dayTypeId, category_id: categoryId });
+    // Append with sort order (last + 1)
+    const dayType = dayTypes.find(dt => dt.id === dayTypeId);
+    const currentLength = dayType?.categoryIds.length || 0;
+
+    await supabase.from('day_type_categories').insert({ 
+        day_type_id: dayTypeId, 
+        category_id: categoryId,
+        sort_order: currentLength 
+    });
     setDayTypes(prev => prev.map(dt =>
       dt.id === dayTypeId ? { ...dt, categoryIds: [...dt.categoryIds, categoryId] } : dt
     ));
@@ -567,6 +609,10 @@ function App() {
     return Math.round(totalProgress);
   }, [currentDailyLog.tasks]);
 
+  // Calculate current sorted category IDs to pass to TaskList
+  const currentDayType = dayTypes.find(dt => dt.id === currentDailyLog.dayTypeId);
+  const sortedCategoryIds = currentDayType ? currentDayType.categoryIds : [];
+
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 font-sans p-4 sm:p-6 lg:p-8">
       <div className="max-w-3xl mx-auto">
@@ -600,11 +646,12 @@ function App() {
             </div>
           </div>
           
-          {/* --- FIX: Key Added Here --- */}
           <TaskList
             key={selectedDate} // Forces full reset on date change
             tasks={currentDailyLog.tasks}
             categories={categories}
+            sortedCategoryIds={sortedCategoryIds} // PASSING SORTED IDS
+            onReorderCategories={handleReorderCategories} // PASSING REORDER HANDLER
             onToggleTask={handleToggleTask}
             onDeleteTask={handleDeleteTask}
             onToggleSubtask={handleToggleSubtask}
