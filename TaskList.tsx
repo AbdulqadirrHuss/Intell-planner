@@ -1,9 +1,11 @@
+// abdulqadirrhuss/intell-planner/Intell-planner-e17ee6aedfdd27444005d6e1d8e66374118c6d5e/intelliday-planner.zip/components/TaskList.tsx
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Task, Category } from '../types';
 import { TrashIcon, PlusIcon, EditIcon, CheckIcon } from './icons';
 
 // --- Icons ---
-
+// ... (Icons same as before, keeping brevity)
 const DragHandleIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
@@ -139,7 +141,6 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
   return (
     <div className={`group p-3 bg-gray-800 rounded-lg mb-2 border-l-4 shadow-md transition-all hover:bg-gray-750`} style={{ borderColor: categoryColor }}>
-      {/* Parent Task Row */}
       <div className="flex items-center">
         <input
           type="checkbox"
@@ -179,7 +180,6 @@ const TaskItem: React.FC<TaskItemProps> = ({
         </div>
       </div>
 
-      {/* Subtask List */}
       {(task.subtasks && task.subtasks.length > 0) && (
         <div className="mt-3 space-y-1.5">
           {task.subtasks.map(subtask => (
@@ -196,7 +196,6 @@ const TaskItem: React.FC<TaskItemProps> = ({
         </div>
       )}
 
-      {/* Add Subtask Form - Only show if not completed */}
       {!task.completed && (
         <form onSubmit={handleAddSubtask} className="flex gap-2 items-center mt-3 pl-9 opacity-60 hover:opacity-100 transition-opacity duration-200">
           <PlusIcon className="w-4 h-4 text-gray-500" />
@@ -217,6 +216,8 @@ const TaskItem: React.FC<TaskItemProps> = ({
 interface TaskListProps {
   tasks: Task[];
   categories: Category[];
+  sortedCategoryIds: string[]; // NEW PROP from App.tsx
+  onReorderCategories: (newOrder: string[]) => void; // NEW PROP from App.tsx
   onToggleTask: (id: string) => void;
   onDeleteTask: (id: string) => void;
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
@@ -230,9 +231,7 @@ interface TaskListProps {
 const calculateProgress = (tasks: Task[]): number => {
   const totalParentTasks = tasks.length;
   if (totalParentTasks === 0) return 0;
-
   const progressPerParent = 100 / totalParentTasks;
-
   const totalProgress = tasks.reduce((acc, task) => {
     if (!task.subtasks || task.subtasks.length === 0) {
       return acc + (task.completed ? progressPerParent : 0);
@@ -242,12 +241,12 @@ const calculateProgress = (tasks: Task[]): number => {
       return acc + (completedSubtasks * progressPerSubtask);
     }
   }, 0);
-
   return Math.round(totalProgress);
 };
 
 const TaskList: React.FC<TaskListProps> = ({ 
-  tasks, categories, onToggleTask, onDeleteTask,
+  tasks, categories, sortedCategoryIds, onReorderCategories,
+  onToggleTask, onDeleteTask,
   onToggleSubtask, onDeleteSubtask, onAddSubtask,
   onUpdateTaskText, onUpdateSubtaskText, onToggleSubtaskRecurring
 }) => {
@@ -260,17 +259,21 @@ const TaskList: React.FC<TaskListProps> = ({
   // Drag and Drop State
   const [draggedCategory, setDraggedCategory] = useState<Category | null>(null);
 
-  // Initialize order
+  // Initialize order based on props
   useEffect(() => {
-    if (orderedCategories.length === 0) {
-      setOrderedCategories(categories);
-    } else {
-      const newCats = categories.filter(c => !orderedCategories.find(oc => oc.id === c.id));
-      const existingCats = orderedCategories.filter(oc => categories.find(c => c.id === oc.id));
-      const updatedExisting = existingCats.map(oc => categories.find(c => c.id === oc.id)!);
-      setOrderedCategories([...updatedExisting, ...newCats]);
-    }
-  }, [categories]);
+    if (categories.length === 0) return;
+
+    // 1. Map sortedCategoryIds to actual category objects
+    const orderedFromProps = sortedCategoryIds
+        .map(id => categories.find(c => c.id === id))
+        .filter(c => c !== undefined) as Category[];
+
+    // 2. Identify categories that are NOT in the sorted list (new ones, or one-offs)
+    const otherCategories = categories.filter(c => !sortedCategoryIds.includes(c.id));
+
+    // 3. Combine: Sorted First + Others
+    setOrderedCategories([...orderedFromProps, ...otherCategories]);
+  }, [categories, sortedCategoryIds]);
 
   const groupedTasks = tasks.reduce<Record<string, Task[]>>((acc, task) => {
     const categoryId = task.categoryId;
@@ -284,7 +287,6 @@ const TaskList: React.FC<TaskListProps> = ({
   const handleDragStart = (e: React.DragEvent, category: Category) => {
     setDraggedCategory(category);
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', category.id); // For compatibility
   };
 
   const handleDragOver = (e: React.DragEvent, targetCategory: Category) => {
@@ -294,18 +296,22 @@ const TaskList: React.FC<TaskListProps> = ({
     const currentIndex = orderedCategories.findIndex(c => c.id === draggedCategory.id);
     const targetIndex = orderedCategories.findIndex(c => c.id === targetCategory.id);
 
-    if (currentIndex === targetIndex) return;
+    if (currentIndex === -1 || targetIndex === -1 || currentIndex === targetIndex) return;
 
     const newOrderedCategories = [...orderedCategories];
-    // Remove dragged item
+    // Move item in local state immediately for visual feedback
     newOrderedCategories.splice(currentIndex, 1);
-    // Insert at target index
     newOrderedCategories.splice(targetIndex, 0, draggedCategory);
 
     setOrderedCategories(newOrderedCategories);
   };
 
   const handleDragEnd = () => {
+    if (draggedCategory) {
+        // Report new order to parent to save to DB
+        const newOrderIds = orderedCategories.map(c => c.id);
+        onReorderCategories(newOrderIds);
+    }
     setDraggedCategory(null);
   };
 
@@ -327,30 +333,6 @@ const TaskList: React.FC<TaskListProps> = ({
   // Main list to render
   const categoriesToRender = orderedCategories.filter(c => c.id !== 'uncategorized');
 
-  // If totally empty
-  if (tasks.length === 0 && forcedVisibleCategories.length === 0) {
-    return (
-        <div className="text-center py-12 px-6 bg-gray-800 rounded-lg border border-gray-700 shadow-lg">
-            <h3 className="text-xl font-semibold text-gray-300">No tasks for this day!</h3>
-            <p className="text-gray-500 mt-2">Select a Day Type or add a new task to get started.</p>
-            <div className="mt-6">
-              <button onClick={() => setIsAddCatDropdownOpen(!isAddCatDropdownOpen)} className="text-indigo-400 hover:text-indigo-300 text-sm font-medium flex items-center justify-center gap-1 mx-auto">
-                <PlusIcon className="w-4 h-4" /> Add Category to Day
-              </button>
-               {isAddCatDropdownOpen && (
-                  <div className="mt-2 w-64 mx-auto bg-gray-700 rounded-lg shadow-xl border border-gray-600 z-10 overflow-hidden text-left">
-                    {categories.filter(c => c.id !== 'uncategorized').map(cat => (
-                      <div key={cat.id} onClick={() => addCategoryToView(cat.id)} className="px-4 py-2 hover:bg-gray-600 cursor-pointer text-sm text-gray-200">
-                        {cat.name}
-                      </div>
-                    ))}
-                  </div>
-                )}
-            </div>
-        </div>
-    );
-  }
-
   // Dropdown list items
   const hiddenCategories = categories.filter(c => 
     c.id !== 'uncategorized' && 
@@ -368,11 +350,8 @@ const TaskList: React.FC<TaskListProps> = ({
 
         const categoryProgress = calculateProgress(tasksInCategory);
         const isCollapsed = collapsedCategories[category.id];
-        
         const activeTasks = tasksInCategory.filter(t => !t.completed);
         const completedTasks = tasksInCategory.filter(t => t.completed);
-
-        // Check if this category is currently being dragged
         const isBeingDragged = draggedCategory?.id === category.id;
 
         return (
@@ -417,8 +396,6 @@ const TaskList: React.FC<TaskListProps> = ({
             {/* Tasks Area */}
             {!isCollapsed && !isBeingDragged && (
               <div className="space-y-4 pl-2">
-                
-                {/* Active Tasks */}
                 <div className="space-y-3">
                   {activeTasks.map(task => (
                     <TaskItem
@@ -436,15 +413,11 @@ const TaskList: React.FC<TaskListProps> = ({
                     />
                   ))}
                 </div>
-
-                {/* Empty State */}
                 {activeTasks.length === 0 && completedTasks.length === 0 && (
                     <div className="text-sm text-gray-500 italic ml-4 py-4 border-2 border-dashed border-gray-800 rounded-lg text-center">
                         No tasks yet. Add a task below.
                     </div>
                 )}
-
-                {/* Completed Tasks Dropdown */}
                 {completedTasks.length > 0 && (
                   <div className="mt-6">
                     <button 
@@ -454,7 +427,6 @@ const TaskList: React.FC<TaskListProps> = ({
                       <ChevronDownIcon isOpen={!!expandedCompletedSections[category.id]} className="w-3 h-3" />
                       Completed ({completedTasks.length})
                     </button>
-                    
                     {expandedCompletedSections[category.id] && (
                       <div className="space-y-2 pl-4 border-l-2 border-gray-800 opacity-70 hover:opacity-100 transition-opacity">
                         {completedTasks.map(task => (
@@ -482,7 +454,6 @@ const TaskList: React.FC<TaskListProps> = ({
         );
       })}
 
-      {/* Uncategorized Tasks */}
       {uncategorizedTasks.length > 0 && (
         <div className="mt-10 pt-6 border-t border-gray-800">
            <h2 className="text-xl font-bold text-gray-400 mb-4 flex items-center gap-3 px-2">
@@ -509,7 +480,6 @@ const TaskList: React.FC<TaskListProps> = ({
          </div>
       )}
 
-      {/* Add Category Button */}
       {hiddenCategories.length > 0 && (
          <div className="mt-8 flex justify-center">
             <div className="relative">
@@ -519,7 +489,6 @@ const TaskList: React.FC<TaskListProps> = ({
                 >
                   <PlusIcon className="w-4 h-4" /> Add Category to View
                 </button>
-                
                 {isAddCatDropdownOpen && (
                   <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-56 bg-gray-800 rounded-lg shadow-xl border border-gray-700 overflow-hidden z-20">
                     <div className="py-1">
