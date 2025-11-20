@@ -1,5 +1,3 @@
-// abdulqadirrhuss/intell-planner/Intell-planner-e17ee6aedfdd27444005d6e1d8e66374118c6d5e/intelliday-planner.zip/components/TaskList.tsx
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Task, Category } from '../types';
 import { TrashIcon, PlusIcon, EditIcon, CheckIcon } from './icons';
@@ -260,8 +258,7 @@ const TaskList: React.FC<TaskListProps> = ({
   const [isAddCatDropdownOpen, setIsAddCatDropdownOpen] = useState(false);
 
   // Drag and Drop State
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [draggedCategory, setDraggedCategory] = useState<Category | null>(null);
 
   // Initialize order
   useEffect(() => {
@@ -283,47 +280,33 @@ const TaskList: React.FC<TaskListProps> = ({
 
   const uncategorizedTasks = groupedTasks['uncategorized'] || [];
 
-  // --- Improved Drag and Drop Handlers ---
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    setDraggedIndex(index);
+  // --- Drag and Drop Handlers ---
+  const handleDragStart = (e: React.DragEvent, category: Category) => {
+    setDraggedCategory(category);
     e.dataTransfer.effectAllowed = 'move';
-    // Hides the "ghost" image for a cleaner custom look, or keep it default. 
-    // To keep default, remove the empty image setting.
-    // const emptyImage = new Image();
-    // e.dataTransfer.setDragImage(emptyImage, 0, 0);
+    e.dataTransfer.setData('text/plain', category.id); // For compatibility
   };
 
-  const handleDragEnter = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    if (draggedIndex === null || draggedIndex === index) return;
-    setDragOverIndex(index);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent, targetCategory: Category) => {
     e.preventDefault(); // Necessary to allow dropping
-  };
+    if (!draggedCategory || draggedCategory.id === targetCategory.id) return;
 
-  const handleDrop = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    
-    if (draggedIndex === null) return;
+    const currentIndex = orderedCategories.findIndex(c => c.id === draggedCategory.id);
+    const targetIndex = orderedCategories.findIndex(c => c.id === targetCategory.id);
+
+    if (currentIndex === targetIndex) return;
 
     const newOrderedCategories = [...orderedCategories];
-    const draggedItem = newOrderedCategories[draggedIndex];
-    
-    // Remove item from old position
-    newOrderedCategories.splice(draggedIndex, 1);
-    // Insert at new position
-    newOrderedCategories.splice(index, 0, draggedItem);
+    // Remove dragged item
+    newOrderedCategories.splice(currentIndex, 1);
+    // Insert at target index
+    newOrderedCategories.splice(targetIndex, 0, draggedCategory);
 
     setOrderedCategories(newOrderedCategories);
-    setDraggedIndex(null);
-    setDragOverIndex(null);
   };
 
   const handleDragEnd = () => {
-    setDraggedIndex(null);
-    setDragOverIndex(null);
+    setDraggedCategory(null);
   };
 
   const toggleCategory = (categoryId: string) => {
@@ -377,7 +360,7 @@ const TaskList: React.FC<TaskListProps> = ({
 
   return (
     <div className="space-y-6 pb-24">
-      {categoriesToRender.map((category, index) => {
+      {categoriesToRender.map((category) => {
         const tasksInCategory = groupedTasks[category.id] || [];
         const isVisible = tasksInCategory.length > 0 || forcedVisibleCategories.includes(category.id);
         
@@ -389,119 +372,112 @@ const TaskList: React.FC<TaskListProps> = ({
         const activeTasks = tasksInCategory.filter(t => !t.completed);
         const completedTasks = tasksInCategory.filter(t => t.completed);
 
-        // Styles for dragging
-        const isBeingDragged = draggedIndex === index;
-        const isDragOver = dragOverIndex === index;
+        // Check if this category is currently being dragged
+        const isBeingDragged = draggedCategory?.id === category.id;
 
         return (
           <div 
             key={category.id}
             draggable
-            onDragStart={(e) => handleDragStart(e, index)}
-            onDragEnter={(e) => handleDragEnter(e, index)}
-            onDragOver={handleDragOver} // Needed to allow drop
-            onDrop={(e) => handleDrop(e, index)}
+            onDragStart={(e) => handleDragStart(e, category)}
+            onDragOver={(e) => handleDragOver(e, category)}
             onDragEnd={handleDragEnd}
             className={`
               transition-all duration-200 ease-in-out rounded-lg
-              ${isBeingDragged ? 'opacity-40 border-2 border-dashed border-indigo-500 bg-gray-800/50' : ''}
-              ${isDragOver && !isBeingDragged ? 'border-t-2 border-indigo-400 pt-2' : ''}
+              ${isBeingDragged ? 'opacity-40 bg-gray-800/50' : ''}
             `}
           >
-            {/* Only render content if not just a placeholder for dragging */}
-            <div className={isBeingDragged ? "pointer-events-none" : ""}>
-              {/* Category Header */}
-              <div className="flex items-center justify-between mb-3 group select-none">
-                <div className="flex items-center flex-grow cursor-pointer" onClick={() => toggleCategory(category.id)}>
-                  <div 
-                    className="mr-3 cursor-grab active:cursor-grabbing text-gray-600 hover:text-gray-400 p-1 rounded hover:bg-gray-800 transition-colors" 
-                    onMouseDown={(e) => e.stopPropagation()} 
-                  >
-                    <DragHandleIcon />
-                  </div>
-                  <h2 className="text-xl font-bold flex items-center" style={{ color: category.color }}>
-                    {category.name}
-                  </h2>
-                  <div className={`ml-2 transition-transform duration-300 ${isCollapsed ? '-rotate-90' : ''}`}>
-                      <ChevronDownIcon isOpen={!isCollapsed} className="w-4 h-4 text-gray-500" />
-                  </div>
+            {/* Category Header */}
+            <div className="flex items-center justify-between mb-3 group select-none">
+              <div className="flex items-center flex-grow cursor-pointer" onClick={() => toggleCategory(category.id)}>
+                <div 
+                  className="mr-3 cursor-grab active:cursor-grabbing text-gray-600 hover:text-gray-400 p-1 rounded hover:bg-gray-800 transition-colors" 
+                  onMouseDown={(e) => e.stopPropagation()} 
+                >
+                  <DragHandleIcon />
                 </div>
-                <span className="text-xs font-bold px-2.5 py-1 bg-gray-800 rounded-full border border-gray-700" style={{ color: category.color }}>{Math.round(categoryProgress)}%</span>
-              </div>
-              
-              {/* Progress Bar */}
-              <div className="w-full bg-gray-800 rounded-full h-1.5 mb-5 overflow-hidden">
-                <div
-                  className="h-1.5 rounded-full transition-all duration-500 ease-out shadow-[0_0_10px_rgba(0,0,0,0.3)]"
-                  style={{ width: `${categoryProgress}%`, backgroundColor: category.color }}
-                ></div>
-              </div>
-
-              {/* Tasks Area */}
-              {!isCollapsed && (
-                <div className="space-y-4 pl-2">
-                  
-                  {/* Active Tasks */}
-                  <div className="space-y-3">
-                    {activeTasks.map(task => (
-                      <TaskItem
-                        key={task.id}
-                        task={task}
-                        categoryColor={category.color}
-                        onToggleTask={onToggleTask}
-                        onDeleteTask={onDeleteTask}
-                        onToggleSubtask={onToggleSubtask}
-                        onDeleteSubtask={onDeleteSubtask}
-                        onAddSubtask={onAddSubtask}
-                        onUpdateTaskText={onUpdateTaskText}
-                        onUpdateSubtaskText={onUpdateSubtaskText}
-                        onToggleSubtaskRecurring={onToggleSubtaskRecurring}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Empty State */}
-                  {activeTasks.length === 0 && completedTasks.length === 0 && (
-                      <div className="text-sm text-gray-500 italic ml-4 py-4 border-2 border-dashed border-gray-800 rounded-lg text-center">
-                          No tasks yet. Add a task below.
-                      </div>
-                  )}
-
-                  {/* Completed Tasks Dropdown */}
-                  {completedTasks.length > 0 && (
-                    <div className="mt-6">
-                      <button 
-                        onClick={() => toggleCompletedSection(category.id)}
-                        className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider hover:text-gray-300 mb-3 transition-colors ml-1"
-                      >
-                        <ChevronDownIcon isOpen={!!expandedCompletedSections[category.id]} className="w-3 h-3" />
-                        Completed ({completedTasks.length})
-                      </button>
-                      
-                      {expandedCompletedSections[category.id] && (
-                        <div className="space-y-2 pl-4 border-l-2 border-gray-800 opacity-70 hover:opacity-100 transition-opacity">
-                          {completedTasks.map(task => (
-                            <TaskItem
-                              key={task.id}
-                              task={task}
-                              categoryColor="#4b5563" 
-                              onToggleTask={onToggleTask}
-                              onDeleteTask={onDeleteTask}
-                              onToggleSubtask={onToggleSubtask}
-                              onDeleteSubtask={onDeleteSubtask}
-                              onAddSubtask={onAddSubtask}
-                              onUpdateTaskText={onUpdateTaskText}
-                              onUpdateSubtaskText={onUpdateSubtaskText}
-                              onToggleSubtaskRecurring={onToggleSubtaskRecurring}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                <h2 className="text-xl font-bold flex items-center" style={{ color: category.color }}>
+                  {category.name}
+                </h2>
+                <div className={`ml-2 transition-transform duration-300 ${isCollapsed ? '-rotate-90' : ''}`}>
+                    <ChevronDownIcon isOpen={!isCollapsed} className="w-4 h-4 text-gray-500" />
                 </div>
-              )}
+              </div>
+              <span className="text-xs font-bold px-2.5 py-1 bg-gray-800 rounded-full border border-gray-700" style={{ color: category.color }}>{Math.round(categoryProgress)}%</span>
             </div>
+            
+            {/* Progress Bar */}
+            <div className="w-full bg-gray-800 rounded-full h-1.5 mb-5 overflow-hidden">
+              <div
+                className="h-1.5 rounded-full transition-all duration-500 ease-out shadow-[0_0_10px_rgba(0,0,0,0.3)]"
+                style={{ width: `${categoryProgress}%`, backgroundColor: category.color }}
+              ></div>
+            </div>
+
+            {/* Tasks Area */}
+            {!isCollapsed && !isBeingDragged && (
+              <div className="space-y-4 pl-2">
+                
+                {/* Active Tasks */}
+                <div className="space-y-3">
+                  {activeTasks.map(task => (
+                    <TaskItem
+                      key={task.id}
+                      task={task}
+                      categoryColor={category.color}
+                      onToggleTask={onToggleTask}
+                      onDeleteTask={onDeleteTask}
+                      onToggleSubtask={onToggleSubtask}
+                      onDeleteSubtask={onDeleteSubtask}
+                      onAddSubtask={onAddSubtask}
+                      onUpdateTaskText={onUpdateTaskText}
+                      onUpdateSubtaskText={onUpdateSubtaskText}
+                      onToggleSubtaskRecurring={onToggleSubtaskRecurring}
+                    />
+                  ))}
+                </div>
+
+                {/* Empty State */}
+                {activeTasks.length === 0 && completedTasks.length === 0 && (
+                    <div className="text-sm text-gray-500 italic ml-4 py-4 border-2 border-dashed border-gray-800 rounded-lg text-center">
+                        No tasks yet. Add a task below.
+                    </div>
+                )}
+
+                {/* Completed Tasks Dropdown */}
+                {completedTasks.length > 0 && (
+                  <div className="mt-6">
+                    <button 
+                      onClick={() => toggleCompletedSection(category.id)}
+                      className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider hover:text-gray-300 mb-3 transition-colors ml-1"
+                    >
+                      <ChevronDownIcon isOpen={!!expandedCompletedSections[category.id]} className="w-3 h-3" />
+                      Completed ({completedTasks.length})
+                    </button>
+                    
+                    {expandedCompletedSections[category.id] && (
+                      <div className="space-y-2 pl-4 border-l-2 border-gray-800 opacity-70 hover:opacity-100 transition-opacity">
+                        {completedTasks.map(task => (
+                          <TaskItem
+                            key={task.id}
+                            task={task}
+                            categoryColor="#4b5563" 
+                            onToggleTask={onToggleTask}
+                            onDeleteTask={onDeleteTask}
+                            onToggleSubtask={onToggleSubtask}
+                            onDeleteSubtask={onDeleteSubtask}
+                            onAddSubtask={onAddSubtask}
+                            onUpdateTaskText={onUpdateTaskText}
+                            onUpdateSubtaskText={onUpdateSubtaskText}
+                            onToggleSubtaskRecurring={onToggleSubtaskRecurring}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         );
       })}
