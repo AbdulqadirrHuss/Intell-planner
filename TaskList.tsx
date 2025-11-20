@@ -1,3 +1,5 @@
+// abdulqadirrhuss/intell-planner/Intell-planner-713a94aab450542265643e214f51f6b366832262/TaskList.tsx
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Task, Category } from '../types';
 import { TrashIcon, PlusIcon, EditIcon, CheckIcon } from './icons';
@@ -251,7 +253,9 @@ const TaskList: React.FC<TaskListProps> = ({
   onToggleSubtask, onDeleteSubtask, onAddSubtask,
   onUpdateTaskText, onUpdateSubtaskText, onToggleSubtaskRecurring
 }) => {
+  // Local state for collapsing categories (headers)
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
+  // Local state for expanding the "Completed" dropdowns
   const [expandedCompletedSections, setExpandedCompletedSections] = useState<Record<string, boolean>>({});
   const [orderedCategories, setOrderedCategories] = useState<Category[]>([]);
   const [forcedVisibleCategories, setForcedVisibleCategories] = useState<string[]>([]);
@@ -266,7 +270,6 @@ const TaskList: React.FC<TaskListProps> = ({
     if (orderedCategories.length === 0) {
       setOrderedCategories(categories);
     } else {
-      // Maintain order but add new/update existing
       const newCats = categories.filter(c => !orderedCategories.find(oc => oc.id === c.id));
       const existingCats = orderedCategories.filter(oc => categories.find(c => c.id === oc.id));
       const updatedExisting = existingCats.map(oc => categories.find(c => c.id === oc.id)!);
@@ -334,7 +337,7 @@ const TaskList: React.FC<TaskListProps> = ({
             {/* Allow adding a category even when empty */}
             <div className="mt-6">
               <button onClick={() => setIsAddCatDropdownOpen(!isAddCatDropdownOpen)} className="text-indigo-400 hover:text-indigo-300 text-sm font-medium flex items-center justify-center gap-1 mx-auto">
-                <PlusIcon className="w-4 h-4" /> Add Category to Day
+                <PlusIcon className="w-4 h-4" /> Add Category to View
               </button>
                {isAddCatDropdownOpen && (
                   <div className="mt-2 w-64 mx-auto bg-gray-700 rounded-lg shadow-xl border border-gray-600 z-10 overflow-hidden text-left">
