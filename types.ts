@@ -1,44 +1,40 @@
-// abdulqadirrhuss/intell-planner/Intell-planner-e4eec65ae3452797ce24afb321a4c1a7a0f5cce3/types.ts
-
-// Defines a subtask, which belongs to a parent task
-export interface Subtask {
-  id: string;
-  parent_task_id: string;
-  log_date: string;
-  text: string;
-  completed: boolean;
-  isRecurring: boolean; // NEW: Track if this subtask is recurring
-}
-
 export interface Task {
   id: string;
   text: string;
   completed: boolean;
   categoryId: string;
   isRecurring: boolean;
-  subtasks: Subtask[];
+  subtasks: Subtask[]; 
 }
 
-// Defines a template for creating subtasks under a recurring task
-export interface RecurringSubtaskTemplate {
+export interface Subtask {
   id: string;
-  parent_template_id: string;
+  parent_task_id: string; 
+  log_date: string;       
   text: string;
-}
-
-export interface RecurringTaskTemplate {
-  id: string;
-  text: string;
-  categoryId: string;
-  daysOfWeek: number[];
-  subtaskTemplates: RecurringSubtaskTemplate[];
+  completed: boolean;
+  isRecurring: boolean;
 }
 
 export interface Category {
   id: string;
   name: string;
   color: string;
-  recurringTasks: RecurringTaskTemplate[];
+  recurringTasks: RecurringTaskTemplate[]; 
+}
+
+export interface RecurringTaskTemplate {
+  id: string;
+  text: string;
+  categoryId: string;
+  daysOfWeek: number[]; 
+  subtaskTemplates: RecurringSubtaskTemplate[]; 
+}
+
+export interface RecurringSubtaskTemplate {
+  id: string;
+  parent_template_id: string; 
+  text: string;
 }
 
 export interface DayType {
@@ -50,5 +46,21 @@ export interface DayType {
 export interface DailyLog {
   date: string;
   dayTypeId: string | null;
-  tasks: Task[];
+  tasks: Task[]; 
+}
+
+// --- NEW STATISTICS TYPES ---
+export interface StatDefinition {
+  id: string;
+  name: string;
+  type: 'percent' | 'count' | 'check';
+  linked_category_id?: string; // If null, it's a manual entry
+}
+
+export interface StatValue {
+  id: string;
+  date: string;
+  stat_definition_id: string;
+  value: number;
+  is_manual: boolean;
 }
