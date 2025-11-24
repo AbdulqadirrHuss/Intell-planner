@@ -1,10 +1,8 @@
-// abdulqadirrhuss/intell-planner/Intell-planner-e4eec65ae3452797ce24afb321a4c1a7a0f5cce3/CategoryManager.tsx
-
 import React, { useState } from 'react';
-import { Category, RecurringTaskTemplate, RecurringSubtaskTemplate } from '../types';
+import { Category, RecurringTaskTemplate, RecurringSubtaskTemplate } from './types';
 import { PlusIcon, TrashIcon, EditIcon, CheckIcon } from './icons';
 
-// NEW: Component for editing recurring subtask template text
+// Component for editing recurring subtask template text
 const RecurringSubtaskItem: React.FC<{
   subtask: RecurringSubtaskTemplate;
   onDelete: (id: string) => void;
@@ -47,7 +45,7 @@ const RecurringSubtaskItem: React.FC<{
   );
 };
 
-// NEW: Component for editing recurring task template
+// Component for editing recurring task template
 const RecurringTaskItem: React.FC<{
   task: RecurringTaskTemplate;
   onDelete: (id: string) => void;
@@ -181,7 +179,6 @@ interface CategoryManagerProps {
   onUpdateRecurringTask: (task: RecurringTaskTemplate) => void;
   onAddRecurringSubtask: (parentTemplateId: string, text: string) => void;
   onDeleteRecurringSubtask: (subtaskTemplateId: string) => void;
-  // NEW: Add handlers for text updates
   onUpdateRecurringTaskText: (taskId: string, newText: string) => void;
   onUpdateRecurringSubtaskText: (subtaskTemplateId: string, newText: string) => void;
 }
@@ -190,7 +187,7 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
   isOpen, onClose, categories, onAddCategory, onUpdateCategory, onDeleteCategory,
   onAddRecurringTask, onDeleteRecurringTask, onUpdateRecurringTask,
   onAddRecurringSubtask, onDeleteRecurringSubtask,
-  onUpdateRecurringTaskText, onUpdateRecurringSubtaskText // NEW
+  onUpdateRecurringTaskText, onUpdateRecurringSubtaskText
 }) => {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState('#4f46e5');
@@ -233,7 +230,6 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
         </div>
         
         <div className="p-6 space-y-6 overflow-y-auto">
-          {/* Add New Category Form */}
           <form onSubmit={handleAddCategory} className="flex gap-2 items-center">
             <input
               type="text"
@@ -251,11 +247,9 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
             <button type="submit" className="p-2 bg-indigo-600 hover:bg-indigo-700 rounded-md"><PlusIcon className="w-5 h-5"/></button>
           </form>
 
-          {/* List of Categories */}
           <div className="space-y-4">
             {categories.filter(c => c.id !== 'uncategorized').map(cat => (
               <div key={cat.id} className="bg-gray-700 p-4 rounded-lg">
-                {/* Category Edit Area */}
                 <div className="flex items-center justify-between mb-4">
                   {editingCategory?.id === cat.id ? (
                     <>
@@ -285,7 +279,6 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
                   </div>
                 </div>
                 
-                {/* Recurring Tasks List for this Category */}
                 <div className="pl-4 space-y-3 mb-4">
                   {cat.recurringTasks.map(task => (
                     <RecurringTaskItem
@@ -302,7 +295,6 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
                   {cat.recurringTasks.length === 0 && <p className="text-sm text-gray-500">No recurring tasks for this category.</p>}
                 </div>
 
-                {/* Add Recurring Task Form for this Category */}
                 <form onSubmit={(e) => handleAddRecurringTask(e, cat.id)} className="flex gap-2 text-sm pl-4">
                   <input
                     type="text"
