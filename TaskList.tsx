@@ -1,33 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Task, Category } from '../types';
-import { TrashIcon, PlusIcon, EditIcon, CheckIcon } from './icons';
+import { TrashIcon, PlusIcon, EditIcon, CheckIcon, DragHandleIcon, ChevronDownIcon, RecurringIcon } from './icons';
 
-// --- Icons ---
-
-const DragHandleIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
-  </svg>
-);
-
-const ChevronDownIcon = ({ className = "w-4 h-4", isOpen }: { className?: string, isOpen: boolean }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    fill="none" 
-    viewBox="0 0 24 24" 
-    strokeWidth={1.5} 
-    stroke="currentColor" 
-    className={`${className} transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-  >
-    <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-  </svg>
-);
-
-const RecurringIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-  </svg>
-);
+// ... (Icons same as previous contexts, omitted for brevity) ...
 
 // --- Subtask Item Component ---
 interface SubtaskItemProps {
@@ -412,10 +387,10 @@ const TaskList: React.FC<TaskListProps> = ({
               <span className="text-xs font-bold px-2.5 py-1 bg-gray-800 rounded-full border border-gray-700" style={{ color: category.color }}>{Math.round(categoryProgress)}%</span>
             </div>
             
-            {/* Progress Bar */}
-            <div className="w-full bg-gray-800 rounded-full h-1.5 mb-5 overflow-hidden">
+            {/* Progress Bar (Thicker, solid color style restored) */}
+            <div className="w-full bg-gray-700/50 rounded-full h-2 mb-5 overflow-hidden">
               <div
-                className="h-1.5 rounded-full transition-all duration-500 ease-out shadow-[0_0_10px_rgba(0,0,0,0.3)]"
+                className="h-2 rounded-full transition-all duration-500 ease-out shadow-sm"
                 style={{ width: `${categoryProgress}%`, backgroundColor: category.color }}
               ></div>
             </div>
