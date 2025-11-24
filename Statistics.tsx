@@ -107,7 +107,8 @@ const Statistics: React.FC<StatisticsProps> = ({
       await supabase.from('stat_definitions').insert(payload);
       setIsAddStatModalOpen(false);
       setNewStatName('');
-      window.location.reload(); // Reload to sync App.tsx state
+      // Reload the page to refresh data in App.tsx
+      window.location.reload();
   };
 
   // --- Generating Columns/Dates ---
