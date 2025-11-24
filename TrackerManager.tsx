@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StatDefinition, Category, TrackerType } from '../types';
+import { StatDefinition, Category, TrackerType } from './types';
 import { PlusIcon, TrashIcon, EditIcon, CheckIcon } from './icons';
 
 interface TrackerManagerProps {
@@ -17,14 +17,12 @@ const TrackerManager: React.FC<TrackerManagerProps> = ({
 }) => {
   const [editingTracker, setEditingTracker] = useState<StatDefinition | null>(null);
   
-  // New Tracker State
   const [newName, setNewName] = useState('');
   const [newType, setNewType] = useState<TrackerType>('percent');
   const [newLinkedCat, setNewLinkedCat] = useState('');
   const [newTarget, setNewTarget] = useState('');
   const [newColor, setNewColor] = useState('#6366f1');
 
-  // Edit State
   const [editName, setEditName] = useState('');
   const [editType, setEditType] = useState<TrackerType>('percent');
   const [editLinkedCat, setEditLinkedCat] = useState('');
@@ -94,8 +92,6 @@ const TrackerManager: React.FC<TrackerManagerProps> = ({
         </div>
 
         <div className="flex-grow overflow-y-auto p-6 space-y-8">
-            
-            {/* Creation Form */}
             <div className="bg-gray-700/30 p-5 rounded-xl border border-gray-600/50">
                 <h3 className="text-lg font-semibold text-indigo-300 mb-4">Add New Metric</h3>
                 <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
@@ -137,7 +133,6 @@ const TrackerManager: React.FC<TrackerManagerProps> = ({
                 </form>
             </div>
 
-            {/* List of Trackers */}
             <div className="space-y-3">
                 <h3 className="text-lg font-semibold text-gray-200">Your Metrics</h3>
                 {statDefinitions.length === 0 && <p className="text-gray-500 italic">No metrics added yet.</p>}
