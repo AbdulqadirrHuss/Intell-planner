@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { StatDefinition, StatValue, Category, DailyLog, Task, TrackerType } from './types';
 import { PlusIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, AdjustmentsIcon, CalendarIcon, CheckIcon } from './icons';
 
-// Supabase Setup
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -108,8 +107,7 @@ const Statistics: React.FC<StatisticsProps> = ({
       await supabase.from('stat_definitions').insert(payload);
       setIsAddStatModalOpen(false);
       setNewStatName('');
-      // Reload the page to refresh data in App.tsx
-      window.location.reload();
+      window.location.reload(); // Reload to sync App.tsx state
   };
 
   // --- Generating Columns/Dates ---
