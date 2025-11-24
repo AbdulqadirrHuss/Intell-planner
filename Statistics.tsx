@@ -2,6 +2,16 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { StatDefinition, StatValue, Category, DailyLog, Task, TrackerType } from './types';
 import { PlusIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, AdjustmentsIcon, CalendarIcon, CheckIcon } from './icons';
 
+// ... (Keep the rest of the file exactly the same as previous turn, just ensures imports are './types' and './icons')
+// ... (Copy content from previous turn's Statistics.tsx, it is correct, just verify the first line imports)
+
+// Since I cannot provide partials, here is the full file again with correct imports:
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+import { createClient } from '@supabase/supabase-js';
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 interface StatisticsProps {
   categories: Category[];
   dailyLogs: { [date: string]: DailyLog };
@@ -61,7 +71,6 @@ const Statistics: React.FC<StatisticsProps> = ({
   const [isTrendOpen, setIsTrendOpen] = useState(true);
   const [isComparativeOpen, setIsComparativeOpen] = useState(true);
 
-  // --- Helpers to resolve values ---
   const getGlobalCompletion = (date: string): number => {
     const log = dailyLogs[date];
     return log ? calculateCompletion(log.tasks) : 0;
@@ -86,7 +95,6 @@ const Statistics: React.FC<StatisticsProps> = ({
     return null;
   };
 
-  // --- Generating Columns/Dates ---
   const generateTableColumns = () => {
     const current = new Date(tableRefDate);
     const cols: string[] = [];
@@ -120,7 +128,6 @@ const Statistics: React.FC<StatisticsProps> = ({
     setTableRefDate(formatDate(d));
   };
 
-  // --- Graph Data ---
   const generateGraphDates = () => {
     let start = new Date();
     let end = new Date();
@@ -144,7 +151,6 @@ const Statistics: React.FC<StatisticsProps> = ({
 
   const graphDates = useMemo(generateGraphDates, [graphView, graphCustomStart, graphCustomEnd]);
 
-  // Aggregation for graphs
   const getAggregatedValue = (dates: string[], def?: StatDefinition) => {
       if (dates.length === 0) return 0;
       let sum = 0;
@@ -163,7 +169,7 @@ const Statistics: React.FC<StatisticsProps> = ({
       });
       if (count === 0) return 0;
       if (!def || def.type === 'percent') return Math.round(sum / count);
-      return sum; // Count/Check sum
+      return sum; 
   };
 
   const groupGraphDates = () => {
@@ -259,7 +265,6 @@ const Statistics: React.FC<StatisticsProps> = ({
 
   return (
     <div className="space-y-12 pb-24 min-h-[80vh]">
-      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-8">
         <div>
             <h2 className="text-3xl font-bold text-white tracking-tight">Performance Scorecard</h2>
@@ -270,11 +275,9 @@ const Statistics: React.FC<StatisticsProps> = ({
         </button>
       </div>
 
-      {/* Table Section */}
       <section>
          <div className="flex flex-col gap-6">
              <div className="flex justify-between">{renderControls(tableView, setTableView)}</div>
-             
              <div className="bg-slate-900/40 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
                 <div className="flex items-center justify-between p-4 border-b border-white/5 bg-white/5">
                     <button onClick={() => navigateTable(-1)} className="p-2 text-slate-400 hover:text-white"><ChevronLeftIcon/></button>
@@ -321,14 +324,12 @@ const Statistics: React.FC<StatisticsProps> = ({
          </div>
       </section>
       
-      {/* Graphs Section */}
       <section className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-4 pt-8 border-t border-white/10">
              <h2 className="text-2xl font-bold text-white">Performance Graphs</h2>
              {renderControls(graphView, setGraphView)}
         </div>
         
-        {/* Trend Graph */}
         <div className="bg-slate-900/40 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
              <div className="flex justify-between items-center p-4 bg-white/5 border-b border-white/5">
                  <h3 className="text-lg font-semibold text-slate-200">Trend: <span style={{color: currentTrendMetric.color}}>{currentTrendMetric.name}</span></h3>
@@ -342,7 +343,6 @@ const Statistics: React.FC<StatisticsProps> = ({
              </div>
         </div>
 
-        {/* Comparative Graph */}
         <div className="bg-slate-900/40 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
              <div className="p-4 bg-white/5 border-b border-white/5"><h3 className="text-lg font-semibold text-slate-200">Comparisons</h3></div>
              <div className="p-6 h-[300px]">
