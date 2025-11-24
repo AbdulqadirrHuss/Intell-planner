@@ -49,12 +49,16 @@ export interface DailyLog {
   tasks: Task[]; 
 }
 
-// --- NEW STATISTICS TYPES ---
+// --- STATISTICS TYPES ---
+export type TrackerType = 'percent' | 'count' | 'check';
+
 export interface StatDefinition {
   id: string;
   name: string;
-  type: 'percent' | 'count' | 'check';
-  linked_category_id?: string; // If null, it's a manual entry
+  type: TrackerType;
+  linked_category_id?: string;
+  target?: number;
+  color?: string;
 }
 
 export interface StatValue {
