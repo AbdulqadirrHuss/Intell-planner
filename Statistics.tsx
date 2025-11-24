@@ -2,13 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { StatDefinition, StatValue, Category, DailyLog, Task, TrackerType } from './types';
 import { PlusIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, AdjustmentsIcon, CalendarIcon, CheckIcon } from './icons';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-// Only import createClient if needed, but it's not used in this component
-// const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-const VIEW_OPTIONS = ['daily', 'weekly', 'monthly', 'yearly', 'custom'];
+const VIEW_OPTIONS = ['Daily', 'Weekly', 'Monthly', 'Yearly', 'Custom'];
 
 interface StatisticsProps {
   categories: Category[];
@@ -24,6 +18,17 @@ type TimeView = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
 const MIN_DATE = new Date('2025-01-01');
 
 const formatDate = (d: Date) => d.toISOString().split('T')[0];
+
+const formatDateLong = (dateStr: string) => {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+};
+
+const formatMonthShort = (monthStr: string) => {
+  const [year, month] = monthStr.split('-');
+  const d = new Date(`${year}-${month}-01`);
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+};
 
 const calculateCompletion = (tasks: Task[]) => {
     if (!tasks || tasks.length === 0) return 0;
@@ -66,13 +71,6 @@ const Statistics: React.FC<StatisticsProps> = ({
   const [graphCustomStart, setGraphCustomStart] = useState(new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
   const [graphCustomEnd, setGraphCustomEnd] = useState(new Date().toISOString().split('T')[0]);
   const [trendMetricIndex, setTrendMetricIndex] = useState(0);
-  const [isTrendOpen, setIsTrendOpen] = useState(true);
-  const [isComparativeOpen, setIsComparativeOpen] = useState(true);
-
-  const [isAddStatModalOpen, setIsAddStatModalOpen] = useState(false);
-  const [newStatName, setNewStatName] = useState('');
-  const [newStatType, setNewStatType] = useState<'percent' | 'count' | 'check'>('percent');
-  const [newStatLink, setNewStatLink] = useState<string>('');
 
   // --- Helpers to resolve values ---
   const getGlobalCompletion = (date: string): number => {
@@ -97,14 +95,6 @@ const Statistics: React.FC<StatisticsProps> = ({
         return calculateCompletion(tasks);
     }
     return null;
-  };
-
-  const handleAddStat = async () => {
-      if (!newStatName) return;
-      // Just call the onOpenTrackerManager to let parent handle it
-      onOpenTrackerManager();
-      setIsAddStatModalOpen(false);
-      setNewStatName('');
   };
 
   // --- Generating Columns/Dates ---
@@ -238,9 +228,9 @@ const Statistics: React.FC<StatisticsProps> = ({
         {VIEW_OPTIONS.map(opt => (
             <button
                 key={opt}
-                onClick={() => setMode(opt)}
+                onClick={() => setMode(opt.toLowerCase() as TimeView)}
                 className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    currentMode === opt 
+                    currentMode === opt.toLowerCase() 
                     ? 'bg-indigo-600 text-white shadow-md' 
                     : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
                 }`}
@@ -251,30 +241,12 @@ const Statistics: React.FC<StatisticsProps> = ({
     </div>
   );
 
-  const renderDateNavigator = (date: string, setDate: (d: string) => void) => {
-      const d = new Date(date);
-      const prev = () => {
-          const newD = new Date(d); newD.setDate(d.getDate() - 1);
-          setDate(newD.toISOString().split('T')[0]);
-      };
-      const next = () => {
-        const newD = new Date(d); newD.setDate(d.getDate() + 1);
-        setDate(newD.toISOString().split('T')[0]);
-      };
-
-      return (
-          <div className="flex items-center bg-gray-800 rounded-lg p-1">
-              <button onClick={prev} className="p-2 hover:text-indigo-400 text-gray-400"><ChevronLeftIcon /></button>
-              <input 
-                type="date" 
-                value={date} 
-                onChange={(e) => setDate(e.target.value)}
-                className="bg-transparent border-none text-white text-sm font-medium focus:ring-0 w-28 text-center"
-              />
-              <button onClick={next} className="p-2 hover:text-indigo-400 text-gray-400"><ChevronRightIcon /></button>
-          </div>
-      )
-  }
+  const getColumnHeaderDisplay = (col: string) => {
+    if (tableView === 'daily') return formatDateLong(col);
+    if (tableView === 'weekly') return formatDateLong(col);
+    if (tableView === 'monthly') return formatMonthShort(col);
+    return col;
+  };
 
   return (
     <div className="space-y-12 pb-24 min-h-[80vh]">
@@ -297,7 +269,7 @@ const Statistics: React.FC<StatisticsProps> = ({
              <div className="bg-slate-900/40 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
                 <div className="flex items-center justify-between p-4 border-b border-white/5 bg-white/5">
                     <button onClick={() => navigateTable(-1)} className="p-2 text-slate-400 hover:text-white"><ChevronLeftIcon/></button>
-                    <div className="flex items-center gap-3"><CalendarIcon className="w-5 h-5 text-indigo-400"/><span className="text-lg font-bold text-slate-200">{tableRefDate}</span></div>
+                    <div className="flex items-center gap-3"><CalendarIcon className="w-5 h-5 text-indigo-400"/><span className="text-lg font-bold text-slate-200">{formatDateLong(tableRefDate)}</span></div>
                     <button onClick={() => navigateTable(1)} className="p-2 text-slate-400 hover:text-white"><ChevronRightIcon/></button>
                 </div>
                 <div className="overflow-x-auto">
@@ -305,7 +277,7 @@ const Statistics: React.FC<StatisticsProps> = ({
                         <thead>
                             <tr className="bg-slate-900/80">
                                 <th className="px-6 py-4 font-bold text-white border-r border-white/5 w-56 sticky left-0 bg-slate-900">Metric</th>
-                                {tableColumns.map(col => <th key={col} className="px-6 py-4 text-center border-b border-white/5 min-w-[100px]">{col}</th>)}
+                                {tableColumns.map(col => <th key={col} className="px-6 py-4 text-center border-b border-white/5 min-w-[150px]">{getColumnHeaderDisplay(col)}</th>)}
                             </tr>
                         </thead>
                         <tbody>
@@ -322,12 +294,10 @@ const Statistics: React.FC<StatisticsProps> = ({
                                          </div>
                                      </td>
                                      {tableColumns.map(col => {
-                                         const val = tableView === 'daily' ? getCellValue(col, def) : '-';
+                                         const val = getCellValue(col, def);
                                          return (
                                              <td key={col} className="px-4 py-3 text-center border-r border-white/5">
-                                                 {tableView === 'daily' ? (
-                                                     <EditableCell value={val} type={def.type} onSave={(v) => onUpdateStatValue(col, def.id, v)} />
-                                                 ) : val}
+                                                 <EditableCell value={val} type={def.type} onSave={(v) => onUpdateStatValue(col, def.id, v)} />
                                              </td>
                                          )
                                      })}
