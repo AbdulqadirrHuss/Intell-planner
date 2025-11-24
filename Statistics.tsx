@@ -4,13 +4,14 @@ import { PlusIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, Adjustmen
 
 const VIEW_OPTIONS = ['Daily', 'Weekly', 'Monthly', 'Yearly', 'Custom'];
 
-interface StatisticsProps {
-  categories: Category[];
-  dailyLogs: { [date: string]: DailyLog };
-  statDefinitions: StatDefinition[];
-  statValues: StatValue[];
-  onOpenTrackerManager: () => void;
-  onUpdateStatValue: (date: string, definitionId: string, value: number | boolean | null) => void;
+export interface StatDefinition {
+  id: string;
+  name: string;
+  type: TrackerType;
+  linked_category_id?: string;
+  target?: number;
+  color?: string;
+  goal_direction?: 'up' | 'down'; // 'up' means higher is better, 'down' means lower is better
 }
 
 type TimeView = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
@@ -65,9 +66,9 @@ const getStartOfWeek = (date: Date) => {
 const Statistics: React.FC<StatisticsProps> = ({ 
     categories, dailyLogs, statDefinitions, statValues, onOpenTrackerManager, onUpdateStatValue
 }) => {
-  const [tableView, setTableView] = useState<TimeView>('weekly');
+  const [tableView, setTableView] = useState<TimeView>('daily');
   const [tableRefDate, setTableRefDate] = useState(formatDate(new Date())); 
-  const [graphView, setGraphView] = useState<TimeView>('daily');
+  const [graphView, setGraphView] = useState<TimeView>('weekly');
   const [graphCustomStart, setGraphCustomStart] = useState(new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
   const [graphCustomEnd, setGraphCustomEnd] = useState(new Date().toISOString().split('T')[0]);
   const [trendMetricIndex, setTrendMetricIndex] = useState(0);
@@ -221,7 +222,7 @@ const Statistics: React.FC<StatisticsProps> = ({
       return statDefinitions.map(def => {
           if (def.type === 'check') return null;
           const val = getAggregatedValue(graphDates, def);
-          return { name: def.name, value: val, type: def.type, color: def.color };
+          return { name: def.name, value: val, type: def.type, color: def.color, target: def.target, goal_direction: def.goal_direction || 'up' };
       }).filter(Boolean) as any[];
   }, [statDefinitions, graphDates, dailyLogs, statValues]);
 
@@ -375,9 +376,14 @@ const ImprovedBarChart = ({ data }: any) => {
                 const h = (d.value / maxVal) * (HEIGHT - PAD * 2);
                 const x = PAD + i * ((WIDTH - PAD * 2) / data.length) + 20;
                 const y = HEIGHT - PAD - h;
+                // Change color if goal_direction is 'down' and value is high (bad)
+                let barColor = d.color || '#6366f1';
+                if (d.goal_direction === 'down' && d.value > (d.target || 50)) {
+                    barColor = '#ef4444'; // Red for bad performance
+                }
                 return (
                     <g key={i}>
-                        <rect x={x} y={y} width={barW} height={h} fill={d.color || '#6366f1'} rx="4" />
+                        <rect x={x} y={y} width={barW} height={h} fill={barColor} rx="4" />
                         <text x={x + barW/2} y={HEIGHT - 10} textAnchor="middle" fill="#94a3b8" fontSize="12">{d.name}</text>
                         <text x={x + barW/2} y={y - 5} textAnchor="middle" fill="white" fontSize="12">{d.value}</text>
                     </g>
