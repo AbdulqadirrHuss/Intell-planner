@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { StatDefinition, StatValue, Category, DailyLog, Task, TrackerType } from './types';
 import { PlusIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, AdjustmentsIcon, CalendarIcon, CheckIcon } from './icons';
 
+// Supabase Setup
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -66,6 +67,12 @@ const Statistics: React.FC<StatisticsProps> = ({
   const [isTrendOpen, setIsTrendOpen] = useState(true);
   const [isComparativeOpen, setIsComparativeOpen] = useState(true);
 
+  const [isAddStatModalOpen, setIsAddStatModalOpen] = useState(false);
+  const [newStatName, setNewStatName] = useState('');
+  const [newStatType, setNewStatType] = useState<'percent' | 'count' | 'check'>('percent');
+  const [newStatLink, setNewStatLink] = useState<string>('');
+
+  // --- Helpers to resolve values ---
   const getGlobalCompletion = (date: string): number => {
     const log = dailyLogs[date];
     return log ? calculateCompletion(log.tasks) : 0;
@@ -90,6 +97,22 @@ const Statistics: React.FC<StatisticsProps> = ({
     return null;
   };
 
+  const handleAddStat = async () => {
+      if (!newStatName) return;
+      const payload = { 
+          name: newStatName, 
+          type: newStatType, 
+          linked_category_id: newStatLink || null,
+          color: '#6366f1'
+      };
+      await supabase.from('stat_definitions').insert(payload);
+      setIsAddStatModalOpen(false);
+      setNewStatName('');
+      // Reload the page to refresh data in App.tsx
+      window.location.reload();
+  };
+
+  // --- Generating Columns/Dates ---
   const generateTableColumns = () => {
     const current = new Date(tableRefDate);
     const cols: string[] = [];
@@ -351,6 +374,63 @@ const Statistics: React.FC<StatisticsProps> = ({
              </div>
         </div>
       </section>
+
+      {/* --- MODAL: ADD STAT --- */}
+      {isAddStatModalOpen && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+              <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 w-full max-w-md shadow-2xl">
+                  <h3 className="text-xl font-bold text-white mb-6">Add New Statistic Column</h3>
+                  
+                  <div className="space-y-4">
+                      <div>
+                          <label className="block text-xs text-gray-400 mb-1">Column Name</label>
+                          <input 
+                            type="text" 
+                            className="w-full bg-gray-700 border-gray-600 rounded-lg text-white p-2.5 focus:ring-indigo-500" 
+                            placeholder="e.g. Gym, Calories, Mood"
+                            value={newStatName}
+                            onChange={e => setNewStatName(e.target.value)}
+                          />
+                      </div>
+
+                      <div>
+                          <label className="block text-xs text-gray-400 mb-1">Data Type</label>
+                          <div className="flex bg-gray-700 rounded-lg p-1">
+                              {['percent', 'count', 'check'].map(type => (
+                                  <button 
+                                    key={type}
+                                    onClick={() => setNewStatType(type as any)}
+                                    className={`flex-1 py-2 text-sm rounded-md capitalize ${newStatType === type ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                                  >
+                                      {type}
+                                  </button>
+                              ))}
+                          </div>
+                      </div>
+
+                      <div>
+                          <label className="block text-xs text-gray-400 mb-1">Link to Category? (Optional)</label>
+                          <select 
+                            className="w-full bg-gray-700 border-gray-600 rounded-lg text-white p-2.5"
+                            value={newStatLink}
+                            onChange={e => setNewStatLink(e.target.value)}
+                          >
+                              <option value="">Manual Entry (No Link)</option>
+                              {categories.filter(c => c.id !== 'uncategorized').map(cat => (
+                                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                              ))}
+                          </select>
+                          <p className="text-[10px] text-gray-500 mt-1">Linked columns calculate automatically from your planner but can be overridden manually.</p>
+                      </div>
+                  </div>
+
+                  <div className="mt-8 flex gap-3">
+                      <button onClick={() => setIsAddStatModalOpen(false)} className="flex-1 py-2.5 bg-transparent border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700">Cancel</button>
+                      <button onClick={handleAddStat} className="flex-1 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 font-medium">Add Column</button>
+                  </div>
+              </div>
+          </div>
+      )}
 
     </div>
   );
