@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { StatDefinition, StatValue, Category, DailyLog, Task, TrackerType } from './types';
 import { PlusIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, AdjustmentsIcon, CalendarIcon, CheckIcon } from './icons';
+
+// ... rest of the code remains the same ...
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
