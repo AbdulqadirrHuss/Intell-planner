@@ -80,11 +80,13 @@ const Statistics: React.FC<StatisticsProps> = ({
 
   const getCellValue = (date: string, def: StatDefinition): number | boolean | null => {
     const override = statValues.find(v => v.date === date && v.stat_definition_id === def.id);
-    if (override) {
+    // Only return override if it's manually set (is_manual = true)
+    if (override && override.is_manual) {
         if (def.type === 'check') return override.value === 1;
         return override.value;
     }
 
+    // If linked to a category, calculate from tasks
     if (def.linked_category_id) {
         const log = dailyLogs[date];
         if (!log) return null;
@@ -94,6 +96,7 @@ const Statistics: React.FC<StatisticsProps> = ({
         if (tasks.length === 0) return null;
         return calculateCompletion(tasks);
     }
+    
     return null;
   };
 
@@ -161,7 +164,7 @@ const Statistics: React.FC<StatisticsProps> = ({
       dates.forEach(d => {
           if (!def) { // Global
               const val = getGlobalCompletion(d);
-              if (val > 0) { sum += val; count++; }
+              if (val >= 0) { sum += val; count++; }
           } else {
               const val = getCellValue(d, def);
               if (val !== null) {
