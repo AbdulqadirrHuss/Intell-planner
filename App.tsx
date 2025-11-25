@@ -112,31 +112,93 @@ function App() {
         if (!supabase) return;
         const selectedDayType = dayTypes.find(dt => dt.id === dayTypeId);
         if (!selectedDayType) return;
+
         const log = dailyLogs[date] || { date: date, dayTypeId: null, tasks: [] };
+
+        // 1. Keep existing one-off tasks (non-recurring)
         const oneOffTasks = log.tasks.filter(t => !t.isRecurring);
-        const newRecurringTasksForDb = selectedDayType.recurringTasks.map(rt => ({
-            log_date: date, text: rt.text, category_id: rt.categoryId === 'uncategorized' ? null : rt.categoryId, is_recurring: true, completed: false
-        }));
+
+        // 2. Prepare NEW recurring tasks list
+        //    This includes:
+        //    a) General routines (uncategorized) attached to the Day Type
+        //    b) Recurring tasks from ALL categories linked to this Day Type
+
+        const newRecurringTasksForDb: any[] = [];
+
+        // a) General routines
+        selectedDayType.recurringTasks.forEach(rt => {
+            // Only include if it's a general routine (no category or uncategorized)
+            // OR if it's explicitly part of the day type's recurring tasks list (which might include some categorized ones if legacy)
+            // But primarily we want the ones defined on the Day Type itself.
+            if (!rt.categoryId || rt.categoryId === 'uncategorized') {
+                newRecurringTasksForDb.push({
+                    log_date: date,
+                    text: rt.text,
+                    category_id: null,
+                    is_recurring: true,
+                    completed: false
+                });
+            }
+        });
+
+        // b) Category-specific recurring tasks
+        //    We need to look up the actual Category objects to get their recurring tasks
+        selectedDayType.categoryIds.forEach(catId => {
+            const category = categories.find(c => c.id === catId);
+            if (category) {
+                category.recurringTasks.forEach(rt => {
+                    newRecurringTasksForDb.push({
+                        log_date: date,
+                        text: rt.text,
+                        category_id: catId,
+                        is_recurring: true,
+                        completed: false
+                    });
+                });
+            }
+        });
+
+        // 3. Delete OLD recurring tasks for this day from DB
+        //    (We replace them entirely to ensure the latest template is applied)
         const { data: oldRecTasks } = await supabase.from('tasks').select('id').eq('log_date', date).eq('is_recurring', true);
         const oldRecTaskIds = oldRecTasks?.map(t => t.id) || [];
+
         if (oldRecTaskIds.length > 0) {
+            // Delete subtasks first (cascade usually handles this but good to be safe)
             await supabase.from('subtasks').delete().in('parent_task_id', oldRecTaskIds);
             await supabase.from('tasks').delete().in('id', oldRecTaskIds);
         }
+
+        // 4. Insert NEW recurring tasks
+        let newTasks: Task[] = [];
         if (newRecurringTasksForDb.length > 0) {
             const { data: newTasksData } = await supabase.from('tasks').insert(newRecurringTasksForDb).select();
             if (newTasksData) {
-                const newTasks: Task[] = newTasksData.map((t: any) => ({
-                    id: t.id, text: t.text, completed: t.completed, categoryId: t.category_id || 'uncategorized', isRecurring: true, subtasks: []
+                newTasks = newTasksData.map((t: any) => ({
+                    id: t.id,
+                    text: t.text,
+                    completed: t.completed,
+                    categoryId: t.category_id || 'uncategorized',
+                    isRecurring: true,
+                    subtasks: []
                 }));
-                await supabase.from('daily_logs').update({ day_type_id: dayTypeId }).eq('date', date);
-                setDailyLogs(prev => ({ ...prev, [date]: { ...log, dayTypeId: dayTypeId, tasks: [...oneOffTasks, ...newTasks] } }));
-                return;
             }
         }
+
+        // 5. Update Daily Log with new Day Type ID
         await supabase.from('daily_logs').update({ day_type_id: dayTypeId }).eq('date', date);
-        setDailyLogs(prev => ({ ...prev, [date]: { ...log, dayTypeId: dayTypeId, tasks: oneOffTasks } }));
-    }, [dayTypes, dailyLogs]);
+
+        // 6. Update Local State
+        setDailyLogs(prev => ({
+            ...prev,
+            [date]: {
+                ...log,
+                dayTypeId: dayTypeId,
+                tasks: [...oneOffTasks, ...newTasks]
+            }
+        }));
+
+    }, [dayTypes, dailyLogs, categories]);
 
     const fetchDailyLog = useCallback(async (date: string) => {
         if (!supabase) return;
