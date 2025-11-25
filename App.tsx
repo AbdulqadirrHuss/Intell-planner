@@ -294,7 +294,7 @@ function App() {
         }
     };
 
-    const handleAddTask = async (text: string, categoryId: string, isRecurring: boolean = false) => {
+    const handleAddTask = async (text: string, categoryId: string, isRecurring: boolean = false, isImportant: boolean = false) => {
         if (!supabase || !text.trim()) return;
         const dbCatId = categoryId === 'uncategorized' || categoryId === '' ? null : categoryId;
 
@@ -309,7 +309,7 @@ function App() {
         }
 
         if (data) {
-            const newTask = { ...data, categoryId: data.category_id || 'uncategorized', isRecurring: data.is_recurring, subtasks: [] };
+            const newTask = { ...data, categoryId: data.category_id || 'uncategorized', isRecurring: data.is_recurring, subtasks: [], isImportant: isImportant };
             setDailyLogs(prev => {
                 const prevLog = prev[selectedDate] || { date: selectedDate, dayTypeId: null, tasks: [] };
                 return {

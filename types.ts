@@ -4,6 +4,7 @@ export interface Task {
   completed: boolean;
   categoryId: string;
   isRecurring: boolean;
+  isImportant?: boolean;
   subtasks: Subtask[];
 }
 

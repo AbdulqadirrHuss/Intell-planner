@@ -459,35 +459,43 @@ const TaskList: React.FC<TaskListProps> = ({
                   </div>
                 )}
               </div>
+            )}
+          </div>
+        );
+      })}
+
+      {hiddenCategories.length > 0 && (
+        <div className="mt-8 flex justify-center">
+          <div className="relative">
+            <button
+              onClick={() => setIsAddCatDropdownOpen(!isAddCatDropdownOpen)}
               className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-full text-sm font-medium text-gray-300 transition-colors border border-gray-700 shadow-sm"
             >
-            <PlusIcon className="w-4 h-4" /> Add Category to View
-          </button>
+              <PlusIcon className="w-4 h-4" /> Add Category to View
+            </button>
 
-            {
-          isAddCatDropdownOpen && (
-            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-56 bg-gray-800 rounded-lg shadow-xl border border-gray-700 overflow-hidden z-20">
-              <div className="py-1">
-                {hiddenCategories.map(cat => (
-                  <button
-                    key={cat.id}
-                    onClick={() => addCategoryToView(cat.id)}
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }}></span>
-                      {cat.name}
-                    </div>
-                  </button>
-                ))}
+            {isAddCatDropdownOpen && (
+              <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-56 bg-gray-800 rounded-lg shadow-xl border border-gray-700 overflow-hidden z-20">
+                <div className="py-1">
+                  {hiddenCategories.map(cat => (
+                    <button
+                      key={cat.id}
+                      onClick={() => addCategoryToView(cat.id)}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }}></span>
+                        {cat.name}
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          )
-        }
+            )}
           </div>
-        </div >
+        </div>
       )}
-    </div >
+    </div>
   );
 };
 
