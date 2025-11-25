@@ -39,15 +39,18 @@ function App() {
   useEffect(() => {
     async function loadInitialData() {
       try {
+        // Declare variables in scope so they can be used later
         let loadedCategories: Category[] = [];
+        let loadedOrphans: RecurringTaskTemplate[] = [];
 
+        // 1. Fetch Categories
         const { data: catData } = await supabase.from('categories').select(`*, recurring_task_templates ( *, recurring_subtask_templates ( * ) )`);
         if (catData) {
              loadedCategories = catData.map((cat: any) => ({
                 id: cat.id, name: cat.name, color: cat.color,
-                recurringTasks: cat.recurring_task_templates.map((rt: any) => ({
+                recurringTasks: (cat.recurring_task_templates || []).map((rt: any) => ({
                     id: rt.id, text: rt.text, categoryId: rt.category_id, daysOfWeek: rt.days_of_week || [],
-                    subtaskTemplates: rt.recurring_subtask_templates.map((rst: SupabaseRecurringSubtaskTemplate) => ({
+                    subtaskTemplates: (rt.recurring_subtask_templates || []).map((rst: SupabaseRecurringSubtaskTemplate) => ({
                         id: rst.id, text: rst.text, parentTemplateId: rst.parent_template_id
                     }))
                 }))
@@ -55,21 +58,22 @@ function App() {
             setCategories(loadedCategories);
         }
 
+        // 2. Fetch Uncategorized Routines
         const { data: orphanData } = await supabase.from('recurring_task_templates')
             .select(`*, recurring_subtask_templates ( * )`)
             .is('category_id', null);
             
-        let loadedOrphans: RecurringTaskTemplate[] = [];
         if (orphanData) {
             loadedOrphans = orphanData.map((rt: any) => ({
                 id: rt.id, text: rt.text, categoryId: 'uncategorized', daysOfWeek: rt.days_of_week || [],
-                subtaskTemplates: rt.recurring_subtask_templates.map((rst: SupabaseRecurringSubtaskTemplate) => ({
+                subtaskTemplates: (rt.recurring_subtask_templates || []).map((rst: SupabaseRecurringSubtaskTemplate) => ({
                     id: rst.id, text: rst.text, parentTemplateId: rst.parent_template_id
                 }))
             }));
             setUncategorizedTemplates(loadedOrphans);
         }
 
+        // 3. Fetch Day Types
         const { data: dtData } = await supabase.from('day_types').select('*');
         const { data: linksData } = await supabase.from('day_type_categories').select('*').order('sort_order');
         
@@ -77,14 +81,16 @@ function App() {
             const formattedDayTypes = dtData.map(dt => {
                 const catIds = linksData.filter((l: any) => l.day_type_id === dt.id).map((l: any) => l.category_id);
                 const dayRecurringTasks: any[] = [];
+                
+                // Safe access using loadedCategories from this scope
                 loadedCategories.forEach((cat: Category) => {
                     if (catIds.includes(cat.id)) {
                         dayRecurringTasks.push(...cat.recurringTasks);
                     }
                 });
-                // Just for display in DayTypeManager, we attach orphans. 
-                // Note: Real filtering happens via logic in Manager or Regenerate.
-                dayRecurringTasks.push(...loadedOrphans); 
+                
+                // Add the orphans (Global Routines)
+                dayRecurringTasks.push(...loadedOrphans);
 
                 return {
                     id: dt.id, name: dt.name,
@@ -102,7 +108,11 @@ function App() {
         if (statsVals) setStatValues(statsVals);
 
         setIsDataLoaded(true);
-      } catch (error) { console.error("Error loading data", error); }
+      } catch (error) { 
+          console.error("Error loading data", error); 
+          // Even if error, enable data loaded so app doesn't stay white
+          setIsDataLoaded(true);
+      }
     }
     loadInitialData();
   }, []); 
@@ -113,12 +123,6 @@ function App() {
     
     const log = dailyLogs[date] || { date: date, dayTypeId: null, tasks: [] };
     const oneOffTasks = log.tasks.filter(t => !t.isRecurring);
-    
-    // Filter selectedDayType.recurringTasks to ensure we don't add duplicates or wrong items
-    // Specifically, we want:
-    // 1. Tasks from Categories linked to this day
-    // 2. Tasks that are Uncategorized (Global/DayType specific routines) - assuming we want them all for now
-    // Realistically, DayType should filter orphans based on a link table, but here we assume orphans apply if they are in the list.
     
     const newRecurringTasksForDb = selectedDayType.recurringTasks.map(rt => ({
       log_date: date, 
@@ -176,57 +180,6 @@ function App() {
 
   const handleSelectDayTypeFromDropdown = (dayTypeId: string) => regenerateTasks(dayTypeId, selectedDate);
   
- // ... (Imports remain same) ...
-
-// ... (Inside App function) ...
-
-  // FIXED: Safer state update to prevent "blank screen" crash
-  const handleAddRecurringTask = async (dayTypeId: string, text: string, categoryId: string) => {
-      const dbCatId = categoryId === 'uncategorized' || categoryId === '' ? null : categoryId;
-      const { data } = await supabase.from('recurring_task_templates').insert({ category_id: dbCatId, text }).select().single();
-      
-      if (data) {
-          const newTemplate: RecurringTaskTemplate = { 
-              id: data.id, text: data.text, categoryId: categoryId || 'uncategorized', daysOfWeek: [], subtaskTemplates: [] 
-          };
-
-          if (dbCatId) {
-             setCategories(categories.map(c => c.id === categoryId ? { ...c, recurringTasks: [...c.recurringTasks, newTemplate] } : c)); 
-          } else {
-             setUncategorizedTemplates(prev => [...prev, newTemplate]);
-             setDayTypes(dayTypes.map(dt => ({...dt, recurringTasks: [...dt.recurringTasks, newTemplate]})));
-          }
-
-          // CHECK: Is this Day Type active on the current selected date?
-          const currentDayTypeId = dailyLogs[selectedDate]?.dayTypeId;
-          
-          if (currentDayTypeId === dayTypeId) {
-              const { data: newTask } = await supabase.from('tasks').insert({
-                  log_date: selectedDate, text: text, category_id: dbCatId, is_recurring: true
-              }).select().single();
-
-              if (newTask) {
-                  setDailyLogs(prev => {
-                      // SAFETY CHECK: Ensure the log exists before spreading
-                      const safeLog = prev[selectedDate] || { date: selectedDate, dayTypeId: dayTypeId, tasks: [] };
-                      return {
-                          ...prev,
-                          [selectedDate]: {
-                              ...safeLog,
-                              tasks: [...safeLog.tasks, { 
-                                  id: newTask.id, text: newTask.text, completed: false, 
-                                  categoryId: newTask.category_id || 'uncategorized', isRecurring: true, subtasks: [] 
-                              }]
-                          }
-                      };
-                  });
-              }
-          }
-      }
-  };
-
-// ... (Rest of App.tsx stays the same as the previous turn) ...
-
   const handleReorderCategories = async (newOrderIds: string[]) => {
     const currentLog = dailyLogs[selectedDate];
     if (currentLog && currentLog.dayTypeId) {
@@ -254,6 +207,47 @@ function App() {
         const newTask = { ...data, categoryId: data.category_id || 'uncategorized', isRecurring: data.is_recurring, subtasks: [] };
         setDailyLogs(prev => ({ ...prev, [selectedDate]: { ...currentDailyLog, tasks: [...currentDailyLog.tasks, newTask] } }));
     }
+  };
+
+  const handleAddRecurringTask = async (dayTypeId: string, text: string, categoryId: string) => {
+      const dbCatId = categoryId === 'uncategorized' || categoryId === '' ? null : categoryId;
+      const { data } = await supabase.from('recurring_task_templates').insert({ category_id: dbCatId, text }).select().single();
+      
+      if (data) {
+          const newTemplate: RecurringTaskTemplate = { 
+              id: data.id, text: data.text, categoryId: categoryId || 'uncategorized', daysOfWeek: [], subtaskTemplates: [] 
+          };
+
+          if (dbCatId) {
+             setCategories(categories.map(c => c.id === categoryId ? { ...c, recurringTasks: [...c.recurringTasks, newTemplate] } : c)); 
+          } else {
+             setUncategorizedTemplates(prev => [...prev, newTemplate]);
+             setDayTypes(dayTypes.map(dt => ({...dt, recurringTasks: [...dt.recurringTasks, newTemplate]})));
+          }
+
+          const currentDayTypeId = dailyLogs[selectedDate]?.dayTypeId;
+          if (currentDayTypeId === dayTypeId) {
+              const { data: newTask } = await supabase.from('tasks').insert({
+                  log_date: selectedDate, text: text, category_id: dbCatId, is_recurring: true
+              }).select().single();
+
+              if (newTask) {
+                  setDailyLogs(prev => {
+                      const safeLog = prev[selectedDate] || { date: selectedDate, dayTypeId: dayTypeId, tasks: [] };
+                      return {
+                          ...prev,
+                          [selectedDate]: {
+                              ...safeLog,
+                              tasks: [...safeLog.tasks, { 
+                                  id: newTask.id, text: newTask.text, completed: false, 
+                                  categoryId: newTask.category_id || 'uncategorized', isRecurring: true, subtasks: [] 
+                              }]
+                          }
+                      };
+                  });
+              }
+          }
+      }
   };
 
   const handleToggleTask = async (id: string) => { setDailyLogs(prev => { const log = prev[selectedDate] || currentDailyLog; const task = log.tasks.find(t => t.id === id); if (!task) return prev; const newCompleted = !task.completed; supabase.from('tasks').update({ completed: newCompleted }).eq('id', id).then(); return { ...prev, [selectedDate]: { ...log, tasks: log.tasks.map(t => t.id === id ? { ...t, completed: newCompleted } : t) } }; }); };
