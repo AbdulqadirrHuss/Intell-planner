@@ -49,6 +49,7 @@ function App() {
 
     const [currentView, setCurrentView] = useState<'planner' | 'tasks'>('planner');
     const [newTaskText, setNewTaskText] = useState('');
+    const [newTaskCategory, setNewTaskCategory] = useState('');
 
     // --- DATA LOADING ---
     useEffect(() => {
@@ -427,20 +428,28 @@ function App() {
                                 className="task-input"
                                 value={newTaskText}
                                 onChange={(e) => setNewTaskText(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleAddTask(newTaskText, 'uncategorized')}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        handleAddTask(newTaskText, newTaskCategory || 'uncategorized');
+                                        setNewTaskCategory(''); // Reset category after adding
+                                    }
+                                }}
                             />
                             <div className="flex items-center gap-2 pr-2">
                                 <select
                                     className="bg-transparent text-xs text-gray-400 border-none outline-none cursor-pointer hover:text-white"
-                                    onChange={(e) => handleAddTask(newTaskText, e.target.value)}
-                                    value=""
+                                    onChange={(e) => setNewTaskCategory(e.target.value)}
+                                    value={newTaskCategory}
                                 >
-                                    <option value="" disabled>No Link</option>
+                                    <option value="">No Link</option>
                                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                 </select>
                                 <button
                                     className="fab-btn"
-                                    onClick={() => handleAddTask(newTaskText, 'uncategorized')}
+                                    onClick={() => {
+                                        handleAddTask(newTaskText, newTaskCategory || 'uncategorized');
+                                        setNewTaskCategory('');
+                                    }}
                                 >
                                     <PlusIcon className="w-6 h-6" />
                                 </button>
