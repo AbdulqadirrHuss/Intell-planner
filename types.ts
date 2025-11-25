@@ -4,13 +4,13 @@ export interface Task {
   completed: boolean;
   categoryId: string;
   isRecurring: boolean;
-  subtasks: Subtask[]; 
+  subtasks: Subtask[];
 }
 
 export interface Subtask {
   id: string;
-  parent_task_id: string; 
-  log_date: string;       
+  parent_task_id: string;
+  log_date: string;
   text: string;
   completed: boolean;
   isRecurring: boolean;
@@ -20,20 +20,20 @@ export interface Category {
   id: string;
   name: string;
   color: string;
-  recurringTasks: RecurringTaskTemplate[]; 
+  recurringTasks: RecurringTaskTemplate[];
 }
 
 export interface RecurringTaskTemplate {
   id: string;
   text: string;
   categoryId: string;
-  daysOfWeek: number[]; 
-  subtaskTemplates: RecurringSubtaskTemplate[]; 
+  daysOfWeek: number[];
+  subtaskTemplates: RecurringSubtaskTemplate[];
 }
 
 export interface RecurringSubtaskTemplate {
   id: string;
-  parent_template_id: string; 
+  parent_template_id: string;
   text: string;
 }
 
@@ -48,7 +48,7 @@ export interface DayType {
 export interface DailyLog {
   date: string;
   dayTypeId: string | null;
-  tasks: Task[]; 
+  tasks: Task[];
 }
 
 export type TrackerType = 'percent' | 'count' | 'check';
@@ -69,4 +69,21 @@ export interface StatValue {
   stat_definition_id: string;
   value: number;
   is_manual: boolean;
+}
+
+export interface DriveItem {
+  id: string;
+  created_at: string;
+  name: string;
+  type: 'folder' | 'file';
+  parent_id: string | null;
+  size?: number;
+  mime_type?: string;
+  url?: string;
+  owner_id: string;
+}
+
+export interface Breadcrumb {
+  id: string;
+  name: string;
 }
