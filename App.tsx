@@ -7,7 +7,8 @@ import DayTypeManager from './DayTypeManager';
 import CategoryManager from './CategoryManager';
 import Statistics from './Statistics';
 import TrackerManager from './TrackerManager';
-import { SettingsIcon, EditIcon, PlannerIcon, StatsIcon } from './icons';
+import TasksPage from './TasksPage'; // Import the new page (flat structure)
+import { SettingsIcon, EditIcon, PlannerIcon, StatsIcon, CheckIcon, CalendarIcon } from './icons';
 import DateNavigator from './DateNavigator';
 import { createClient } from '@supabase/supabase-js';
 
@@ -32,7 +33,9 @@ function App() {
   const [isCategoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const [isTrackerManagerOpen, setTrackerManagerOpen] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false); 
-  const [currentView, setCurrentView] = useState<'planner' | 'statistics'>('planner');
+  
+  // UPDATED: 3-way view state
+  const [currentView, setCurrentView] = useState<'planner' | 'statistics' | 'tracker'>('planner');
 
   useEffect(() => {
     async function loadInitialData() {
@@ -166,13 +169,15 @@ function App() {
     }
   };
 
-  const handleAddTask = async (text: string, categoryId: string) => {
-    const { data } = await supabase.from('tasks').insert({ log_date: selectedDate, text, category_id: categoryId, is_recurring: false }).select().single();
+  // Updated to accept extra params from AdvancedTaskForm (though we might ignore priority for now if not in DB)
+  const handleAddTask = async (text: string, categoryId: string, isRecurring: boolean = false) => {
+    const { data } = await supabase.from('tasks').insert({ log_date: selectedDate, text, category_id: categoryId, is_recurring: isRecurring }).select().single();
     if (data) {
-        const newTask = { ...data, categoryId: data.category_id, isRecurring: false, subtasks: [] };
+        const newTask = { ...data, categoryId: data.category_id, isRecurring: data.is_recurring, subtasks: [] };
         setDailyLogs(prev => ({ ...prev, [selectedDate]: { ...currentDailyLog, tasks: [...currentDailyLog.tasks, newTask] } }));
     }
   };
+
   const handleToggleTask = async (id: string) => {
     setDailyLogs(prev => {
       const log = prev[selectedDate] || currentDailyLog;
@@ -353,10 +358,13 @@ function App() {
                 <button onClick={() => setCurrentView('statistics')} className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-medium transition-all ${currentView === 'statistics' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}>
                     <StatsIcon className="w-4 h-4" /> Statistics
                 </button>
+                <button onClick={() => setCurrentView('tracker')} className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-medium transition-all ${currentView === 'tracker' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}>
+                    <CheckIcon className="w-4 h-4" /> Tasks
+                </button>
             </div>
         </div>
 
-        {currentView === 'planner' ? (
+        {currentView === 'planner' && (
             <div className="animate-in fade-in">
                 <Header completionPercentage={completionPercentage} selectedDate={selectedDate} />
                 <DateNavigator selectedDate={selectedDate} onDateChange={setSelectedDate} />
@@ -392,10 +400,12 @@ function App() {
                     onUpdateSubtaskText={handleUpdateSubtaskText}
                     onToggleSubtaskRecurring={handleToggleSubtaskRecurring}
                   />
-                  <AddTaskForm categories={categories} onAddTask={handleAddTask} />
+                  <AddTaskForm categories={categories} onAddTask={(t, c) => handleAddTask(t, c, false)} />
                 </main>
             </div>
-        ) : (
+        )}
+        
+        {currentView === 'statistics' && (
             <div className="animate-in fade-in">
                 <Statistics 
                     categories={categories} 
@@ -406,6 +416,31 @@ function App() {
                     onUpdateStatValue={handleUpdateStatValue}
                 />
             </div>
+        )}
+
+        {currentView === 'tracker' && (
+            <TasksPage 
+              selectedDate={selectedDate}
+              setSelectedDate={setSelectedDate}
+              completionPercentage={completionPercentage}
+              dailyLog={currentDailyLog}
+              dayTypes={dayTypes}
+              categories={categories}
+              onSelectDayType={handleSelectDayTypeFromDropdown}
+              onOpenDayTypeManager={() => setDayTypeManagerOpen(true)}
+              onOpenCategoryManager={() => setCategoryManagerOpen(true)}
+              onOpenTrackerManager={() => setTrackerManagerOpen(true)}
+              onReorderCategories={handleReorderCategories}
+              onToggleTask={handleToggleTask}
+              onDeleteTask={handleDeleteTask}
+              onToggleSubtask={handleToggleSubtask}
+              onDeleteSubtask={handleDeleteSubtask}
+              onAddSubtask={handleAddSubtask}
+              onUpdateTaskText={handleUpdateTaskText}
+              onUpdateSubtaskText={handleUpdateSubtaskText}
+              onToggleSubtaskRecurring={handleToggleSubtaskRecurring}
+              onAddTask={handleAddTask}
+            />
         )}
 
         <DayTypeManager isOpen={isDayTypeManagerOpen} onClose={() => setDayTypeManagerOpen(false)} dayTypes={dayTypes} categories={categories} onAddDayType={handleAddDayType} onUpdateDayType={handleUpdateDayType} onDeleteDayType={handleDeleteDayType} onAddCategoryToDayType={handleAddCategoryToDayType} onRemoveCategoryFromDayType={onRemoveCategoryFromDayType} />
