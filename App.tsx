@@ -228,11 +228,20 @@ function App() {
     const handleAddRecurringTask = async (dayTypeId: string, text: string, categoryId: string) => {
         if (!supabase) return;
         const dbCatId = categoryId === 'uncategorized' || categoryId === '' ? null : categoryId;
-        const { data } = await supabase.from('recurring_task_templates').insert({ category_id: dbCatId, text }).select().single();
+        // Default to all days (0-6)
+        const defaultDays = [0, 1, 2, 3, 4, 5, 6];
+
+        const { data } = await supabase.from('recurring_task_templates').insert({
+            category_id: dbCatId,
+            text,
+            days_of_week: defaultDays
+        }).select().single();
 
         if (data) {
             const newTemplate: RecurringTaskTemplate = {
-                id: data.id, text: data.text, categoryId: categoryId || 'uncategorized', daysOfWeek: [], subtaskTemplates: []
+                id: data.id, text: data.text, categoryId: categoryId || 'uncategorized',
+                daysOfWeek: defaultDays,
+                subtaskTemplates: []
             };
 
             if (dbCatId) {
