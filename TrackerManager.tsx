@@ -17,12 +17,14 @@ const TrackerManager: React.FC<TrackerManagerProps> = ({
 }) => {
   const [editingTracker, setEditingTracker] = useState<StatDefinition | null>(null);
   
+  // New Tracker Form State
   const [newName, setNewName] = useState('');
   const [newType, setNewType] = useState<TrackerType>('percent');
   const [newLinkedCat, setNewLinkedCat] = useState('');
   const [newTarget, setNewTarget] = useState('');
   const [newColor, setNewColor] = useState('#6366f1');
 
+  // Editing Tracker Form State
   const [editName, setEditName] = useState('');
   const [editType, setEditType] = useState<TrackerType>('percent');
   const [editLinkedCat, setEditLinkedCat] = useState('');
@@ -48,8 +50,12 @@ const TrackerManager: React.FC<TrackerManagerProps> = ({
       e.preventDefault();
       if (newName.trim()) {
           const targetVal = newTarget ? parseFloat(newTarget) : undefined;
-          const linked = newLinkedCat === 'none' ? undefined : (newLinkedCat || undefined);
-          onAddTracker(newName.trim(), newType, linked, targetVal, newColor);
+          const linked = newLinkedCat === 'none' || newLinkedCat === '' ? undefined : newLinkedCat;
+          
+          // "all" is a special keyword for Global Todos
+          const finalLinked = newLinkedCat === 'all' ? 'all' : linked;
+
+          onAddTracker(newName.trim(), newType, finalLinked, targetVal, newColor);
           resetForm();
       }
   };
@@ -66,11 +72,13 @@ const TrackerManager: React.FC<TrackerManagerProps> = ({
   const handleUpdate = () => {
       if (editingTracker && editName.trim()) {
           const targetVal = editTarget ? parseFloat(editTarget) : undefined;
-          const linked = editLinkedCat === 'none' ? undefined : (editLinkedCat || undefined);
+          const linked = editLinkedCat === 'none' || editLinkedCat === '' ? undefined : editLinkedCat;
+           const finalLinked = editLinkedCat === 'all' ? 'all' : linked;
+
           onUpdateTracker(editingTracker.id, {
               name: editName.trim(),
               type: editType,
-              linked_category_id: linked,
+              linked_category_id: finalLinked,
               target: targetVal,
               color: editColor
           });
@@ -92,13 +100,19 @@ const TrackerManager: React.FC<TrackerManagerProps> = ({
         </div>
 
         <div className="flex-grow overflow-y-auto p-6 space-y-8">
+            
+            {/* --- ADD NEW FORM --- */}
             <div className="bg-gray-700/30 p-5 rounded-xl border border-gray-600/50">
                 <h3 className="text-lg font-semibold text-indigo-300 mb-4">Add New Metric</h3>
                 <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                    
+                    {/* Name */}
                     <div className="md:col-span-3 space-y-1">
                         <label className="text-xs text-gray-400">Name</label>
                         <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Gym" className="w-full bg-gray-700 border-gray-600 rounded p-2 text-sm text-white" />
                     </div>
+
+                    {/* Type */}
                     <div className="md:col-span-2 space-y-1">
                          <label className="text-xs text-gray-400">Type</label>
                          <select value={newType} onChange={e => setNewType(e.target.value as TrackerType)} className="w-full bg-gray-700 border-gray-600 rounded p-2 text-sm text-white">
@@ -107,32 +121,41 @@ const TrackerManager: React.FC<TrackerManagerProps> = ({
                              <option value="check">Check ✓</option>
                          </select>
                     </div>
+
+                    {/* Link Category */}
                     <div className="md:col-span-3 space-y-1">
                          <label className="text-xs text-gray-400">Link Category</label>
                          <select value={newLinkedCat} onChange={e => setNewLinkedCat(e.target.value)} disabled={newType !== 'percent'} className="w-full bg-gray-700 border-gray-600 rounded p-2 text-sm text-white disabled:opacity-50">
-                             <option value="">Manual Entry</option>
+                             <option value="none">Manual Entry</option>
                              <option value="all">All Tasks (Global)</option>
                              {categories.filter(c => c.id !== 'uncategorized').map(c => (
                                  <option key={c.id} value={c.id}>{c.name}</option>
                              ))}
                          </select>
                     </div>
+
+                    {/* Target (for Count) */}
                     {newType === 'count' && (
                          <div className="md:col-span-2 space-y-1">
                             <label className="text-xs text-gray-400">Target (Opt)</label>
                             <input type="number" value={newTarget} onChange={e => setNewTarget(e.target.value)} placeholder="e.g. 100" className="w-full bg-gray-700 border-gray-600 rounded p-2 text-sm text-white" />
                         </div>
                     )}
+
+                    {/* Color */}
                     <div className="md:col-span-1 space-y-1">
                          <label className="text-xs text-gray-400">Color</label>
                          <input type="color" value={newColor} onChange={e => setNewColor(e.target.value)} className="w-full h-9 rounded cursor-pointer bg-transparent" />
                     </div>
+
+                    {/* Add Button */}
                     <div className="md:col-span-1">
-                        <button type="submit" className="w-full p-2 bg-indigo-600 hover:bg-indigo-700 rounded-md flex justify-center"><PlusIcon className="w-5 h-5"/></button>
+                        <button type="submit" className="w-full p-2 bg-indigo-600 hover:bg-indigo-700 rounded-md flex justify-center text-white"><PlusIcon className="w-5 h-5"/></button>
                     </div>
                 </form>
             </div>
 
+            {/* --- LIST OF METRICS --- */}
             <div className="space-y-3">
                 <h3 className="text-lg font-semibold text-gray-200">Your Metrics</h3>
                 {statDefinitions.length === 0 && <p className="text-gray-500 italic">No metrics added yet.</p>}
@@ -140,19 +163,20 @@ const TrackerManager: React.FC<TrackerManagerProps> = ({
                 {statDefinitions.map(tracker => (
                     <div key={tracker.id} className="bg-gray-700/50 border border-gray-600 rounded-lg p-4 flex flex-col md:flex-row items-center gap-4 transition-all hover:bg-gray-700">
                          {editingTracker?.id === tracker.id ? (
+                             // EDIT MODE
                              <div className="grid grid-cols-1 md:grid-cols-12 gap-2 w-full items-center">
                                  <div className="md:col-span-3">
-                                     <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="w-full bg-gray-600 border-gray-500 rounded p-1 text-sm" />
+                                     <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="w-full bg-gray-600 border-gray-500 rounded p-1 text-sm text-white" />
                                  </div>
                                  <div className="md:col-span-2">
-                                      <select value={editType} onChange={e => setEditType(e.target.value as TrackerType)} className="w-full bg-gray-600 border-gray-500 rounded p-1 text-sm">
+                                      <select value={editType} onChange={e => setEditType(e.target.value as TrackerType)} className="w-full bg-gray-600 border-gray-500 rounded p-1 text-sm text-white">
                                          <option value="percent">Percent</option>
                                          <option value="count">Count</option>
                                          <option value="check">Check</option>
                                      </select>
                                  </div>
                                  <div className="md:col-span-3">
-                                      <select value={editLinkedCat} onChange={e => setEditLinkedCat(e.target.value)} disabled={editType !== 'percent'} className="w-full bg-gray-600 border-gray-500 rounded p-1 text-sm disabled:opacity-50">
+                                      <select value={editLinkedCat} onChange={e => setEditLinkedCat(e.target.value)} disabled={editType !== 'percent'} className="w-full bg-gray-600 border-gray-500 rounded p-1 text-sm text-white disabled:opacity-50">
                                          <option value="none">Manual</option>
                                          <option value="all">All Tasks</option>
                                          {categories.filter(c => c.id !== 'uncategorized').map(c => (
@@ -162,7 +186,7 @@ const TrackerManager: React.FC<TrackerManagerProps> = ({
                                  </div>
                                  <div className="md:col-span-2">
                                      {editType === 'count' ? (
-                                         <input type="number" value={editTarget} onChange={e => setEditTarget(e.target.value)} placeholder="Target" className="w-full bg-gray-600 border-gray-500 rounded p-1 text-sm" />
+                                         <input type="number" value={editTarget} onChange={e => setEditTarget(e.target.value)} placeholder="Target" className="w-full bg-gray-600 border-gray-500 rounded p-1 text-sm text-white" />
                                      ) : <span className="text-gray-500 text-xs text-center block">-</span>}
                                  </div>
                                  <div className="md:col-span-1">
@@ -174,6 +198,7 @@ const TrackerManager: React.FC<TrackerManagerProps> = ({
                                  </div>
                              </div>
                          ) : (
+                             // VIEW MODE
                              <>
                                 <div className="flex-grow flex items-center gap-4">
                                     <div className="w-4 h-12 rounded-full" style={{ backgroundColor: tracker.color || '#6366f1' }}></div>
@@ -181,7 +206,7 @@ const TrackerManager: React.FC<TrackerManagerProps> = ({
                                         <h4 className="font-bold text-white text-lg">{tracker.name}</h4>
                                         <div className="flex items-center gap-3 text-xs text-gray-400 uppercase tracking-wider">
                                             <span className="bg-gray-800 px-2 py-1 rounded border border-gray-700">{tracker.type}</span>
-                                            {tracker.linked_category_id && <span className="text-green-400 flex items-center gap-1">Linked to {categories.find(c=>c.id === tracker.linked_category_id)?.name || 'Global'}</span>}
+                                            {tracker.linked_category_id && <span className="text-green-400 flex items-center gap-1">Linked: {tracker.linked_category_id === 'all' ? 'All Tasks' : categories.find(c=>c.id === tracker.linked_category_id)?.name}</span>}
                                             {tracker.type === 'count' && tracker.target && <span className="text-indigo-300">Target: {tracker.target}</span>}
                                         </div>
                                     </div>
