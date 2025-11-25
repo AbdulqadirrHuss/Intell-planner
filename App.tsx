@@ -7,7 +7,7 @@ import DayTypeManager from './DayTypeManager';
 import CategoryManager from './CategoryManager';
 import Statistics from './Statistics';
 import TrackerManager from './TrackerManager';
-import TasksPage from './TasksPage'; // Import the new separate page
+import TasksPage from './TasksPage';
 import { SettingsIcon, EditIcon, PlannerIcon, StatsIcon, CheckIcon } from './icons';
 import DateNavigator from './DateNavigator';
 import { createClient } from '@supabase/supabase-js';
@@ -34,8 +34,8 @@ function App() {
   const [isTrackerManagerOpen, setTrackerManagerOpen] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false); 
   
-  // NEW: 3-way navigation state
-  const [currentView, setCurrentView] = useState<'planner' | 'tasks' | 'statistics'>('planner');
+  // 3-Way View State
+  const [currentView, setCurrentView] = useState<'planner' | 'statistics' | 'tracker'>('planner');
 
   useEffect(() => {
     async function loadInitialData() {
@@ -169,7 +169,6 @@ function App() {
     }
   };
 
-  // UPDATED: Accepts params from AdvancedTaskForm
   const handleAddTask = async (text: string, categoryId: string, isRecurring: boolean = false) => {
     const { data } = await supabase.from('tasks').insert({ log_date: selectedDate, text, category_id: categoryId, is_recurring: isRecurring }).select().single();
     if (data) {
@@ -178,7 +177,6 @@ function App() {
     }
   };
 
-  // ... (Keep other handlers like toggleTask, DeleteTask exactly as they were) ...
   const handleToggleTask = async (id: string) => {
     setDailyLogs(prev => {
       const log = prev[selectedDate] || currentDailyLog;
@@ -305,7 +303,6 @@ function App() {
       }
   };
 
-  // ... (Category and DayType handlers remain the same) ...
   const handleAddCategory = async (name: string, color: string) => {
     const { data } = await supabase.from('categories').insert({ name, color }).select().single();
     if (data) setCategories([...categories, { ...data, recurringTasks: [] }]);
@@ -352,7 +349,6 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 font-sans p-4 sm:p-6 lg:p-8">
       <div className="max-w-5xl mx-auto">
-        {/* MAIN NAVIGATION */}
         <div className="flex justify-center mb-8">
             <div className="bg-gray-800 p-1 rounded-full inline-flex shadow-lg border border-gray-700 gap-1">
                 <button onClick={() => setCurrentView('planner')} className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-medium transition-all ${currentView === 'planner' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}>
@@ -367,7 +363,6 @@ function App() {
             </div>
         </div>
 
-        {/* VIEW 1: PLANNER (Day Focus Management) */}
         {currentView === 'planner' && (
             <div className="animate-in fade-in">
                 <Header completionPercentage={completionPercentage} selectedDate={selectedDate} />
@@ -389,11 +384,11 @@ function App() {
                     </div>
                   </div>
                   
-                  {/* Planner also shows list, but purely for overview */}
                   <TaskList
                     key={selectedDate}
                     tasks={currentDailyLog.tasks}
-                    categories={categories}
+                    // We FILTER OUT uncategorized tasks here so they only show in the Tasks page
+                    categories={categories.filter(c => c.id !== 'uncategorized')}
                     sortedCategoryIds={dayTypes.find(dt => dt.id === currentDailyLog.dayTypeId)?.categoryIds || []}
                     onReorderCategories={handleReorderCategories}
                     onToggleTask={handleToggleTask}
@@ -405,12 +400,29 @@ function App() {
                     onUpdateSubtaskText={handleUpdateSubtaskText}
                     onToggleSubtaskRecurring={handleToggleSubtaskRecurring}
                   />
-                  <AddTaskForm categories={categories} onAddTask={(t, c) => handleAddTask(t, c, false)} />
+                  
+                  {/* Old Form adds to "Uncategorized", but since we hide it, we probably should default to the first Real category */}
+                  <AddTaskForm 
+                    categories={categories.filter(c => c.id !== 'uncategorized')} 
+                    onAddTask={(t, c) => handleAddTask(t, c, false)} 
+                  />
                 </main>
             </div>
         )}
         
-        {/* VIEW 2: TASKS (The Tripartite Division) */}
+        {currentView === 'statistics' && (
+            <div className="animate-in fade-in">
+                <Statistics 
+                    categories={categories} 
+                    dailyLogs={dailyLogs}
+                    statDefinitions={statDefinitions}
+                    statValues={statValues}
+                    onOpenTrackerManager={() => setTrackerManagerOpen(true)}
+                    onUpdateStatValue={handleUpdateStatValue}
+                />
+            </div>
+        )}
+
         {currentView === 'tasks' && (
             <TasksPage 
               selectedDate={selectedDate}
@@ -436,21 +448,6 @@ function App() {
             />
         )}
 
-        {/* VIEW 3: STATISTICS */}
-        {currentView === 'statistics' && (
-            <div className="animate-in fade-in">
-                <Statistics 
-                    categories={categories} 
-                    dailyLogs={dailyLogs}
-                    statDefinitions={statDefinitions}
-                    statValues={statValues}
-                    onOpenTrackerManager={() => setTrackerManagerOpen(true)}
-                    onUpdateStatValue={handleUpdateStatValue}
-                />
-            </div>
-        )}
-
-        {/* Modals */}
         <DayTypeManager isOpen={isDayTypeManagerOpen} onClose={() => setDayTypeManagerOpen(false)} dayTypes={dayTypes} categories={categories} onAddDayType={handleAddDayType} onUpdateDayType={handleUpdateDayType} onDeleteDayType={handleDeleteDayType} onAddCategoryToDayType={handleAddCategoryToDayType} onRemoveCategoryFromDayType={onRemoveCategoryFromDayType} />
         <CategoryManager isOpen={isCategoryManagerOpen} onClose={() => setCategoryManagerOpen(false)} categories={categories} onAddCategory={handleAddCategory} onUpdateCategory={handleUpdateCategory} onDeleteCategory={handleDeleteCategory} onAddRecurringTask={handleAddRecurringTask} onDeleteRecurringTask={onDeleteRecurringTask} onUpdateRecurringTask={onUpdateRecurringTask} onAddRecurringSubtask={onAddRecurringSubtask} onDeleteRecurringSubtask={onDeleteRecurringSubtask} onUpdateRecurringTaskText={handleUpdateRecurringTaskText} onUpdateRecurringSubtaskText={handleUpdateRecurringSubtaskText} />
         <TrackerManager isOpen={isTrackerManagerOpen} onClose={() => setTrackerManagerOpen(false)} statDefinitions={statDefinitions} categories={categories} onAddTracker={handleAddTracker} onUpdateTracker={handleUpdateTracker} onDeleteTracker={handleDeleteTracker} />
