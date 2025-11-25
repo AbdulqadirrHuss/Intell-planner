@@ -6,7 +6,7 @@ import AddTaskForm from './AddTaskForm';
 import DayTypeManager from './DayTypeManager';
 import CategoryManager from './CategoryManager';
 import Statistics from './Statistics';
-import TrackerManager from './TrackerManager'; // FIXED IMPORT PATH
+import TrackerManager from './TrackerManager';
 import { SettingsIcon, EditIcon, PlannerIcon, StatsIcon } from './icons';
 import DateNavigator from './DateNavigator';
 import { createClient } from '@supabase/supabase-js';
