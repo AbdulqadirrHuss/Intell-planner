@@ -544,6 +544,8 @@ function App() {
                     dailyLog={currentDailyLog}
                     dayTypes={dayTypes}
                     categories={categories}
+                    statDefinitions={statDefinitions}
+                    statValues={statValues}
                     onSelectDayType={handleSelectDayTypeFromDropdown}
                     onOpenDayTypeManager={() => setDayTypeManagerOpen(true)}
                     onOpenCategoryManager={() => setCategoryManagerOpen(true)}
@@ -558,6 +560,7 @@ function App() {
                     onUpdateSubtaskText={handleUpdateSubtaskText}
                     onToggleSubtaskRecurring={handleToggleSubtaskRecurring}
                     onAddTask={handleAddTask}
+                    onUpdateStatValue={handleUpdateStatValue}
                 />
             )}
 
