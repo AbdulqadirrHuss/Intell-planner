@@ -59,7 +59,7 @@ export interface StatDefinition {
   linked_category_id?: string;
   target?: number;
   color?: string;
-  goal_direction?: 'up' | 'down'; // 'up' means higher is better (default), 'down' means lower is better
+  goal_direction?: 'up' | 'down';
 }
 
 export interface StatValue {
