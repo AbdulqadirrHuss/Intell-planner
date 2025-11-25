@@ -1,49 +1,41 @@
 
 import React from 'react';
-import { CloudIcon, TrashIcon, FolderIcon, SettingsIcon } from '../../icons';
+import { PlannerIcon, CheckIcon, StatsIcon, SettingsIcon } from '../../icons';
 
 interface SidebarProps {
     activeTab: string;
-    setActiveTab: (tab: string) => void;
-    storageUsed: number;
-    storageLimit: number;
+    setActiveTab: (tab: 'planner' | 'tasks' | 'statistics') => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, storageUsed, storageLimit }) => {
-    const usagePercent = Math.min((storageUsed / storageLimit) * 100, 100);
-
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     return (
         <div className="sidebar">
             <div className="sidebar-logo">
-                <CloudIcon className="w-8 h-8 text-indigo-500" />
-                <span>AI Drive</span>
+                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                    <PlannerIcon className="w-5 h-5 text-white" />
+                </div>
+                <span>IntelliPlanner</span>
             </div>
 
             <div className="sidebar-nav">
-                <div className={`nav-item ${activeTab === 'my-drive' ? 'active' : ''}`} onClick={() => setActiveTab('my-drive')}>
-                    <FolderIcon className="w-5 h-5" />
-                    <span>My Drive</span>
+                <div className={`nav-item ${activeTab === 'planner' ? 'active' : ''}`} onClick={() => setActiveTab('planner')}>
+                    <PlannerIcon className="w-5 h-5" />
+                    <span>Planner</span>
                 </div>
-                <div className={`nav-item ${activeTab === 'trash' ? 'active' : ''}`} onClick={() => setActiveTab('trash')}>
-                    <TrashIcon className="w-5 h-5" />
-                    <span>Trash</span>
+                <div className={`nav-item ${activeTab === 'tasks' ? 'active' : ''}`} onClick={() => setActiveTab('tasks')}>
+                    <CheckIcon className="w-5 h-5" />
+                    <span>All Tasks</span>
                 </div>
-                <div className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
-                    <SettingsIcon className="w-5 h-5" />
-                    <span>Settings</span>
+                <div className={`nav-item ${activeTab === 'statistics' ? 'active' : ''}`} onClick={() => setActiveTab('statistics')}>
+                    <StatsIcon className="w-5 h-5" />
+                    <span>Statistics</span>
                 </div>
             </div>
 
-            <div className="storage-info">
-                <div className="flex justify-between text-xs text-gray-400 mb-1">
-                    <span>Storage</span>
-                    <span>{usagePercent.toFixed(0)}%</span>
-                </div>
-                <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${usagePercent}%` }}></div>
-                </div>
-                <div className="text-xs text-gray-500 mt-2">
-                    {(storageUsed / 1024 / 1024).toFixed(1)} MB of {(storageLimit / 1024 / 1024).toFixed(0)} MB used
+            <div className="mt-auto pt-4 border-t border-gray-800">
+                <div className="nav-item">
+                    <SettingsIcon className="w-5 h-5" />
+                    <span>Settings</span>
                 </div>
             </div>
         </div>
