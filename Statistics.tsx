@@ -2,17 +2,16 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { StatDefinition, StatValue, Category, DailyLog, Task, TrackerType } from './types';
 import { PlusIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, AdjustmentsIcon, CalendarIcon, CheckIcon } from './icons';
 
-const VIEW_OPTIONS = ['Daily', 'Weekly', 'Monthly', 'Yearly', 'Custom'];
-
-export interface StatDefinition {
-  id: string;
-  name: string;
-  type: TrackerType;
-  linked_category_id?: string;
-  target?: number;
-  color?: string;
-  goal_direction?: 'up' | 'down'; // 'up' means higher is better, 'down' means lower is better
+interface StatisticsProps {
+  categories: Category[];
+  dailyLogs: { [date: string]: DailyLog };
+  statDefinitions: StatDefinition[];
+  statValues: StatValue[];
+  onOpenTrackerManager: () => void;
+  onUpdateStatValue: (date: string, definitionId: string, value: number | boolean | null) => void;
 }
+
+const VIEW_OPTIONS = ['Daily', 'Weekly', 'Monthly', 'Yearly', 'Custom'];
 
 type TimeView = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
 
