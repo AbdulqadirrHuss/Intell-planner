@@ -14,8 +14,8 @@ interface SubtaskItemProps {
   onToggleSubtaskRecurring: (taskId: string, subtaskId: string) => void;
 }
 
-const SubtaskItem: React.FC<SubtaskItemProps> = ({ 
-  task, subtask, onToggleSubtask, onDeleteSubtask, onUpdateSubtaskText, onToggleSubtaskRecurring 
+const SubtaskItem: React.FC<SubtaskItemProps> = ({
+  task, subtask, onToggleSubtask, onDeleteSubtask, onUpdateSubtaskText, onToggleSubtaskRecurring
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(subtask.text);
@@ -35,7 +35,7 @@ const SubtaskItem: React.FC<SubtaskItemProps> = ({
         onChange={() => onToggleSubtask(task.id, subtask.id)}
         className="w-4 h-4 text-indigo-500 bg-gray-700 border-gray-600 rounded focus:ring-indigo-600 ring-offset-gray-900 focus:ring-2 cursor-pointer"
       />
-      
+
       {isEditing ? (
         <input
           type="text"
@@ -53,7 +53,7 @@ const SubtaskItem: React.FC<SubtaskItemProps> = ({
       )}
 
       <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-         <button 
+        <button
           onClick={() => onToggleSubtaskRecurring(task.id, subtask.id)}
           className={`mr-2 ${subtask.isRecurring ? 'text-indigo-400' : 'text-gray-600'} hover:text-indigo-300 transition-colors`}
           title={subtask.isRecurring ? "Recurring subtask" : "Make recurring"}
@@ -62,9 +62,9 @@ const SubtaskItem: React.FC<SubtaskItemProps> = ({
         </button>
 
         {isEditing ? (
-          <button onClick={handleUpdate} className="mr-2 text-green-400 hover:text-green-300"><CheckIcon className="w-3.5 h-3.5"/></button>
+          <button onClick={handleUpdate} className="mr-2 text-green-400 hover:text-green-300"><CheckIcon className="w-3.5 h-3.5" /></button>
         ) : (
-          <button onClick={() => setIsEditing(true)} className="mr-2 text-gray-500 hover:text-white"><EditIcon className="w-3.5 h-3.5"/></button>
+          <button onClick={() => setIsEditing(true)} className="mr-2 text-gray-500 hover:text-white"><EditIcon className="w-3.5 h-3.5" /></button>
         )}
         <button onClick={() => onDeleteSubtask(subtask.id)} className="text-gray-600 hover:text-red-500 transition-colors"><TrashIcon className="w-3.5 h-3.5" /></button>
       </div>
@@ -86,8 +86,8 @@ interface TaskItemProps {
   onToggleSubtaskRecurring: (taskId: string, subtaskId: string) => void;
 }
 
-const TaskItem: React.FC<TaskItemProps> = ({ 
-  task, categoryColor, onToggleTask, onDeleteTask, 
+const TaskItem: React.FC<TaskItemProps> = ({
+  task, categoryColor, onToggleTask, onDeleteTask,
   onToggleSubtask, onDeleteSubtask, onAddSubtask,
   onUpdateTaskText, onUpdateSubtaskText, onToggleSubtaskRecurring
 }) => {
@@ -123,7 +123,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
           onChange={() => onToggleTask(task.id)}
           className={`w-5 h-5 text-indigo-500 bg-gray-700 border-gray-600 rounded focus:ring-indigo-600 ring-offset-gray-800 focus:ring-2 ${hasSubtasks ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
         />
-        
+
         {isEditing ? (
           <input
             type="text"
@@ -139,14 +139,14 @@ const TaskItem: React.FC<TaskItemProps> = ({
             {task.text}
           </span>
         )}
-        
+
         {task.isRecurring && <span className="text-xs bg-gray-700 text-indigo-300 px-2 py-0.5 rounded-full mr-3 border border-gray-600 font-medium">Recurring</span>}
-        
+
         <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-           {isEditing ? (
-            <button onClick={handleUpdate} className="ml-2 text-green-400 hover:text-green-300"><CheckIcon className="w-5 h-5"/></button>
+          {isEditing ? (
+            <button onClick={handleUpdate} className="ml-2 text-green-400 hover:text-green-300"><CheckIcon className="w-5 h-5" /></button>
           ) : (
-            <button onClick={() => setIsEditing(true)} className="ml-2 text-gray-500 hover:text-white"><EditIcon className="w-4 h-4"/></button>
+            <button onClick={() => setIsEditing(true)} className="ml-2 text-gray-500 hover:text-white"><EditIcon className="w-4 h-4" /></button>
           )}
           <button onClick={() => onDeleteTask(task.id)} className="ml-2 text-gray-500 hover:text-red-500 transition-colors">
             <TrashIcon className="w-4 h-4" />
@@ -158,7 +158,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
       {(task.subtasks && task.subtasks.length > 0) && (
         <div className="mt-3 space-y-1.5">
           {task.subtasks.map(subtask => (
-            <SubtaskItem 
+            <SubtaskItem
               key={subtask.id}
               task={task}
               subtask={subtask}
@@ -223,7 +223,7 @@ const calculateProgress = (tasks: Task[]): number => {
   return Math.round(totalProgress);
 };
 
-const TaskList: React.FC<TaskListProps> = ({ 
+const TaskList: React.FC<TaskListProps> = ({
   tasks, categories, sortedCategoryIds, onReorderCategories,
   onToggleTask, onDeleteTask,
   onToggleSubtask, onDeleteSubtask, onAddSubtask,
@@ -244,8 +244,8 @@ const TaskList: React.FC<TaskListProps> = ({
 
     // 1. Map sortedCategoryIds to actual category objects
     const orderedFromProps = sortedCategoryIds
-        .map(id => categories.find(c => c.id === id))
-        .filter(c => c !== undefined) as Category[];
+      .map(id => categories.find(c => c.id === id))
+      .filter(c => c !== undefined) as Category[];
 
     // 2. Identify categories that are NOT in the sorted list (new ones, or one-offs)
     const otherCategories = categories.filter(c => !sortedCategoryIds.includes(c.id));
@@ -287,9 +287,9 @@ const TaskList: React.FC<TaskListProps> = ({
 
   const handleDragEnd = () => {
     if (draggedCategory) {
-        // Report new order to parent to save to DB
-        const newOrderIds = orderedCategories.map(c => c.id);
-        onReorderCategories(newOrderIds);
+      // Report new order to parent to save to DB
+      const newOrderIds = orderedCategories.map(c => c.id);
+      onReorderCategories(newOrderIds);
     }
     setDraggedCategory(null);
   };
@@ -313,32 +313,32 @@ const TaskList: React.FC<TaskListProps> = ({
   const categoriesToRender = orderedCategories.filter(c => c.id !== 'uncategorized');
 
   // Dropdown list items
-  const hiddenCategories = categories.filter(c => 
-    c.id !== 'uncategorized' && 
+  const hiddenCategories = categories.filter(c =>
+    c.id !== 'uncategorized' &&
     (!groupedTasks[c.id] || groupedTasks[c.id].length === 0) &&
     !forcedVisibleCategories.includes(c.id)
   );
 
   if (tasks.length === 0 && forcedVisibleCategories.length === 0) {
     return (
-        <div className="text-center py-12 px-6 bg-gray-800 rounded-lg border border-gray-700 shadow-lg">
-            <h3 className="text-xl font-semibold text-gray-300">No tasks for this day!</h3>
-            <p className="text-gray-500 mt-2">Select a Day Type or add a new task to get started.</p>
-            <div className="mt-6">
-              <button onClick={() => setIsAddCatDropdownOpen(!isAddCatDropdownOpen)} className="text-indigo-400 hover:text-indigo-300 text-sm font-medium flex items-center justify-center gap-1 mx-auto">
-                <PlusIcon className="w-4 h-4" /> Add Category to Day
-              </button>
-               {isAddCatDropdownOpen && (
-                  <div className="mt-2 w-64 mx-auto bg-gray-700 rounded-lg shadow-xl border border-gray-600 z-10 overflow-hidden text-left">
-                    {categories.filter(c => c.id !== 'uncategorized').map(cat => (
-                      <div key={cat.id} onClick={() => addCategoryToView(cat.id)} className="px-4 py-2 hover:bg-gray-600 cursor-pointer text-sm text-gray-200">
-                        {cat.name}
-                      </div>
-                    ))}
-                  </div>
-                )}
+      <div className="text-center py-12 px-6 bg-gray-800 rounded-lg border border-gray-700 shadow-lg">
+        <h3 className="text-xl font-semibold text-gray-300">No tasks for this day!</h3>
+        <p className="text-gray-500 mt-2">Select a Day Type or add a new task to get started.</p>
+        <div className="mt-6">
+          <button onClick={() => setIsAddCatDropdownOpen(!isAddCatDropdownOpen)} className="text-indigo-400 hover:text-indigo-300 text-sm font-medium flex items-center justify-center gap-1 mx-auto">
+            <PlusIcon className="w-4 h-4" /> Add Category to Day
+          </button>
+          {isAddCatDropdownOpen && (
+            <div className="mt-2 w-64 mx-auto bg-gray-700 rounded-lg shadow-xl border border-gray-600 z-10 overflow-hidden text-left">
+              {categories.filter(c => c.id !== 'uncategorized').map(cat => (
+                <div key={cat.id} onClick={() => addCategoryToView(cat.id)} className="px-4 py-2 hover:bg-gray-600 cursor-pointer text-sm text-gray-200">
+                  {cat.name}
+                </div>
+              ))}
             </div>
+          )}
         </div>
+      </div>
     );
   }
 
@@ -346,8 +346,9 @@ const TaskList: React.FC<TaskListProps> = ({
     <div className="space-y-6 pb-24">
       {categoriesToRender.map((category) => {
         const tasksInCategory = groupedTasks[category.id] || [];
-        const isVisible = tasksInCategory.length > 0 || forcedVisibleCategories.includes(category.id);
-        
+        // Visible if: has tasks OR forced visible OR is part of the current Day Type structure
+        const isVisible = tasksInCategory.length > 0 || forcedVisibleCategories.includes(category.id) || sortedCategoryIds.includes(category.id);
+
         if (!isVisible) return null;
 
         const categoryProgress = calculateProgress(tasksInCategory);
@@ -357,7 +358,7 @@ const TaskList: React.FC<TaskListProps> = ({
         const isBeingDragged = draggedCategory?.id === category.id;
 
         return (
-          <div 
+          <div
             key={category.id}
             draggable
             onDragStart={(e) => handleDragStart(e, category)}
@@ -371,9 +372,9 @@ const TaskList: React.FC<TaskListProps> = ({
             {/* Category Header */}
             <div className="flex items-center justify-between mb-3 group select-none">
               <div className="flex items-center flex-grow cursor-pointer" onClick={() => toggleCategory(category.id)}>
-                <div 
-                  className="mr-3 cursor-grab active:cursor-grabbing text-gray-600 hover:text-gray-400 p-1 rounded hover:bg-gray-800 transition-colors" 
-                  onMouseDown={(e) => e.stopPropagation()} 
+                <div
+                  className="mr-3 cursor-grab active:cursor-grabbing text-gray-600 hover:text-gray-400 p-1 rounded hover:bg-gray-800 transition-colors"
+                  onMouseDown={(e) => e.stopPropagation()}
                 >
                   <DragHandleIcon />
                 </div>
@@ -381,12 +382,12 @@ const TaskList: React.FC<TaskListProps> = ({
                   {category.name}
                 </h2>
                 <div className={`ml-2 transition-transform duration-300 ${isCollapsed ? '-rotate-90' : ''}`}>
-                    <ChevronDownIcon isOpen={!isCollapsed} className="w-4 h-4 text-gray-500" />
+                  <ChevronDownIcon isOpen={!isCollapsed} className="w-4 h-4 text-gray-500" />
                 </div>
               </div>
               <span className="text-xs font-bold px-2.5 py-1 bg-gray-800 rounded-full border border-gray-700" style={{ color: category.color }}>{Math.round(categoryProgress)}%</span>
             </div>
-            
+
             {/* Progress Bar (Thicker, solid color style restored) */}
             <div className="w-full bg-gray-700/50 rounded-full h-2 mb-5 overflow-hidden">
               <div
@@ -398,7 +399,7 @@ const TaskList: React.FC<TaskListProps> = ({
             {/* Tasks Area */}
             {!isCollapsed && !isBeingDragged && (
               <div className="space-y-4 pl-2">
-                
+
                 {/* Active Tasks */}
                 <div className="space-y-3">
                   {activeTasks.map(task => (
@@ -420,29 +421,29 @@ const TaskList: React.FC<TaskListProps> = ({
 
                 {/* Empty State */}
                 {activeTasks.length === 0 && completedTasks.length === 0 && (
-                    <div className="text-sm text-gray-500 italic ml-4 py-4 border-2 border-dashed border-gray-800 rounded-lg text-center">
-                        No tasks yet. Add a task below.
-                    </div>
+                  <div className="text-sm text-gray-500 italic ml-4 py-4 border-2 border-dashed border-gray-800 rounded-lg text-center">
+                    No tasks yet. Add a task below.
+                  </div>
                 )}
 
                 {/* Completed Tasks Dropdown */}
                 {completedTasks.length > 0 && (
                   <div className="mt-6">
-                    <button 
+                    <button
                       onClick={() => toggleCompletedSection(category.id)}
                       className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider hover:text-gray-300 mb-3 transition-colors ml-1"
                     >
                       <ChevronDownIcon isOpen={!!expandedCompletedSections[category.id]} className="w-3 h-3" />
                       Completed ({completedTasks.length})
                     </button>
-                    
+
                     {expandedCompletedSections[category.id] && (
                       <div className="space-y-2 pl-4 border-l-2 border-gray-800 opacity-70 hover:opacity-100 transition-opacity">
                         {completedTasks.map(task => (
                           <TaskItem
                             key={task.id}
                             task={task}
-                            categoryColor="#4b5563" 
+                            categoryColor="#4b5563"
                             onToggleTask={onToggleTask}
                             onDeleteTask={onDeleteTask}
                             onToggleSubtask={onToggleSubtask}
@@ -465,60 +466,60 @@ const TaskList: React.FC<TaskListProps> = ({
 
       {uncategorizedTasks.length > 0 && (
         <div className="mt-10 pt-6 border-t border-gray-800">
-           <h2 className="text-xl font-bold text-gray-400 mb-4 flex items-center gap-3 px-2">
-               Uncategorized
-               <span className="text-xs bg-gray-800 px-2 py-1 rounded-full text-gray-500 border border-gray-700">{uncategorizedTasks.length}</span>
-           </h2>
-           <div className="space-y-3 pl-2">
-           {uncategorizedTasks.map(task => (
-             <TaskItem
-               key={task.id}
-               task={task}
-               categoryColor="#6b7280"
-               onToggleTask={onToggleTask}
-               onDeleteTask={onDeleteTask}
-               onToggleSubtask={onToggleSubtask}
-               onDeleteSubtask={onDeleteSubtask}
-               onAddSubtask={onAddSubtask}
-               onUpdateTaskText={onUpdateTaskText}
-               onUpdateSubtaskText={onUpdateSubtaskText}
-               onToggleSubtaskRecurring={onToggleSubtaskRecurring}
-             />
-           ))}
-           </div>
-         </div>
+          <h2 className="text-xl font-bold text-gray-400 mb-4 flex items-center gap-3 px-2">
+            Uncategorized
+            <span className="text-xs bg-gray-800 px-2 py-1 rounded-full text-gray-500 border border-gray-700">{uncategorizedTasks.length}</span>
+          </h2>
+          <div className="space-y-3 pl-2">
+            {uncategorizedTasks.map(task => (
+              <TaskItem
+                key={task.id}
+                task={task}
+                categoryColor="#6b7280"
+                onToggleTask={onToggleTask}
+                onDeleteTask={onDeleteTask}
+                onToggleSubtask={onToggleSubtask}
+                onDeleteSubtask={onDeleteSubtask}
+                onAddSubtask={onAddSubtask}
+                onUpdateTaskText={onUpdateTaskText}
+                onUpdateSubtaskText={onUpdateSubtaskText}
+                onToggleSubtaskRecurring={onToggleSubtaskRecurring}
+              />
+            ))}
+          </div>
+        </div>
       )}
 
       {hiddenCategories.length > 0 && (
-         <div className="mt-8 flex justify-center">
-            <div className="relative">
-                <button 
-                  onClick={() => setIsAddCatDropdownOpen(!isAddCatDropdownOpen)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-full text-sm font-medium text-gray-300 transition-colors border border-gray-700 shadow-sm"
-                >
-                  <PlusIcon className="w-4 h-4" /> Add Category to View
-                </button>
-                
-                {isAddCatDropdownOpen && (
-                  <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-56 bg-gray-800 rounded-lg shadow-xl border border-gray-700 overflow-hidden z-20">
-                    <div className="py-1">
-                      {hiddenCategories.map(cat => (
-                        <button
-                          key={cat.id}
-                          onClick={() => addCategoryToView(cat.id)}
-                          className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
-                        >
-                          <div className="flex items-center gap-2">
-                             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }}></span>
-                             {cat.name}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-            </div>
-         </div>
+        <div className="mt-8 flex justify-center">
+          <div className="relative">
+            <button
+              onClick={() => setIsAddCatDropdownOpen(!isAddCatDropdownOpen)}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-full text-sm font-medium text-gray-300 transition-colors border border-gray-700 shadow-sm"
+            >
+              <PlusIcon className="w-4 h-4" /> Add Category to View
+            </button>
+
+            {isAddCatDropdownOpen && (
+              <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-56 bg-gray-800 rounded-lg shadow-xl border border-gray-700 overflow-hidden z-20">
+                <div className="py-1">
+                  {hiddenCategories.map(cat => (
+                    <button
+                      key={cat.id}
+                      onClick={() => addCategoryToView(cat.id)}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }}></span>
+                        {cat.name}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
