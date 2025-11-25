@@ -7,8 +7,8 @@ import DayTypeManager from './DayTypeManager';
 import CategoryManager from './CategoryManager';
 import Statistics from './Statistics';
 import TrackerManager from './TrackerManager';
-import TasksPage from './TasksPage'; // Import the new page (flat structure)
-import { SettingsIcon, EditIcon, PlannerIcon, StatsIcon, CheckIcon, CalendarIcon } from './icons';
+import TasksPage from './TasksPage'; // Import the new separate page
+import { SettingsIcon, EditIcon, PlannerIcon, StatsIcon, CheckIcon } from './icons';
 import DateNavigator from './DateNavigator';
 import { createClient } from '@supabase/supabase-js';
 
@@ -34,8 +34,8 @@ function App() {
   const [isTrackerManagerOpen, setTrackerManagerOpen] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false); 
   
-  // UPDATED: 3-way view state
-  const [currentView, setCurrentView] = useState<'planner' | 'statistics' | 'tracker'>('planner');
+  // NEW: 3-way navigation state
+  const [currentView, setCurrentView] = useState<'planner' | 'tasks' | 'statistics'>('planner');
 
   useEffect(() => {
     async function loadInitialData() {
@@ -169,7 +169,7 @@ function App() {
     }
   };
 
-  // Updated to accept extra params from AdvancedTaskForm (though we might ignore priority for now if not in DB)
+  // UPDATED: Accepts params from AdvancedTaskForm
   const handleAddTask = async (text: string, categoryId: string, isRecurring: boolean = false) => {
     const { data } = await supabase.from('tasks').insert({ log_date: selectedDate, text, category_id: categoryId, is_recurring: isRecurring }).select().single();
     if (data) {
@@ -178,6 +178,7 @@ function App() {
     }
   };
 
+  // ... (Keep other handlers like toggleTask, DeleteTask exactly as they were) ...
   const handleToggleTask = async (id: string) => {
     setDailyLogs(prev => {
       const log = prev[selectedDate] || currentDailyLog;
@@ -304,6 +305,7 @@ function App() {
       }
   };
 
+  // ... (Category and DayType handlers remain the same) ...
   const handleAddCategory = async (name: string, color: string) => {
     const { data } = await supabase.from('categories').insert({ name, color }).select().single();
     if (data) setCategories([...categories, { ...data, recurringTasks: [] }]);
@@ -350,20 +352,22 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 font-sans p-4 sm:p-6 lg:p-8">
       <div className="max-w-5xl mx-auto">
+        {/* MAIN NAVIGATION */}
         <div className="flex justify-center mb-8">
-            <div className="bg-gray-800 p-1 rounded-full inline-flex shadow-lg border border-gray-700">
+            <div className="bg-gray-800 p-1 rounded-full inline-flex shadow-lg border border-gray-700 gap-1">
                 <button onClick={() => setCurrentView('planner')} className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-medium transition-all ${currentView === 'planner' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}>
                     <PlannerIcon className="w-4 h-4" /> Planner
                 </button>
-                <button onClick={() => setCurrentView('statistics')} className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-medium transition-all ${currentView === 'statistics' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}>
-                    <StatsIcon className="w-4 h-4" /> Statistics
-                </button>
-                <button onClick={() => setCurrentView('tracker')} className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-medium transition-all ${currentView === 'tracker' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}>
+                <button onClick={() => setCurrentView('tasks')} className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-medium transition-all ${currentView === 'tasks' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}>
                     <CheckIcon className="w-4 h-4" /> Tasks
+                </button>
+                <button onClick={() => setCurrentView('statistics')} className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-medium transition-all ${currentView === 'statistics' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}>
+                    <StatsIcon className="w-4 h-4" /> Stats
                 </button>
             </div>
         </div>
 
+        {/* VIEW 1: PLANNER (Day Focus Management) */}
         {currentView === 'planner' && (
             <div className="animate-in fade-in">
                 <Header completionPercentage={completionPercentage} selectedDate={selectedDate} />
@@ -385,6 +389,7 @@ function App() {
                     </div>
                   </div>
                   
+                  {/* Planner also shows list, but purely for overview */}
                   <TaskList
                     key={selectedDate}
                     tasks={currentDailyLog.tasks}
@@ -405,20 +410,8 @@ function App() {
             </div>
         )}
         
-        {currentView === 'statistics' && (
-            <div className="animate-in fade-in">
-                <Statistics 
-                    categories={categories} 
-                    dailyLogs={dailyLogs}
-                    statDefinitions={statDefinitions}
-                    statValues={statValues}
-                    onOpenTrackerManager={() => setTrackerManagerOpen(true)}
-                    onUpdateStatValue={handleUpdateStatValue}
-                />
-            </div>
-        )}
-
-        {currentView === 'tracker' && (
+        {/* VIEW 2: TASKS (The Tripartite Division) */}
+        {currentView === 'tasks' && (
             <TasksPage 
               selectedDate={selectedDate}
               setSelectedDate={setSelectedDate}
@@ -443,6 +436,21 @@ function App() {
             />
         )}
 
+        {/* VIEW 3: STATISTICS */}
+        {currentView === 'statistics' && (
+            <div className="animate-in fade-in">
+                <Statistics 
+                    categories={categories} 
+                    dailyLogs={dailyLogs}
+                    statDefinitions={statDefinitions}
+                    statValues={statValues}
+                    onOpenTrackerManager={() => setTrackerManagerOpen(true)}
+                    onUpdateStatValue={handleUpdateStatValue}
+                />
+            </div>
+        )}
+
+        {/* Modals */}
         <DayTypeManager isOpen={isDayTypeManagerOpen} onClose={() => setDayTypeManagerOpen(false)} dayTypes={dayTypes} categories={categories} onAddDayType={handleAddDayType} onUpdateDayType={handleUpdateDayType} onDeleteDayType={handleDeleteDayType} onAddCategoryToDayType={handleAddCategoryToDayType} onRemoveCategoryFromDayType={onRemoveCategoryFromDayType} />
         <CategoryManager isOpen={isCategoryManagerOpen} onClose={() => setCategoryManagerOpen(false)} categories={categories} onAddCategory={handleAddCategory} onUpdateCategory={handleUpdateCategory} onDeleteCategory={handleDeleteCategory} onAddRecurringTask={handleAddRecurringTask} onDeleteRecurringTask={onDeleteRecurringTask} onUpdateRecurringTask={onUpdateRecurringTask} onAddRecurringSubtask={onAddRecurringSubtask} onDeleteRecurringSubtask={onDeleteRecurringSubtask} onUpdateRecurringTaskText={handleUpdateRecurringTaskText} onUpdateRecurringSubtaskText={handleUpdateRecurringSubtaskText} />
         <TrackerManager isOpen={isTrackerManagerOpen} onClose={() => setTrackerManagerOpen(false)} statDefinitions={statDefinitions} categories={categories} onAddTracker={handleAddTracker} onUpdateTracker={handleUpdateTracker} onDeleteTracker={handleDeleteTracker} />
