@@ -40,7 +40,9 @@ export interface RecurringSubtaskTemplate {
 export interface DayType {
   id: string;
   name: string;
-  categoryIds: string[]; 
+  categoryIds: string[];
+  // ADDED THIS LINE:
+  recurringTasks: RecurringTaskTemplate[];
 }
 
 export interface DailyLog {
@@ -49,7 +51,6 @@ export interface DailyLog {
   tasks: Task[]; 
 }
 
-// --- STATISTICS TYPES ---
 export type TrackerType = 'percent' | 'count' | 'check';
 
 export interface StatDefinition {
