@@ -1,182 +1,260 @@
+
 import React, { useState } from 'react';
 import { DayType, Category } from './types';
 import { PlusIcon, TrashIcon, EditIcon, CheckIcon } from './icons';
 
 interface DayTypeManagerProps {
-  isOpen: boolean;
-  onClose: () => void;
-  dayTypes: DayType[];
-  categories: Category[];
-  onAddDayType: (name: string) => void;
-  onUpdateDayType: (id: string, name: string) => void;
-  onDeleteDayType: (id: string) => void;
-  onAddCategoryToDayType: (dayTypeId: string, categoryId: string) => void;
-  onRemoveCategoryFromDayType: (dayTypeId: string, categoryId: string) => void;
-  onAddRecurringTask: (dayTypeId: string, text: string, categoryId: string) => void;
-  onDeleteRecurringTask: (dayTypeId: string, taskId: string) => void;
+    isOpen: boolean;
+    onClose: () => void;
+    dayTypes: DayType[];
+    categories: Category[];
+    onAddDayType: (name: string) => void;
+    onUpdateDayType: (id: string, name: string) => void;
+    onDeleteDayType: (id: string) => void;
+    onAddCategoryToDayType: (dayTypeId: string, categoryId: string) => void;
+    onRemoveCategoryFromDayType: (dayTypeId: string, categoryId: string) => void;
+    onAddRecurringTask: (dayTypeId: string, text: string, categoryId: string) => void;
+    onDeleteRecurringTask: (dayTypeId: string, taskId: string) => void;
 }
 
 const DayTypeManager: React.FC<DayTypeManagerProps> = ({
-  isOpen, onClose, dayTypes, categories, onAddDayType, onUpdateDayType,
-  onDeleteDayType, onAddRecurringTask, onDeleteRecurringTask
+    isOpen, onClose, dayTypes, categories, onAddDayType, onUpdateDayType,
+    onDeleteDayType, onAddCategoryToDayType, onRemoveCategoryFromDayType,
+    onAddRecurringTask, onDeleteRecurringTask
 }) => {
-  const [newDayTypeName, setNewDayTypeName] = useState('');
-  const [editingDayTypeId, setEditingDayTypeId] = useState<string | null>(null);
-  const [editingDayTypeName, setEditingDayTypeName] = useState('');
-  const [newRecurringTask, setNewRecurringTask] = useState<{ [key: string]: string }>({});
-  const [selectedDayType, setSelectedDayType] = useState<string | null>(null);
+    const [newDayTypeName, setNewDayTypeName] = useState('');
+    const [editingDayTypeId, setEditingDayTypeId] = useState<string | null>(null);
+    const [editingDayTypeName, setEditingDayTypeName] = useState('');
+    const [newRecurringTask, setNewRecurringTask] = useState<{ [key: string]: string }>({});
+    const [selectedDayType, setSelectedDayType] = useState<string | null>(null);
+    const [selectedCategoryToAdd, setSelectedCategoryToAdd] = useState<string>('');
 
-  if (!isOpen) return null;
+    if (!isOpen) return null;
 
-  // Select the first day type by default if none selected
-  if (!selectedDayType && dayTypes.length > 0) {
-      setSelectedDayType(dayTypes[0].id);
-  }
-
-  const activeDayType = dayTypes.find(dt => dt.id === selectedDayType);
-
-  const handleAddDayType = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newDayTypeName.trim()) {
-      onAddDayType(newDayTypeName.trim());
-      setNewDayTypeName('');
+    // Select the first day type by default if none selected
+    if (!selectedDayType && dayTypes.length > 0) {
+        setSelectedDayType(dayTypes[0].id);
     }
-  };
 
-  const handleUpdateDayType = (id: string) => {
-    if (editingDayTypeName.trim()) {
-      onUpdateDayType(id, editingDayTypeName.trim());
-      setEditingDayTypeId(null);
-      setEditingDayTypeName('');
-    }
-  };
+    const activeDayType = dayTypes.find(dt => dt.id === selectedDayType);
 
-  const startEditing = (dayType: DayType) => {
-    setEditingDayTypeId(dayType.id);
-    setEditingDayTypeName(dayType.name);
-  };
+    const handleAddDayType = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (newDayTypeName.trim()) {
+            onAddDayType(newDayTypeName.trim());
+            setNewDayTypeName('');
+        }
+    };
 
-  const handleAddRoutine = (e: React.FormEvent) => {
-      e.preventDefault();
-      if (selectedDayType && newRecurringTask[selectedDayType]?.trim()) {
-          // IMPORTANT: We send '' as categoryId to mark it as a ROUTINE (Uncategorized)
-          onAddRecurringTask(selectedDayType, newRecurringTask[selectedDayType], '');
-          setNewRecurringTask(prev => ({ ...prev, [selectedDayType]: '' }));
-      }
-  };
+    const handleUpdateDayType = (id: string) => {
+        if (editingDayTypeName.trim()) {
+            onUpdateDayType(id, editingDayTypeName.trim());
+            setEditingDayTypeId(null);
+            setEditingDayTypeName('');
+        }
+    };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 z-[60] flex justify-center items-center p-4 backdrop-blur-sm">
-      <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-5xl h-[80vh] flex border border-gray-800 overflow-hidden">
-        
-        {/* SIDEBAR: Day Types List */}
-        <div className="w-1/3 border-r border-gray-800 flex flex-col bg-gray-900">
-            <div className="p-5 border-b border-gray-800">
-                <h2 className="text-xl font-bold text-white">Day Types</h2>
-                <p className="text-xs text-gray-500 mt-1">Select a day to manage routines.</p>
-            </div>
-            
-            <div className="flex-grow overflow-y-auto p-3 space-y-2">
-                {dayTypes.map(dt => (
-                    <div 
-                        key={dt.id} 
-                        onClick={() => setSelectedDayType(dt.id)}
-                        className={`p-3 rounded-xl cursor-pointer transition-all border ${selectedDayType === dt.id ? 'bg-indigo-900/20 border-indigo-500/50' : 'bg-gray-800/50 border-transparent hover:bg-gray-800'}`}
-                    >
-                        <div className="flex justify-between items-center">
-                            {editingDayTypeId === dt.id ? (
-                                <div className="flex gap-2 w-full">
-                                    <input 
-                                        type="text" 
-                                        value={editingDayTypeName} 
-                                        onClick={e => e.stopPropagation()}
-                                        onChange={e => setEditingDayTypeName(e.target.value)} 
-                                        className="flex-grow bg-gray-900 text-white rounded border border-indigo-500 px-2 text-sm" 
-                                        autoFocus
-                                    />
-                                    <button onClick={() => handleUpdateDayType(dt.id)} className="text-green-400"><CheckIcon className="w-4 h-4"/></button>
-                                </div>
-                            ) : (
-                                <span className={`font-medium ${selectedDayType === dt.id ? 'text-indigo-300' : 'text-gray-300'}`}>{dt.name}</span>
-                            )}
-                            <div className="flex gap-1">
-                                <button onClick={(e) => { e.stopPropagation(); startEditing(dt); }} className="p-1 text-gray-500 hover:text-white"><EditIcon className="w-4 h-4"/></button>
-                                <button onClick={(e) => { e.stopPropagation(); onDeleteDayType(dt.id); }} className="p-1 text-gray-500 hover:text-red-400"><TrashIcon className="w-4 h-4"/></button>
-                            </div>
-                        </div>
+    const startEditing = (dayType: DayType) => {
+        setEditingDayTypeId(dayType.id);
+        setEditingDayTypeName(dayType.name);
+    };
+
+    const handleAddRoutine = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (selectedDayType && newRecurringTask[selectedDayType]?.trim()) {
+            // IMPORTANT: We send '' as categoryId to mark it as a ROUTINE (Uncategorized)
+            onAddRecurringTask(selectedDayType, newRecurringTask[selectedDayType], '');
+            setNewRecurringTask(prev => ({ ...prev, [selectedDayType]: '' }));
+        }
+    };
+
+    const handleAddCategoryLink = () => {
+        if (selectedDayType && selectedCategoryToAdd) {
+            onAddCategoryToDayType(selectedDayType, selectedCategoryToAdd);
+            setSelectedCategoryToAdd('');
+        }
+    };
+
+    // Filter categories that are NOT already linked to the active day type
+    const availableCategories = categories.filter(c =>
+        c.id !== 'uncategorized' &&
+        activeDayType &&
+        !activeDayType.categoryIds.includes(c.id)
+    );
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-90 z-[60] flex justify-center items-center p-4 backdrop-blur-sm">
+            <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-5xl h-[80vh] flex border border-gray-800 overflow-hidden">
+
+                {/* SIDEBAR: Day Types List */}
+                <div className="w-1/3 border-r border-gray-800 flex flex-col bg-gray-900">
+                    <div className="p-5 border-b border-gray-800">
+                        <h2 className="text-xl font-bold text-white">Day Types</h2>
+                        <p className="text-xs text-gray-500 mt-1">Select a day to manage its structure.</p>
                     </div>
-                ))}
-            </div>
 
-            <div className="p-4 border-t border-gray-800">
-                <form onSubmit={handleAddDayType} className="flex gap-2">
-                    <input 
-                        type="text" 
-                        value={newDayTypeName} 
-                        onChange={e => setNewDayTypeName(e.target.value)}
-                        placeholder="New Day Type..." 
-                        className="flex-grow bg-gray-800 border-none rounded-lg text-sm text-white px-3 focus:ring-1 focus:ring-indigo-500"
-                    />
-                    <button type="submit" className="bg-indigo-600 p-2 rounded-lg text-white"><PlusIcon className="w-5 h-5"/></button>
-                </form>
-            </div>
-        </div>
-
-        {/* MAIN: Routines for Selected Day */}
-        <div className="w-2/3 flex flex-col bg-gray-900/50">
-            <div className="p-5 border-b border-gray-800 flex justify-between items-center">
-                <h2 className="text-xl font-bold text-white">
-                    Routines for <span className="text-indigo-400">{activeDayType?.name}</span>
-                </h2>
-                <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl">&times;</button>
-            </div>
-
-            <div className="flex-grow overflow-y-auto p-6">
-                {activeDayType ? (
-                    <div className="space-y-4">
-                        {/* List Routines */}
-                        {activeDayType.recurringTasks.filter(t => !t.categoryId || t.categoryId === 'uncategorized').length === 0 && (
-                            <div className="text-center py-12 border-2 border-dashed border-gray-800 rounded-xl">
-                                <p className="text-gray-500 italic">No routine tasks defined for this day type yet.</p>
-                            </div>
-                        )}
-
-                        {activeDayType.recurringTasks.filter(t => !t.categoryId || t.categoryId === 'uncategorized').map(task => (
-                            <div key={task.id} className="flex items-center justify-between bg-gray-800 p-4 rounded-xl border border-gray-700 group">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
-                                    <span className="text-gray-200">{task.text}</span>
+                    <div className="flex-grow overflow-y-auto p-3 space-y-2">
+                        {dayTypes.map(dt => (
+                            <div
+                                key={dt.id}
+                                onClick={() => setSelectedDayType(dt.id)}
+                                className={`p-3 rounded-xl cursor-pointer transition-all border ${selectedDayType === dt.id ? 'bg-indigo-900/20 border-indigo-500/50' : 'bg-gray-800/50 border-transparent hover:bg-gray-800'}`}
+                            >
+                                <div className="flex justify-between items-center">
+                                    {editingDayTypeId === dt.id ? (
+                                        <div className="flex gap-2 w-full">
+                                            <input
+                                                type="text"
+                                                value={editingDayTypeName}
+                                                onClick={e => e.stopPropagation()}
+                                                onChange={e => setEditingDayTypeName(e.target.value)}
+                                                className="flex-grow bg-gray-900 text-white rounded border border-indigo-500 px-2 text-sm"
+                                                autoFocus
+                                            />
+                                            <button onClick={() => handleUpdateDayType(dt.id)} className="text-green-400"><CheckIcon className="w-4 h-4" /></button>
+                                        </div>
+                                    ) : (
+                                        <span className={`font-medium ${selectedDayType === dt.id ? 'text-indigo-300' : 'text-gray-300'}`}>{dt.name}</span>
+                                    )}
+                                    <div className="flex gap-1">
+                                        <button onClick={(e) => { e.stopPropagation(); startEditing(dt); }} className="p-1 text-gray-500 hover:text-white"><EditIcon className="w-4 h-4" /></button>
+                                        <button onClick={(e) => { e.stopPropagation(); onDeleteDayType(dt.id); }} className="p-1 text-gray-500 hover:text-red-400"><TrashIcon className="w-4 h-4" /></button>
+                                    </div>
                                 </div>
-                                <button onClick={() => onDeleteRecurringTask(activeDayType.id, task.id)} className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><TrashIcon className="w-5 h-5"/></button>
                             </div>
                         ))}
                     </div>
-                ) : (
-                    <p className="text-gray-500">Select a day type to edit.</p>
-                )}
-            </div>
 
-            {/* Add Routine Input */}
-            {activeDayType && (
-                <div className="p-6 border-t border-gray-800 bg-gray-900">
-                    <form onSubmit={handleAddRoutine} className="flex gap-3">
-                        <input 
-                            type="text"
-                            value={newRecurringTask[activeDayType.id] || ''}
-                            onChange={e => setNewRecurringTask(prev => ({ ...prev, [activeDayType.id]: e.target.value }))} 
-                            placeholder="Add a new routine task (e.g. Drink Water)..."
-                            className="flex-grow bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
-                        />
-                        <button type="submit" className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 rounded-xl font-bold shadow-lg shadow-indigo-900/20 transition-all">
-                            Add
-                        </button>
-                    </form>
+                    <div className="p-4 border-t border-gray-800">
+                        <form onSubmit={handleAddDayType} className="flex gap-2">
+                            <input
+                                type="text"
+                                value={newDayTypeName}
+                                onChange={e => setNewDayTypeName(e.target.value)}
+                                placeholder="New Day Type..."
+                                className="flex-grow bg-gray-800 border-none rounded-lg text-sm text-white px-3 focus:ring-1 focus:ring-indigo-500"
+                            />
+                            <button type="submit" className="bg-indigo-600 p-2 rounded-lg text-white"><PlusIcon className="w-5 h-5" /></button>
+                        </form>
+                    </div>
                 </div>
-            )}
+
+                {/* MAIN: Configuration for Selected Day */}
+                <div className="w-2/3 flex flex-col bg-gray-900/50">
+                    <div className="p-5 border-b border-gray-800 flex justify-between items-center">
+                        <h2 className="text-xl font-bold text-white">
+                            Configure <span className="text-indigo-400">{activeDayType?.name}</span>
+                        </h2>
+                        <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl">&times;</button>
+                    </div>
+
+                    <div className="flex-grow overflow-y-auto p-6 space-y-8">
+                        {activeDayType ? (
+                            <>
+                                {/* SECTION 1: Linked Categories */}
+                                <div>
+                                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Linked Categories</h3>
+                                    <p className="text-xs text-gray-500 mb-4">
+                                        Categories attached here will appear automatically when this day type is selected.
+                                        Their recurring tasks will also be included.
+                                    </p>
+
+                                    <div className="flex flex-wrap gap-3 mb-4">
+                                        {activeDayType.categoryIds.map(catId => {
+                                            const cat = categories.find(c => c.id === catId);
+                                            if (!cat) return null;
+                                            return (
+                                                <div key={catId} className="flex items-center gap-2 bg-gray-800 px-3 py-1.5 rounded-full border border-gray-700">
+                                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }}></span>
+                                                    <span className="text-sm text-gray-200">{cat.name}</span>
+                                                    <button
+                                                        onClick={() => onRemoveCategoryFromDayType(activeDayType.id, catId)}
+                                                        className="ml-1 text-gray-500 hover:text-red-400"
+                                                    >
+                                                        &times;
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                        {activeDayType.categoryIds.length === 0 && (
+                                            <span className="text-sm text-gray-600 italic">No categories linked yet.</span>
+                                        )}
+                                    </div>
+
+                                    {/* Add Category Dropdown */}
+                                    <div className="flex gap-2 max-w-md">
+                                        <select
+                                            className="flex-grow bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-indigo-500 outline-none"
+                                            value={selectedCategoryToAdd}
+                                            onChange={(e) => setSelectedCategoryToAdd(e.target.value)}
+                                        >
+                                            <option value="">Select a category to link...</option>
+                                            {availableCategories.map(c => (
+                                                <option key={c.id} value={c.id}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                        <button
+                                            onClick={handleAddCategoryLink}
+                                            disabled={!selectedCategoryToAdd}
+                                            className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                                        >
+                                            Link
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="h-px bg-gray-800 w-full"></div>
+
+                                {/* SECTION 2: General Routines (Uncategorized) */}
+                                <div>
+                                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">General Routines</h3>
+                                    <p className="text-xs text-gray-500 mb-4">
+                                        Routine tasks that don't belong to any specific category.
+                                    </p>
+
+                                    <div className="space-y-3 mb-4">
+                                        {activeDayType.recurringTasks.filter(t => !t.categoryId || t.categoryId === 'uncategorized').length === 0 && (
+                                            <div className="text-center py-6 border-2 border-dashed border-gray-800 rounded-xl">
+                                                <p className="text-gray-600 italic text-sm">No general routines.</p>
+                                            </div>
+                                        )}
+
+                                        {activeDayType.recurringTasks.filter(t => !t.categoryId || t.categoryId === 'uncategorized').map(task => (
+                                            <div key={task.id} className="flex items-center justify-between bg-gray-800 p-3 rounded-lg border border-gray-700 group">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+                                                    <span className="text-gray-200 text-sm">{task.text}</span>
+                                                </div>
+                                                <button onClick={() => onDeleteRecurringTask(activeDayType.id, task.id)} className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><TrashIcon className="w-4 h-4" /></button>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Add Routine Input */}
+                                    <form onSubmit={handleAddRoutine} className="flex gap-3">
+                                        <input
+                                            type="text"
+                                            value={newRecurringTask[activeDayType.id] || ''}
+                                            onChange={e => setNewRecurringTask(prev => ({ ...prev, [activeDayType.id]: e.target.value }))}
+                                            placeholder="Add a new general routine..."
+                                            className="flex-grow bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                                        />
+                                        <button type="submit" className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg shadow-indigo-900/20 transition-all">
+                                            Add
+                                        </button>
+                                    </form>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                                <p>Select a day type from the sidebar to configure it.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default DayTypeManager;
