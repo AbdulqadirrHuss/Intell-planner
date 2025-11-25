@@ -176,7 +176,11 @@ function App() {
 
   const handleSelectDayTypeFromDropdown = (dayTypeId: string) => regenerateTasks(dayTypeId, selectedDate);
   
-  // FIXED: Update both DB and Live View when adding a routine
+ // ... (Imports remain same) ...
+
+// ... (Inside App function) ...
+
+  // FIXED: Safer state update to prevent "blank screen" crash
   const handleAddRecurringTask = async (dayTypeId: string, text: string, categoryId: string) => {
       const dbCatId = categoryId === 'uncategorized' || categoryId === '' ? null : categoryId;
       const { data } = await supabase.from('recurring_task_templates').insert({ category_id: dbCatId, text }).select().single();
@@ -186,46 +190,42 @@ function App() {
               id: data.id, text: data.text, categoryId: categoryId || 'uncategorized', daysOfWeek: [], subtaskTemplates: [] 
           };
 
-          // 1. Update Templates State
           if (dbCatId) {
              setCategories(categories.map(c => c.id === categoryId ? { ...c, recurringTasks: [...c.recurringTasks, newTemplate] } : c)); 
           } else {
              setUncategorizedTemplates(prev => [...prev, newTemplate]);
-             // Also update the Day Types list so it shows up in the sidebar immediately
              setDayTypes(dayTypes.map(dt => ({...dt, recurringTasks: [...dt.recurringTasks, newTemplate]})));
           }
 
-          // 2. INSTANTLY UPDATE CURRENT VIEW IF APPLICABLE
-          // If the user added a routine to the CURRENTLY selected day type, we must show it immediately in the "Routines" card.
+          // CHECK: Is this Day Type active on the current selected date?
           const currentDayTypeId = dailyLogs[selectedDate]?.dayTypeId;
           
-          // Ideally we check if this DayType actually *uses* this template.
-          // For now, if it's Uncategorized, we assume it applies to the active day type context in Manager.
-          // Or if it's a Category, we check if the day links to it.
-          // Simplified: If dayTypeId matches current view, inject it.
           if (currentDayTypeId === dayTypeId) {
               const { data: newTask } = await supabase.from('tasks').insert({
-                  log_date: selectedDate,
-                  text: text,
-                  category_id: dbCatId,
-                  is_recurring: true
+                  log_date: selectedDate, text: text, category_id: dbCatId, is_recurring: true
               }).select().single();
 
               if (newTask) {
-                  setDailyLogs(prev => ({
-                      ...prev,
-                      [selectedDate]: {
-                          ...prev[selectedDate],
-                          tasks: [...prev[selectedDate].tasks, { 
-                              id: newTask.id, text: newTask.text, completed: false, 
-                              categoryId: newTask.category_id || 'uncategorized', isRecurring: true, subtasks: [] 
-                          }]
-                      }
-                  }));
+                  setDailyLogs(prev => {
+                      // SAFETY CHECK: Ensure the log exists before spreading
+                      const safeLog = prev[selectedDate] || { date: selectedDate, dayTypeId: dayTypeId, tasks: [] };
+                      return {
+                          ...prev,
+                          [selectedDate]: {
+                              ...safeLog,
+                              tasks: [...safeLog.tasks, { 
+                                  id: newTask.id, text: newTask.text, completed: false, 
+                                  categoryId: newTask.category_id || 'uncategorized', isRecurring: true, subtasks: [] 
+                              }]
+                          }
+                      };
+                  });
               }
           }
       }
   };
+
+// ... (Rest of App.tsx stays the same as the previous turn) ...
 
   const handleReorderCategories = async (newOrderIds: string[]) => {
     const currentLog = dailyLogs[selectedDate];
