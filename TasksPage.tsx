@@ -25,9 +25,11 @@ interface TasksPageProps {
 }
 
 const TasksPage: React.FC<TasksPageProps> = (props) => {
+  // SAFETY CHECK: Ensure tasks array exists
+  const tasks = props.dailyLog?.tasks || [];
+
   // STRICT FILTER: Only show tasks that are explicitly Uncategorized OR have no category
-  // This keeps your Planner categories (Work, Gym) OFF this page.
-  const blankSlateTasks = props.dailyLog.tasks.filter(
+  const blankSlateTasks = tasks.filter(
     t => !t.categoryId || t.categoryId === 'uncategorized'
   );
 
@@ -37,28 +39,22 @@ const TasksPage: React.FC<TasksPageProps> = (props) => {
   return (
     <div className="animate-in fade-in flex flex-col min-h-[85vh] pb-24">
       
-      {/* Header & Mode Switcher */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <Header completionPercentage={props.completionPercentage} selectedDate={props.selectedDate} />
-          
           <div className="flex items-center gap-3 bg-gray-800 p-2 rounded-lg border border-gray-700 shadow-sm">
               <div className="flex flex-col px-2">
                   <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Current Mode</span>
                   <select 
-                      value={props.dailyLog.dayTypeId || ''} 
+                      value={props.dailyLog?.dayTypeId || ''} 
                       onChange={(e) => props.onSelectDayType(e.target.value)} 
                       className="bg-transparent text-indigo-300 text-sm font-bold border-none focus:ring-0 p-0 cursor-pointer hover:text-indigo-200 w-32"
                   >
                     <option value="" disabled>Select Type...</option>
-                    {props.dayTypes.map(dt => <option key={dt.id} value={dt.id}>{dt.name}</option>)}
+                    {(props.dayTypes || []).map(dt => <option key={dt.id} value={dt.id}>{dt.name}</option>)}
                   </select>
               </div>
               <div className="h-8 w-px bg-gray-700"></div>
-              <button 
-                onClick={props.onOpenDayTypeManager} 
-                className="text-gray-400 hover:text-white p-2 rounded-md hover:bg-gray-700 transition-colors"
-                title="Manage Routines"
-              >
+              <button onClick={props.onOpenDayTypeManager} className="text-gray-400 hover:text-white p-2 rounded-md hover:bg-gray-700 transition-colors">
                 <RecurringIcon className="w-5 h-5" />
               </button>
           </div>
@@ -70,7 +66,7 @@ const TasksPage: React.FC<TasksPageProps> = (props) => {
 
       <div className="mb-6">
          <h2 className="text-2xl font-bold text-white mb-1">Execution Dashboard</h2>
-         <p className="text-gray-400 text-sm">Prioritize and Execute. These tasks are separate from your Planner categories.</p>
+         <p className="text-gray-400 text-sm">Prioritize and Execute. These are your unlinked tasks.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -80,21 +76,12 @@ const TasksPage: React.FC<TasksPageProps> = (props) => {
                 <div className="w-3 h-3 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>
                 <h3 className="text-xl font-bold text-gray-100">Routine & Boilerplate</h3>
             </div>
-            
             <div className="flex-grow">
                 {routineTasks.length === 0 ? (
-                    <div className="text-center py-12 opacity-50">
-                        <p className="text-gray-400 font-medium">No routines.</p>
-                    </div>
+                    <div className="text-center py-12 opacity-50"><p className="text-gray-400 font-medium">No routines.</p></div>
                 ) : (
                     routineTasks.map(task => (
-                        <SimpleTaskItem 
-                            key={task.id} 
-                            task={task} 
-                            onToggle={props.onToggleTask}
-                            onDelete={props.onDeleteTask}
-                            onUpdateText={props.onUpdateTaskText}
-                        />
+                        <SimpleTaskItem key={task.id} task={task} onToggle={props.onToggleTask} onDelete={props.onDeleteTask} onUpdateText={props.onUpdateTaskText} />
                     ))
                 )}
             </div>
@@ -106,21 +93,12 @@ const TasksPage: React.FC<TasksPageProps> = (props) => {
                 <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
                 <h3 className="text-xl font-bold text-gray-100">Ad-hoc & Specifics</h3>
             </div>
-
             <div className="flex-grow">
                 {adHocTasks.length === 0 ? (
-                    <div className="text-center py-12 opacity-50">
-                        <p className="text-gray-400 font-medium">No specific tasks.</p>
-                    </div>
+                    <div className="text-center py-12 opacity-50"><p className="text-gray-400 font-medium">No specific tasks.</p></div>
                 ) : (
                     adHocTasks.map(task => (
-                        <SimpleTaskItem 
-                            key={task.id} 
-                            task={task} 
-                            onToggle={props.onToggleTask}
-                            onDelete={props.onDeleteTask}
-                            onUpdateText={props.onUpdateTaskText}
-                        />
+                        <SimpleTaskItem key={task.id} task={task} onToggle={props.onToggleTask} onDelete={props.onDeleteTask} onUpdateText={props.onUpdateTaskText} />
                     ))
                 )}
             </div>
