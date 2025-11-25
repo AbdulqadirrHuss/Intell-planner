@@ -159,27 +159,6 @@ function App() {
 
     useEffect(() => { fetchDailyLog(selectedDate); }, [selectedDate, fetchDailyLog]);
     const currentDailyLog = useMemo(() => dailyLogs[selectedDate] || { date: selectedDate, dayTypeId: null, tasks: [] }, [dailyLogs, selectedDate]);
-
-    const handleSelectDayTypeFromDropdown = (dayTypeId: string) => regenerateTasks(dayTypeId, selectedDate);
-    const handleAddRecurringTask = async (dayTypeId: string, text: string, categoryId: string) => { /* ... (Logic kept same) ... */ };
-    const handleReorderCategories = async (newOrderIds: string[]) => { /* ... (Logic kept same) ... */ };
-
-    const handleAddTask = async (text: string, categoryId: string, isRecurring: boolean = false) => {
-        if (!supabase || !text.trim()) return;
-        const dbCatId = categoryId === 'uncategorized' || categoryId === '' ? null : categoryId;
-        const { data } = await supabase.from('tasks').insert({
-            log_date: selectedDate, text, category_id: dbCatId, is_recurring: isRecurring
-        }).select().single();
-        if (data) {
-            const newTask = { ...data, categoryId: data.category_id || 'uncategorized', isRecurring: data.is_recurring, subtasks: [] };
-            setDailyLogs(prev => ({ ...prev, [selectedDate]: { ...currentDailyLog, tasks: [...currentDailyLog.tasks, newTask] } }));
-            setNewTaskText('');
-        }
-    };
-
-    // Handlers (Simplified for brevity, assuming they exist as before)
-    const handleToggleTask = async (id: string) => { if (!supabase) return; setDailyLogs(prev => { const log = prev[selectedDate] || currentDailyLog; const task = log.tasks.find(t => t.id === id); if (!task) return prev; const newCompleted = !task.completed; supabase!.from('tasks').update({ completed: newCompleted }).eq('id', id).then(); return { ...prev, [selectedDate]: { ...log, tasks: log.tasks.map(t => t.id === id ? { ...t, completed: newCompleted } : t) } }; }); };
-    const handleDeleteTask = async (id: string) => { if (!supabase) return; await supabase.from('tasks').delete().eq('id', id); setDailyLogs(prev => ({ ...prev, [selectedDate]: { ...currentDailyLog, tasks: currentDailyLog.tasks.filter(t => t.id !== id) } })); };
     const handleUpdateTaskText = async (id: string, text: string) => { if (!supabase) return; await supabase.from('tasks').update({ text }).eq('id', id); setDailyLogs(prev => ({ ...prev, [selectedDate]: { ...currentDailyLog, tasks: currentDailyLog.tasks.map(t => t.id === id ? { ...t, text } : t) } })); };
     const handleAddSubtask = async (taskId: string, text: string) => { if (!supabase) return; const { data } = await supabase.from('subtasks').insert({ parent_task_id: taskId, log_date: selectedDate, text, is_recurring: false }).select().single(); if (data) { const newSub = { ...data, isRecurring: false }; setDailyLogs(prev => { const log = prev[selectedDate] || currentDailyLog; return { ...prev, [selectedDate]: { ...log, tasks: log.tasks.map(t => t.id === taskId ? { ...t, subtasks: [...t.subtasks, newSub] } : t) } }; }); } };
     const handleDeleteSubtask = async (subtaskId: string) => { if (!supabase) return; await supabase.from('subtasks').delete().eq('id', subtaskId); setDailyLogs(prev => { const log = prev[selectedDate] || currentDailyLog; return { ...prev, [selectedDate]: { ...log, tasks: log.tasks.map(t => ({ ...t, subtasks: t.subtasks.filter(st => st.id !== subtaskId) })) } }; }); };
