@@ -22,7 +22,6 @@ const AdvancedTaskForm: React.FC<AdvancedTaskFormProps> = ({ categories, onAddTa
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (text.trim()) {
-      // Pass the flags up to App.tsx
       onAddTask(text, categoryId || 'uncategorized', isRecurring);
       setText('');
       setIsRecurring(false);
@@ -35,42 +34,33 @@ const AdvancedTaskForm: React.FC<AdvancedTaskFormProps> = ({ categories, onAddTa
   const currentCategoryColor = categories.find(c => c.id === categoryId)?.color || "#9ca3af";
 
   return (
-    <div className="mt-auto pt-6">
-      <form onSubmit={handleSubmit} className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden shadow-lg transition-colors focus-within:border-gray-600">
-        {/* Text Input */}
+    <div className="mt-4">
+      <form onSubmit={handleSubmit} className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10 transition-colors focus-within:border-indigo-500/50">
         <div className="p-4 pb-2">
           <input
             type="text"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Add a new task..."
-            className="w-full bg-transparent border-none text-gray-200 placeholder-gray-500 focus:ring-0 text-lg"
+            placeholder="Add a new todo..."
+            className="w-full bg-transparent border-none text-gray-100 placeholder-gray-500 focus:ring-0 text-lg font-medium"
+            autoFocus
           />
         </div>
-
-        {/* Controls Bar */}
-        <div className="px-4 py-3 bg-gray-800/50 border-t border-gray-700/50 flex justify-between items-center">
+        <div className="px-4 py-3 bg-gray-900/50 border-t border-gray-700/50 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            {/* Priority Star */}
-            <button type="button" onClick={() => setIsPriority(!isPriority)} className="p-1 hover:bg-gray-700 rounded transition-colors">
+            <button type="button" onClick={() => setIsPriority(!isPriority)} className="p-1 hover:bg-gray-700 rounded transition-colors" title="High Priority">
               <StarIcon filled={isPriority} />
             </button>
-            
             <div className="h-4 w-px bg-gray-700"></div>
-            
-            {/* Recurring Toggle */}
             <button 
               type="button" 
               onClick={() => setIsRecurring(!isRecurring)}
-              className={`flex items-center gap-2 text-sm font-medium transition-colors ${isRecurring ? 'text-indigo-400' : 'text-gray-500 hover:text-gray-300'}`}
+              className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors ${isRecurring ? 'text-indigo-400' : 'text-gray-500 hover:text-gray-300'}`}
             >
               <RecurringIcon className="w-4 h-4" />
               {isRecurring ? "Recurring" : "One-off"}
             </button>
-            
             <div className="h-4 w-px bg-gray-700"></div>
-            
-            {/* Category Dropdown */}
             <div className="relative group">
                 <select 
                     value={categoryId}
@@ -82,16 +72,14 @@ const AdvancedTaskForm: React.FC<AdvancedTaskFormProps> = ({ categories, onAddTa
                         <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                 </select>
-                <div className="flex items-center gap-2 text-sm text-gray-400 group-hover:text-gray-200 transition-colors">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500 group-hover:text-gray-300 transition-colors">
                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: categoryId ? currentCategoryColor : '#4b5563' }}></span>
                     {currentCategoryName}
                 </div>
             </div>
           </div>
-
-          {/* Submit Button */}
-          <button type="submit" disabled={!text.trim()} className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white p-2 rounded-lg">
-            <PlusIcon className="w-6 h-6" />
+          <button type="submit" disabled={!text.trim()} className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white p-2 rounded-lg shadow-lg shadow-indigo-500/20">
+            <PlusIcon className="w-5 h-5" />
           </button>
         </div>
       </form>
