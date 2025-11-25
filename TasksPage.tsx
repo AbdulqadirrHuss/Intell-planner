@@ -30,31 +30,43 @@ interface TasksPageProps {
 }
 
 const TasksPage: React.FC<TasksPageProps> = (props) => {
-  // SYSTEM FIX: Strict Filtering
-  // We only allow tasks here that have NO category (or explicitly 'uncategorized')
-  // This prevents Planner items from leaking into this view.
+  // Strict Filtering: Only show Uncategorized tasks (The "Blank Slate")
   const blankSlateTasks = props.dailyLog.tasks.filter(
     t => !t.categoryId || t.categoryId === 'uncategorized'
   );
 
-  // Tripartite Division
   const routineTasks = blankSlateTasks.filter(t => t.isRecurring);
   const adHocTasks = blankSlateTasks.filter(t => !t.isRecurring);
-
-  // Dummy sorter (not needed for blank slate)
   const dummySortedIds: string[] = [];
 
   return (
     <div className="animate-in fade-in flex flex-col min-h-[85vh] pb-24">
-      <div className="flex justify-between items-start mb-6">
+      
+      {/* TOP BAR: Header + Day Type Selector */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <Header completionPercentage={props.completionPercentage} selectedDate={props.selectedDate} />
-          <button 
-            onClick={props.onOpenDayTypeManager} 
-            className="mt-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/50 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-          >
-            <RecurringIcon className="w-4 h-4" />
-            Manage Routines
-          </button>
+          
+          <div className="flex items-center gap-3 bg-gray-800 p-2 rounded-lg border border-gray-700 shadow-sm">
+              <div className="flex flex-col px-2">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Current Mode</span>
+                  <select 
+                      value={props.dailyLog.dayTypeId || ''} 
+                      onChange={(e) => props.onSelectDayType(e.target.value)} 
+                      className="bg-transparent text-indigo-300 text-sm font-bold border-none focus:ring-0 p-0 cursor-pointer hover:text-indigo-200 w-32"
+                  >
+                    <option value="" disabled>Select Type...</option>
+                    {props.dayTypes.map(dt => <option key={dt.id} value={dt.id}>{dt.name}</option>)}
+                  </select>
+              </div>
+              <div className="h-8 w-px bg-gray-700"></div>
+              <button 
+                onClick={props.onOpenDayTypeManager} 
+                className="text-gray-400 hover:text-white p-2 rounded-md hover:bg-gray-700 transition-colors"
+                title="Manage Routines"
+              >
+                <RecurringIcon className="w-5 h-5" />
+              </button>
+          </div>
       </div>
       
       <div className="bg-gray-800 rounded-xl p-2 mb-8 shadow-lg border border-gray-700">
@@ -63,13 +75,13 @@ const TasksPage: React.FC<TasksPageProps> = (props) => {
 
       <div className="mb-6">
          <h2 className="text-2xl font-bold text-white mb-1">Execution Dashboard</h2>
-         <p className="text-gray-400 text-sm">Prioritize and Execute. Use the Planner to automate routine tasks.</p>
+         <p className="text-gray-400 text-sm">Prioritize and Execute. Use "Manage Routines" to configure Day Types.</p>
       </div>
 
-      {/* TRIPARTITE DASHBOARD LAYOUT */}
+      {/* DASHBOARD GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         
-        {/* LEFT CARD: ROUTINE & BOILERPLATE */}
+        {/* ROUTINES CARD */}
         <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-5 flex flex-col min-h-[300px]">
             <div className="flex items-center gap-3 mb-6 border-b border-gray-700/50 pb-4">
                 <div className="w-3 h-3 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>
@@ -78,8 +90,8 @@ const TasksPage: React.FC<TasksPageProps> = (props) => {
             
             {routineTasks.length === 0 ? (
                 <div className="flex-grow flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-gray-700/50 rounded-xl opacity-50">
-                    <p className="text-gray-400 font-medium">No active routine tasks.</p>
-                    <p className="text-xs text-gray-500 mt-1">Select a Day Type or use "Manage Routines" to scaffold.</p>
+                    <p className="text-gray-400 font-medium">No active routine.</p>
+                    <p className="text-xs text-gray-500 mt-1">Select a Day Type above to load routines.</p>
                 </div>
             ) : (
                 <div className="flex-grow">
@@ -101,7 +113,7 @@ const TasksPage: React.FC<TasksPageProps> = (props) => {
             )}
         </div>
 
-        {/* RIGHT CARD: AD-HOC & SPECIFICS */}
+        {/* AD-HOC CARD */}
         <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-5 flex flex-col min-h-[300px]">
             <div className="flex items-center gap-3 mb-6 border-b border-gray-700/50 pb-4">
                 <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
@@ -134,7 +146,6 @@ const TasksPage: React.FC<TasksPageProps> = (props) => {
         </div>
       </div>
       
-      {/* BOTTOM: COMPOSER */}
       <div className="sticky bottom-6 z-20">
         <AdvancedTaskForm categories={props.categories} onAddTask={props.onAddTask} />
       </div>
