@@ -566,7 +566,21 @@ function App() {
                 onAddRecurringTask={handleAddRecurringTask}
                 onDeleteRecurringTask={onDeleteRecurringTask}
             />
-            <CategoryManager isOpen={isCategoryManagerOpen} onClose={() => setCategoryManagerOpen(false)} categories={categories} onAddCategory={handleAddCategory} onUpdateCategory={handleUpdateCategory} onDeleteCategory={handleDeleteCategory} onAddRecurringTask={handleAddRecurringTask} onDeleteRecurringTask={onDeleteRecurringTask} onUpdateRecurringTask={onUpdateRecurringTask} onAddRecurringSubtask={onAddRecurringSubtask} onDeleteRecurringSubtask={onDeleteRecurringSubtask} onUpdateRecurringTaskText={handleUpdateRecurringTaskText} onUpdateRecurringSubtaskText={handleUpdateRecurringSubtaskText} />
+            <CategoryManager
+                isOpen={isCategoryManagerOpen}
+                onClose={() => setCategoryManagerOpen(false)}
+                categories={categories}
+                onAddCategory={handleAddCategory}
+                onUpdateCategory={handleUpdateCategory}
+                onDeleteCategory={handleDeleteCategory}
+                onAddRecurringTask={(catId, text) => handleAddRecurringTask(null as any, text, catId)}
+                onDeleteRecurringTask={(taskId) => onDeleteRecurringTask(null as any, taskId)}
+                onUpdateRecurringTask={onUpdateRecurringTask}
+                onAddRecurringSubtask={onAddRecurringSubtask}
+                onDeleteRecurringSubtask={onDeleteRecurringSubtask}
+                onUpdateRecurringTaskText={handleUpdateRecurringTaskText}
+                onUpdateRecurringSubtaskText={handleUpdateRecurringSubtaskText}
+            />
             <TrackerManager isOpen={isTrackerManagerOpen} onClose={() => setTrackerManagerOpen(false)} statDefinitions={statDefinitions} categories={categories} onAddTracker={handleAddTracker} onUpdateTracker={handleUpdateTracker} onDeleteTracker={handleDeleteTracker} />
         </div>
     );
