@@ -25,7 +25,8 @@ interface TasksPageProps {
 }
 
 const TasksPage: React.FC<TasksPageProps> = (props) => {
-  // Filter: Only tasks that are explicitly Uncategorized OR have no category
+  // STRICT FILTER: Only show tasks that are explicitly Uncategorized OR have no category
+  // This keeps your Planner categories (Work, Gym) OFF this page.
   const blankSlateTasks = props.dailyLog.tasks.filter(
     t => !t.categoryId || t.categoryId === 'uncategorized'
   );
