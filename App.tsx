@@ -430,15 +430,20 @@ function App() {
                                 onChange={(e) => setNewTaskText(e.target.value)}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
+                                        console.log("Adding task with category:", newTaskCategory);
                                         handleAddTask(newTaskText, newTaskCategory || 'uncategorized');
-                                        setNewTaskCategory(''); // Reset category after adding
+                                        // Optional: Keep category selected for rapid entry
+                                        // setNewTaskCategory(''); 
                                     }
                                 }}
                             />
                             <div className="flex items-center gap-2 pr-2">
                                 <select
-                                    className="bg-transparent text-xs text-gray-400 border-none outline-none cursor-pointer hover:text-white"
-                                    onChange={(e) => setNewTaskCategory(e.target.value)}
+                                    className="bg-transparent text-xs text-gray-400 border-none outline-none cursor-pointer hover:text-white max-w-[100px] truncate"
+                                    onChange={(e) => {
+                                        console.log("Category selected:", e.target.value);
+                                        setNewTaskCategory(e.target.value);
+                                    }}
                                     value={newTaskCategory}
                                 >
                                     <option value="">No Link</option>
@@ -447,8 +452,9 @@ function App() {
                                 <button
                                     className="fab-btn"
                                     onClick={() => {
+                                        console.log("Adding task via button with category:", newTaskCategory);
                                         handleAddTask(newTaskText, newTaskCategory || 'uncategorized');
-                                        setNewTaskCategory('');
+                                        // setNewTaskCategory('');
                                     }}
                                 >
                                     <PlusIcon className="w-6 h-6" />
