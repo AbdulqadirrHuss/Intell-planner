@@ -30,107 +30,111 @@ interface TasksPageProps {
 }
 
 const TasksPage: React.FC<TasksPageProps> = (props) => {
-  // 1. ROUTINE TASKS: Anything that is marked as recurring (comes from Day Type)
-  // We show these regardless of category because they are part of the "Day Structure"
-  const routineTasks = props.dailyLog.tasks.filter(t => t.isRecurring);
-  
-  // 2. MY TODOS: One-off tasks that are UNLINKED (Uncategorized).
-  // We hide categorized one-offs (like "Email Client" under "Work") because those live in the Planner.
-  // This ensures this section is a "Blank Slate" for your random thoughts/todos.
-  const todoTasks = props.dailyLog.tasks.filter(t => 
-    !t.isRecurring && (!t.categoryId || t.categoryId === 'uncategorized')
+  // SYSTEM FIX: Strict Filtering
+  // We only allow tasks here that have NO category (or explicitly 'uncategorized')
+  // This prevents Planner items from leaking into this view.
+  const blankSlateTasks = props.dailyLog.tasks.filter(
+    t => !t.categoryId || t.categoryId === 'uncategorized'
   );
 
-  // Pass empty list for sorting because we aren't grouping by category here
+  // Tripartite Division
+  const routineTasks = blankSlateTasks.filter(t => t.isRecurring);
+  const adHocTasks = blankSlateTasks.filter(t => !t.isRecurring);
+
+  // Dummy sorter (not needed for blank slate)
   const dummySortedIds: string[] = [];
 
   return (
     <div className="animate-in fade-in flex flex-col min-h-[85vh] pb-24">
-      <Header completionPercentage={props.completionPercentage} selectedDate={props.selectedDate} />
-      
-      <div className="bg-gray-800 rounded-xl p-2 mb-6 shadow-lg border border-gray-700 flex flex-col md:flex-row items-center gap-4">
-           <div className="flex-grow w-full">
-              <DateNavigator selectedDate={props.selectedDate} onDateChange={props.setSelectedDate} />
-           </div>
-      </div>
-
-      <div className="flex justify-between items-end mb-6 px-2">
-          <div className="flex flex-col">
-               <span className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Current Day Mode</span>
-               <select 
-                  value={props.dailyLog.dayTypeId || ''} 
-                  onChange={(e) => props.onSelectDayType(e.target.value)} 
-                  className="bg-transparent text-indigo-300 text-xl font-bold border-none focus:ring-0 p-0 cursor-pointer hover:text-indigo-200"
-              >
-                <option value="" disabled>Select Type...</option>
-                {props.dayTypes.map(dt => <option key={dt.id} value={dt.id}>{dt.name}</option>)}
-              </select>
-          </div>
-          <button onClick={props.onOpenDayTypeManager} className="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-300 px-3 py-1.5 rounded-lg transition-colors">
-            Manage Routine
+      <div className="flex justify-between items-start mb-6">
+          <Header completionPercentage={props.completionPercentage} selectedDate={props.selectedDate} />
+          <button 
+            onClick={props.onOpenDayTypeManager} 
+            className="mt-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/50 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+          >
+            <RecurringIcon className="w-4 h-4" />
+            Manage Routines
           </button>
       </div>
-
-      {/* SECTION 1: ROUTINE & HABITS */}
-      <div className="mb-10">
-        <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="p-1.5 bg-indigo-500/10 rounded-lg"><RecurringIcon className="w-5 h-5 text-indigo-400" /></div>
-            <h3 className="text-lg font-bold text-gray-100">Routine & Habits</h3>
-            <span className="text-xs font-medium text-gray-500 ml-auto">{routineTasks.filter(t=>t.completed).length}/{routineTasks.length} Done</span>
-        </div>
-        
-        {routineTasks.length === 0 ? (
-            <div className="text-center py-8 border border-dashed border-gray-800 rounded-xl bg-gray-800/30 text-gray-500 text-sm">
-                No routine loaded for this day type.
-            </div>
-        ) : (
-            <TaskList
-                tasks={routineTasks}
-                categories={props.categories}
-                sortedCategoryIds={dummySortedIds}
-                onReorderCategories={props.onReorderCategories}
-                onToggleTask={props.onToggleTask}
-                onDeleteTask={props.onDeleteTask}
-                onToggleSubtask={props.onToggleSubtask}
-                onDeleteSubtask={props.onDeleteSubtask}
-                onAddSubtask={props.onAddSubtask}
-                onUpdateTaskText={props.onUpdateTaskText}
-                onUpdateSubtaskText={props.onUpdateSubtaskText}
-                onToggleSubtaskRecurring={props.onToggleSubtaskRecurring}
-            />
-        )}
+      
+      <div className="bg-gray-800 rounded-xl p-2 mb-8 shadow-lg border border-gray-700">
+          <DateNavigator selectedDate={props.selectedDate} onDateChange={props.setSelectedDate} />
       </div>
 
-      {/* SECTION 2: MY TODOS (One-off) */}
-      <div className="flex-grow">
-        <div className="flex items-center gap-3 mb-4 px-2 pt-6 border-t border-gray-800/50">
-            <div className="p-1.5 bg-emerald-500/10 rounded-lg"><CheckIcon className="w-5 h-5 text-emerald-400" /></div>
-            <h3 className="text-lg font-bold text-gray-100">My Todos</h3>
-            <span className="text-xs font-medium text-gray-500 ml-auto">{todoTasks.filter(t=>t.completed).length}/{todoTasks.length} Done</span>
+      <div className="mb-6">
+         <h2 className="text-2xl font-bold text-white mb-1">Execution Dashboard</h2>
+         <p className="text-gray-400 text-sm">Prioritize and Execute. Use the Planner to automate routine tasks.</p>
+      </div>
+
+      {/* TRIPARTITE DASHBOARD LAYOUT */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        
+        {/* LEFT CARD: ROUTINE & BOILERPLATE */}
+        <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-5 flex flex-col min-h-[300px]">
+            <div className="flex items-center gap-3 mb-6 border-b border-gray-700/50 pb-4">
+                <div className="w-3 h-3 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>
+                <h3 className="text-xl font-bold text-gray-100">Routine & Boilerplate</h3>
+            </div>
+            
+            {routineTasks.length === 0 ? (
+                <div className="flex-grow flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-gray-700/50 rounded-xl opacity-50">
+                    <p className="text-gray-400 font-medium">No active routine tasks.</p>
+                    <p className="text-xs text-gray-500 mt-1">Select a Day Type or use "Manage Routines" to scaffold.</p>
+                </div>
+            ) : (
+                <div className="flex-grow">
+                    <TaskList
+                        tasks={routineTasks}
+                        categories={props.categories}
+                        sortedCategoryIds={dummySortedIds}
+                        onReorderCategories={props.onReorderCategories}
+                        onToggleTask={props.onToggleTask}
+                        onDeleteTask={props.onDeleteTask}
+                        onToggleSubtask={props.onToggleSubtask}
+                        onDeleteSubtask={props.onDeleteSubtask}
+                        onAddSubtask={props.onAddSubtask}
+                        onUpdateTaskText={props.onUpdateTaskText}
+                        onUpdateSubtaskText={props.onUpdateSubtaskText}
+                        onToggleSubtaskRecurring={props.onToggleSubtaskRecurring}
+                    />
+                </div>
+            )}
         </div>
 
-        {todoTasks.length === 0 ? (
-            <div className="text-center py-12 text-gray-600 italic text-sm">
-                Your todo list is clear. Add tasks below.
+        {/* RIGHT CARD: AD-HOC & SPECIFICS */}
+        <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-5 flex flex-col min-h-[300px]">
+            <div className="flex items-center gap-3 mb-6 border-b border-gray-700/50 pb-4">
+                <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                <h3 className="text-xl font-bold text-gray-100">Ad-hoc & Specifics</h3>
             </div>
-        ) : (
-            <TaskList
-                tasks={todoTasks}
-                categories={props.categories}
-                sortedCategoryIds={dummySortedIds}
-                onReorderCategories={props.onReorderCategories}
-                onToggleTask={props.onToggleTask}
-                onDeleteTask={props.onDeleteTask}
-                onToggleSubtask={props.onToggleSubtask}
-                onDeleteSubtask={props.onDeleteSubtask}
-                onAddSubtask={props.onAddSubtask}
-                onUpdateTaskText={props.onUpdateTaskText}
-                onUpdateSubtaskText={props.onUpdateSubtaskText}
-                onToggleSubtaskRecurring={props.onToggleSubtaskRecurring}
-            />
-        )}
+
+            {adHocTasks.length === 0 ? (
+                <div className="flex-grow flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-gray-700/50 rounded-xl opacity-50">
+                    <p className="text-gray-400 font-medium">No specific tasks added.</p>
+                    <p className="text-xs text-gray-500 mt-1">Use the composer below to add one-offs.</p>
+                </div>
+            ) : (
+                <div className="flex-grow">
+                    <TaskList
+                        tasks={adHocTasks}
+                        categories={props.categories}
+                        sortedCategoryIds={dummySortedIds}
+                        onReorderCategories={props.onReorderCategories}
+                        onToggleTask={props.onToggleTask}
+                        onDeleteTask={props.onDeleteTask}
+                        onToggleSubtask={props.onToggleSubtask}
+                        onDeleteSubtask={props.onDeleteSubtask}
+                        onAddSubtask={props.onAddSubtask}
+                        onUpdateTaskText={props.onUpdateTaskText}
+                        onUpdateSubtaskText={props.onUpdateSubtaskText}
+                        onToggleSubtaskRecurring={props.onToggleSubtaskRecurring}
+                    />
+                </div>
+            )}
+        </div>
       </div>
       
+      {/* BOTTOM: COMPOSER */}
       <div className="sticky bottom-6 z-20">
         <AdvancedTaskForm categories={props.categories} onAddTask={props.onAddTask} />
       </div>
