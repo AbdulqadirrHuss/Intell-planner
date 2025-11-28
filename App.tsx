@@ -18,7 +18,10 @@ export const supabase = (supabaseUrl && supabaseAnonKey)
     ? createClient(supabaseUrl, supabaseAnonKey)
     : null;
 
-const getTodayDateString = () => new Date().toISOString().split('T')[0];
+const getTodayDateString = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 
 interface SupabaseRecurringSubtaskTemplate extends Omit<RecurringSubtaskTemplate, 'parent_template_id'> { parent_template_id: string; }
 
@@ -64,7 +67,7 @@ function App() {
                     loadedCategories = catData.map((cat: any) => ({
                         id: cat.id, name: cat.name, color: cat.color,
                         recurringTasks: (cat.recurring_task_templates || []).map((rt: any) => ({
-                            id: rt.id, text: rt.text, categoryId: rt.category_id, daysOfWeek: rt.days_of_week || [],
+                            id: rt.id, text: rt.text, categoryId: rt.category_id, daysOfWeek: rt.days_of_week || [0, 1, 2, 3, 4, 5, 6],
                             subtaskTemplates: (rt.recurring_subtask_templates || []).map((rst: SupabaseRecurringSubtaskTemplate) => ({
                                 id: rst.id, text: rst.text, parentTemplateId: rst.parent_template_id
                             }))
@@ -76,7 +79,7 @@ function App() {
                 const { data: orphanData } = await supabase.from('recurring_task_templates').select(`*, recurring_subtask_templates ( * )`).is('category_id', null);
                 if (orphanData) {
                     loadedOrphans = orphanData.map((rt: any) => ({
-                        id: rt.id, text: rt.text, categoryId: 'uncategorized', daysOfWeek: rt.days_of_week || [],
+                        id: rt.id, text: rt.text, categoryId: 'uncategorized', daysOfWeek: rt.days_of_week || [0, 1, 2, 3, 4, 5, 6],
                         subtaskTemplates: (rt.recurring_subtask_templates || []).map((rst: SupabaseRecurringSubtaskTemplate) => ({
                             id: rst.id, text: rst.text, parentTemplateId: rst.parent_template_id
                         }))
@@ -113,6 +116,9 @@ function App() {
         const selectedDayType = dayTypes.find(dt => dt.id === dayTypeId);
         if (!selectedDayType) return;
 
+        // Calculate day of week (0-6) for the selected date (YYYY-MM-DD)
+        const [y, m, d] = date.split('-').map(Number);
+        const dayOfWeek = new Date(y, m - 1, d).getDay();
         const log = dailyLogs[date] || { date: date, dayTypeId: null, tasks: [] };
 
         // 1. Keep existing one-off tasks (non-recurring)
@@ -130,7 +136,8 @@ function App() {
             // Only include if it's a general routine (no category or uncategorized)
             // OR if it's explicitly part of the day type's recurring tasks list (which might include some categorized ones if legacy)
             // But primarily we want the ones defined on the Day Type itself.
-            if (!rt.categoryId || rt.categoryId === 'uncategorized') {
+            const isScheduled = rt.daysOfWeek && rt.daysOfWeek.includes(dayOfWeek);
+            if (isScheduled && (!rt.categoryId || rt.categoryId === 'uncategorized')) {
                 newRecurringTasksForDb.push({
                     log_date: date,
                     text: rt.text,
@@ -147,13 +154,15 @@ function App() {
             const category = categories.find(c => c.id === catId);
             if (category) {
                 category.recurringTasks.forEach(rt => {
-                    newRecurringTasksForDb.push({
-                        log_date: date,
-                        text: rt.text,
-                        category_id: catId,
-                        is_recurring: true,
-                        completed: false
-                    });
+                    if (rt.daysOfWeek && rt.daysOfWeek.includes(dayOfWeek)) {
+                        newRecurringTasksForDb.push({
+                            log_date: date,
+                            text: rt.text,
+                            category_id: catId,
+                            is_recurring: true,
+                            completed: false
+                        });
+                    }
                 });
             }
         });
@@ -211,14 +220,53 @@ function App() {
             }
             const { data: taskData } = await supabase.from('tasks').select('*').eq('log_date', date);
             const { data: subtaskData } = await supabase.from('subtasks').select('*').eq('log_date', date);
+
+            // Enforce Schedule Consistency for Recurring Tasks (Today & Future)
+            const [y, m, d] = date.split('-').map(Number);
+            const dayOfWeek = new Date(y, m - 1, d).getDay();
+            const todayStr = getTodayDateString();
+            const isFutureOrToday = date >= todayStr;
+
+            const validTasks: any[] = [];
+            const tasksToDelete: string[] = [];
+
+            if (taskData) {
+                for (const t of taskData) {
+                    let shouldKeep = true;
+                    if (t.is_recurring && isFutureOrToday) {
+                        let template = null;
+                        if (t.category_id) {
+                            const cat = categories.find(c => c.id === t.category_id);
+                            template = cat?.recurringTasks.find(rt => rt.text === t.text);
+                        } else {
+                            template = uncategorizedTemplates.find(rt => rt.text === t.text);
+                        }
+
+                        if (template) {
+                            // If template exists, strictly enforce schedule
+                            if (!template.daysOfWeek.includes(dayOfWeek)) {
+                                shouldKeep = false;
+                                tasksToDelete.push(t.id);
+                            }
+                        }
+                    }
+                    if (shouldKeep) validTasks.push(t);
+                }
+            }
+
+            if (tasksToDelete.length > 0) {
+                console.log("Cleaning up invalid recurring tasks:", tasksToDelete);
+                await supabase.from('tasks').delete().in('id', tasksToDelete);
+            }
+
             const subtasks = subtaskData ? subtaskData.map((st: any) => ({ ...st, isRecurring: st.is_recurring || false })) : [];
-            const formattedTasks = taskData ? taskData.map((t: any) => ({
+            const formattedTasks = validTasks.map((t: any) => ({
                 id: t.id, text: t.text, completed: t.completed, categoryId: t.category_id || 'uncategorized', isRecurring: t.is_recurring,
                 subtasks: subtasks.filter((st: any) => st.parent_task_id === t.id)
-            })) : [];
+            }));
             setDailyLogs(prev => ({ ...prev, [date]: { date: logData?.date || date, dayTypeId: logData?.day_type_id, tasks: formattedTasks } }));
         } catch (e) { console.error("Error fetching daily log", e); }
-    }, [isDataLoaded]);
+    }, [isDataLoaded, categories, uncategorizedTemplates]);
 
     useEffect(() => { fetchDailyLog(selectedDate); }, [selectedDate, fetchDailyLog]);
     const currentDailyLog = useMemo(() => dailyLogs[selectedDate] || { date: selectedDate, dayTypeId: null, tasks: [] }, [dailyLogs, selectedDate]);
@@ -252,7 +300,16 @@ function App() {
             }
 
             const currentDayTypeId = dailyLogs[selectedDate]?.dayTypeId;
-            if (currentDayTypeId === dayTypeId) {
+            const currentDayType = dayTypes.find(dt => dt.id === currentDayTypeId);
+
+            let shouldAddToCurrentView = false;
+            if (dayTypeId && currentDayTypeId === dayTypeId) {
+                shouldAddToCurrentView = true;
+            } else if (categoryId && currentDayType && currentDayType.categoryIds.includes(categoryId)) {
+                shouldAddToCurrentView = true;
+            }
+
+            if (shouldAddToCurrentView) {
                 const { data: newTask } = await supabase.from('tasks').insert({
                     log_date: selectedDate, text: text, category_id: dbCatId, is_recurring: true
                 }).select().single();
@@ -332,18 +389,92 @@ function App() {
     const handleDeleteSubtask = async (subtaskId: string) => { if (!supabase) return; await supabase.from('subtasks').delete().eq('id', subtaskId); setDailyLogs(prev => { const log = prev[selectedDate] || currentDailyLog; return { ...prev, [selectedDate]: { ...log, tasks: log.tasks.map(t => ({ ...t, subtasks: t.subtasks.filter(st => st.id !== subtaskId) })) } }; }); };
     const handleUpdateSubtaskText = async (taskId: string, subtaskId: string, text: string) => { if (!supabase) return; await supabase.from('subtasks').update({ text }).eq('id', subtaskId); setDailyLogs(prev => { const log = prev[selectedDate] || currentDailyLog; return { ...prev, [selectedDate]: { ...log, tasks: log.tasks.map(t => t.id === taskId ? { ...t, subtasks: t.subtasks.map(st => st.id === subtaskId ? { ...st, text } : st) } : t) } }; }); };
     const handleToggleSubtask = async (taskId: string, subtaskId: string) => { if (!supabase) return; setDailyLogs(prev => { const log = prev[selectedDate] || currentDailyLog; const task = log.tasks.find(t => t.id === taskId); if (!task) return prev; const subtask = task.subtasks.find(st => st.id === subtaskId); if (!subtask) return prev; const newSubState = !subtask.completed; supabase!.from('subtasks').update({ completed: newSubState }).eq('id', subtaskId).then(); const newTasks = log.tasks.map(t => { if (t.id === taskId) { const newSubs = t.subtasks.map(st => st.id === subtaskId ? { ...st, completed: newSubState } : st); const allComplete = newSubs.every(st => st.completed); if (allComplete !== t.completed) supabase!.from('tasks').update({ completed: allComplete }).eq('id', taskId).then(); return { ...t, subtasks: newSubs, completed: allComplete }; } return t; }); return { ...prev, [selectedDate]: { ...log, tasks: newTasks } }; }); };
-    const handleToggleSubtaskRecurring = async (taskId: string, subtaskId: string) => { if (!supabase) return; setDailyLogs(prev => { const log = prev[selectedDate] || currentDailyLog; const task = log.tasks.find(t => t.id === taskId); if (!task) return prev; const subtask = task.subtasks.find(st => st.id === subtaskId); if (!subtask) return prev; const newRecurringState = !subtask.isRecurring; supabase!.from('subtasks').update({ is_recurring: newRecurringState }).eq('id', subtaskId).then(); if (newRecurringState && task.isRecurring) { const category = categories.find(c => c.id === task.categoryId); const recurringTask = category?.recurringTasks.find(rt => rt.text === task.text); if (recurringTask) { supabase!.from('recurring_subtask_templates').insert({ parent_template_id: recurringTask.id, text: subtask.text }).then(({ data }) => { if (data) { setCategories(prevCats => prevCats.map(cat => ({ ...cat, recurringTasks: cat.recurringTasks.map(rt => rt.id === recurringTask.id ? { ...rt, subtaskTemplates: [...rt.subtaskTemplates, { id: data[0].id, text: subtask.text, parentTemplateId: recurringTask.id }] } : rt) }))); } }); } } const newTasks = log.tasks.map(t => { if (t.id === taskId) { return { ...t, subtasks: t.subtasks.map(st => st.id === subtaskId ? { ...st, isRecurring: newRecurringState } : st) }; } return t; }); return { ...prev, [selectedDate]: { ...log, tasks: newTasks } }; }); };
+    const handleToggleSubtaskRecurring = async (taskId: string, subtaskId: string) => { if (!supabase) return; setDailyLogs(prev => { const log = prev[selectedDate] || currentDailyLog; const task = log.tasks.find(t => t.id === taskId); if (!task) return prev; const subtask = task.subtasks.find(st => st.id === subtaskId); if (!subtask) return prev; const newRecurringState = !subtask.isRecurring; supabase!.from('subtasks').update({ is_recurring: newRecurringState }).eq('id', subtaskId).then(); if (newRecurringState && task.isRecurring) { const category = categories.find(c => c.id === task.categoryId); const recurringTask = category?.recurringTasks.find(rt => rt.text === task.text); if (recurringTask) { supabase!.from('recurring_subtask_templates').insert({ parent_template_id: recurringTask.id, text: subtask.text }).then(({ data }) => { if (data) { setCategories(prevCats => prevCats.map(cat => ({ ...cat, recurringTasks: cat.recurringTasks.map(rt => rt.id === recurringTask.id ? { ...rt, subtaskTemplates: [...rt.subtaskTemplates, { id: data.id, text: subtask.text, parentTemplateId: recurringTask.id }] } : rt) }))); } }); } } const newTasks = log.tasks.map(t => { if (t.id === taskId) { return { ...t, subtasks: t.subtasks.map(st => st.id === subtaskId ? { ...st, isRecurring: newRecurringState } : st) }; } return t; }); return { ...prev, [selectedDate]: { ...log, tasks: newTasks } }; }); };
 
-    // Manager Handlers
-    const handleAddCategory = async (name: string, color: string) => { if (!supabase) return; const { data } = await supabase.from('categories').insert({ name, color }).select().single(); if (data) setCategories([...categories, { ...data, recurringTasks: [] }]); };
-    const handleUpdateCategory = async (id: string, name: string, color: string) => { if (!supabase) return; await supabase.from('categories').update({ name, color }).eq('id', id); setCategories(categories.map(c => c.id === id ? { ...c, name, color } : c)); };
-    const handleDeleteCategory = async (id: string) => { if (!supabase || id === 'uncategorized') return; await supabase.from('categories').delete().eq('id', id); setCategories(categories.filter(c => c.id !== id)); };
-    const onDeleteRecurringTask = async (dayTypeId: string, id: string) => { if (!supabase) return; await supabase.from('recurring_task_templates').delete().eq('id', id); setCategories(categories.map(c => ({ ...c, recurringTasks: c.recurringTasks.filter(rt => rt.id !== id) }))); setUncategorizedTemplates(uncategorizedTemplates.filter(t => t.id !== id)); setDayTypes(dayTypes.map(dt => ({ ...dt, recurringTasks: dt.recurringTasks.filter(t => t.id !== id) }))); };
-    const onUpdateRecurringTask = async (task: RecurringTaskTemplate) => { if (!supabase) return; await supabase.from('recurring_task_templates').update({ days_of_week: task.daysOfWeek }).eq('id', task.id); setCategories(categories.map(c => ({ ...c, recurringTasks: c.recurringTasks.map(rt => rt.id === task.id ? task : rt) }))); };
+    const onUpdateRecurringTask = async (task: RecurringTaskTemplate) => {
+        if (!supabase) return;
+        const { error } = await supabase.from('recurring_task_templates').update({ days_of_week: task.daysOfWeek }).eq('id', task.id);
+
+        if (error) {
+            console.error("Failed to update recurring task schedule:", error);
+            alert(`Failed to save schedule: ${error.message}`);
+            return;
+        }
+
+        setCategories(categories.map(c => ({ ...c, recurringTasks: c.recurringTasks.map(rt => rt.id === task.id ? task : rt) })));
+
+        // Live Update Logic
+        console.log("Live Update Triggered for:", task.text);
+        console.log("New Days:", task.daysOfWeek);
+
+        const [y, m, d] = selectedDate.split('-').map(Number);
+        const currentDayOfWeek = new Date(y, m - 1, d).getDay();
+        console.log("Current Date:", selectedDate, "DayOfWeek:", currentDayOfWeek);
+
+        const shouldBePresent = task.daysOfWeek.includes(currentDayOfWeek);
+        console.log("Should be present?", shouldBePresent);
+
+        const currentLog = dailyLogs[selectedDate];
+
+        if (currentLog) {
+            const existingTask = currentLog.tasks.find(t => t.text === task.text && t.isRecurring && (t.categoryId === task.categoryId || (!t.categoryId && task.categoryId === 'uncategorized')));
+
+            if (shouldBePresent && !existingTask) {
+                const { data: newTask } = await supabase.from('tasks').insert({
+                    log_date: selectedDate, text: task.text, category_id: task.categoryId === 'uncategorized' ? null : task.categoryId, is_recurring: true
+                }).select().single();
+                if (newTask) {
+                    setDailyLogs(prev => ({
+                        ...prev,
+                        [selectedDate]: {
+                            ...prev[selectedDate],
+                            tasks: [...prev[selectedDate].tasks, { ...newTask, categoryId: newTask.category_id || 'uncategorized', isRecurring: true, subtasks: [] }]
+                        }
+                    }));
+                }
+            } else if (!shouldBePresent && existingTask) {
+                await supabase.from('tasks').delete().eq('id', existingTask.id);
+                setDailyLogs(prev => ({
+                    ...prev,
+                    [selectedDate]: {
+                        ...prev[selectedDate],
+                        tasks: prev[selectedDate].tasks.filter(t => t.id !== existingTask.id)
+                    }
+                }));
+            }
+        }
+    };
+
+    const onDeleteRecurringTask = async (dayTypeId: string, id: string) => {
+        if (!supabase) return;
+        await supabase.from('recurring_task_templates').delete().eq('id', id);
+        setCategories(categories.map(c => ({ ...c, recurringTasks: c.recurringTasks.filter(rt => rt.id !== id) })));
+        setUncategorizedTemplates(uncategorizedTemplates.filter(t => t.id !== id));
+        setDayTypes(dayTypes.map(dt => ({ ...dt, recurringTasks: dt.recurringTasks.filter(t => t.id !== id) })));
+    };
     const onAddRecurringSubtask = async (parentId: string, text: string) => { if (!supabase) return; const { data } = await supabase.from('recurring_subtask_templates').insert({ parent_template_id: parentId, text }).select().single(); if (data) { setCategories(categories.map(c => ({ ...c, recurringTasks: c.recurringTasks.map(rt => rt.id === parentId ? { ...rt, subtaskTemplates: [...rt.subtaskTemplates, { id: data.id, text, parentTemplateId: parentId }] } : rt) }))); } };
     const onDeleteRecurringSubtask = async (id: string) => { if (!supabase) return; await supabase.from('recurring_subtask_templates').delete().eq('id', id); setCategories(categories.map(c => ({ ...c, recurringTasks: c.recurringTasks.map(rt => ({ ...rt, subtaskTemplates: rt.subtaskTemplates.filter(st => st.id !== id) })) }))); };
     const handleUpdateRecurringTaskText = async (id: string, text: string) => { if (!supabase) return; await supabase.from('recurring_task_templates').update({ text }).eq('id', id); setCategories(categories.map(c => ({ ...c, recurringTasks: c.recurringTasks.map(rt => rt.id === id ? { ...rt, text } : rt) }))); };
     const handleUpdateRecurringSubtaskText = async (id: string, text: string) => { if (!supabase) return; await supabase.from('recurring_subtask_templates').update({ text }).eq('id', id); setCategories(categories.map(c => ({ ...c, recurringTasks: c.recurringTasks.map(rt => ({ ...rt, subtaskTemplates: rt.subtaskTemplates.map(st => st.id === id ? { ...st, text } : st) })) }))); };
+
+    const handleAddCategory = async (name: string, color: string) => {
+        if (!supabase) return;
+        const { data } = await supabase.from('categories').insert({ name, color }).select().single();
+        if (data) setCategories([...categories, { ...data, recurringTasks: [] }]);
+    };
+
+    const handleUpdateCategory = async (id: string, name: string, color: string) => {
+        if (!supabase) return;
+        await supabase.from('categories').update({ name, color }).eq('id', id);
+        setCategories(categories.map(c => c.id === id ? { ...c, name, color } : c));
+    };
+
+    const handleDeleteCategory = async (id: string) => {
+        if (!supabase) return;
+        await supabase.from('categories').delete().eq('id', id);
+        setCategories(categories.filter(c => c.id !== id));
+    };
+
     const handleAddDayType = async (name: string) => { if (!supabase) return; const { data } = await supabase.from('day_types').insert({ name }).select().single(); if (data) setDayTypes([...dayTypes, { ...data, categoryIds: [], recurringTasks: [...uncategorizedTemplates] }]); };
     const handleUpdateDayType = async (id: string, name: string) => { if (!supabase) return; await supabase.from('day_types').update({ name }).eq('id', id); setDayTypes(dayTypes.map(dt => dt.id === id ? { ...dt, name } : dt)); };
     const handleDeleteDayType = async (id: string) => { if (!supabase) return; await supabase.from('day_types').delete().eq('id', id); setDayTypes(dayTypes.filter(dt => dt.id !== id)); };
@@ -405,7 +536,11 @@ function App() {
                 <h1 className="text-4xl font-bold text-white mb-2">IntelliDay</h1>
                 <div className="flex justify-between items-end">
                     <p className="text-gray-400">
-                        {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                        {(() => {
+                            const [y, m, d] = selectedDate.split('-').map(Number);
+                            const dateObj = new Date(y, m - 1, d);
+                            return dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+                        })()}
                     </p>
                     <div className="text-right">
                         <div className="text-xs text-gray-400 uppercase tracking-wider mb-1">Daily Progress</div>

@@ -8,8 +8,9 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ completionPercentage, selectedDate }) => {
   // Use the selectedDate prop to format the display date
   // new Date('YYYY-MM-DD') can be off by a day due to timezone.
-  // Adding T00:00:00 makes it interpret as local time.
-  const displayDate = new Date(selectedDate + 'T00:00:00');
+  // We parse it manually to ensure it's treated as local date.
+  const [y, m, d] = selectedDate.split('-').map(Number);
+  const displayDate = new Date(y, m - 1, d);
   const dateString = displayDate.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',

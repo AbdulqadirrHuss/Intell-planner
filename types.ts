@@ -34,7 +34,7 @@ export interface RecurringTaskTemplate {
 
 export interface RecurringSubtaskTemplate {
   id: string;
-  parent_template_id: string;
+  parentTemplateId: string;
   text: string;
 }
 

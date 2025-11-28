@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Category, RecurringTaskTemplate, RecurringSubtaskTemplate } from './types';
 import { PlusIcon, TrashIcon, EditIcon, CheckIcon } from './icons';
 
@@ -35,11 +35,11 @@ const RecurringSubtaskItem: React.FC<{
       )}
       <div className="flex gap-1">
         {isEditing ? (
-          <button onClick={handleUpdate}><CheckIcon className="w-3 h-3 text-green-300"/></button>
+          <button onClick={handleUpdate}><CheckIcon className="w-3 h-3 text-green-300" /></button>
         ) : (
-          <button onClick={() => setIsEditing(true)}><EditIcon className="w-3 h-3 text-gray-300"/></button>
+          <button onClick={() => setIsEditing(true)}><EditIcon className="w-3 h-3 text-gray-300" /></button>
         )}
-        <button onClick={() => onDelete(subtask.id)} className="text-gray-300 hover:text-red-500"><TrashIcon className="w-3 h-3"/></button>
+        <button onClick={() => onDelete(subtask.id)} className="text-gray-300 hover:text-red-500"><TrashIcon className="w-3 h-3" /></button>
       </div>
     </div>
   );
@@ -55,12 +55,20 @@ const RecurringTaskItem: React.FC<{
   onDeleteSubtask: (id: string) => void;
   onUpdateSubtaskText: (id: string, newText: string) => void;
 }> = ({ task, onDelete, onUpdateDays, onUpdateText, onAddSubtask, onDeleteSubtask, onUpdateSubtaskText }) => {
-  
+
   const [editingDays, setEditingDays] = useState(false);
   const [daysOfWeek, setDaysOfWeek] = useState(task.daysOfWeek || []);
-  
+
+  useEffect(() => {
+    setDaysOfWeek(task.daysOfWeek || []);
+  }, [task.daysOfWeek]);
+
   const [editingText, setEditingText] = useState(false);
   const [text, setText] = useState(task.text);
+
+  useEffect(() => {
+    setText(task.text);
+  }, [task.text]);
 
   const [newSubtask, setNewSubtask] = useState('');
 
@@ -112,15 +120,15 @@ const RecurringTaskItem: React.FC<{
         )}
         <div className="flex gap-2">
           {editingText ? (
-            <button onClick={handleSaveText}><CheckIcon className="w-4 h-4 text-green-300"/></button>
+            <button onClick={handleSaveText}><CheckIcon className="w-4 h-4 text-green-300" /></button>
           ) : (
-            <button onClick={() => setEditingText(true)}><EditIcon className="w-4 h-4 text-gray-300"/></button>
+            <button onClick={() => setEditingText(true)}><EditIcon className="w-4 h-4 text-gray-300" /></button>
           )}
-          <button onClick={() => setEditingDays(true)} className="text-gray-300 hover:text-white"><EditIcon className="w-4 h-4"/></button>
-          <button onClick={() => onDelete(task.id)} className="text-gray-300 hover:text-red-500"><TrashIcon className="w-4 h-4"/></button>
+          <button onClick={() => setEditingDays(true)} className="text-gray-300 hover:text-white"><EditIcon className="w-4 h-4" /></button>
+          <button onClick={() => onDelete(task.id)} className="text-gray-300 hover:text-red-500"><TrashIcon className="w-4 h-4" /></button>
         </div>
       </div>
-      
+
       {editingDays ? (
         <div className="mt-2 flex items-center gap-2">
           <div className="flex gap-1">
@@ -134,14 +142,14 @@ const RecurringTaskItem: React.FC<{
               </button>
             ))}
           </div>
-          <button onClick={handleSaveDays} className="p-1 bg-green-500 rounded-md"><CheckIcon className="w-4 h-4"/></button>
+          <button onClick={handleSaveDays} className="p-1 bg-green-500 rounded-md"><CheckIcon className="w-4 h-4" /></button>
         </div>
       ) : (
         <div className="mt-1 text-xs text-indigo-300">
           {(task.daysOfWeek || []).length > 0 ? task.daysOfWeek.sort().map(d => DAYS_OF_WEEK[d].label).join(', ') : 'No days set'}
         </div>
       )}
-      
+
       <div className="pl-4 mt-2 space-y-1">
         {task.subtaskTemplates.map(st => (
           <RecurringSubtaskItem
@@ -161,7 +169,7 @@ const RecurringTaskItem: React.FC<{
           placeholder="Add subtask template..."
           className="flex-grow bg-gray-500 border-gray-400 rounded-md p-1 text-xs text-white"
         />
-        <button type="submit" className="p-1 bg-indigo-500 hover:bg-indigo-600 rounded-md"><PlusIcon className="w-3 h-3"/></button>
+        <button type="submit" className="p-1 bg-indigo-500 hover:bg-indigo-600 rounded-md"><PlusIcon className="w-3 h-3" /></button>
       </form>
     </div>
   );
@@ -228,7 +236,7 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
           <h2 className="text-2xl font-bold text-white">Manage Categories & Recurring Tasks</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white">&times;</button>
         </div>
-        
+
         <div className="p-6 space-y-6 overflow-y-auto">
           <form onSubmit={handleAddCategory} className="flex gap-2 items-center">
             <input
@@ -244,7 +252,7 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
               onChange={(e) => setNewCategoryColor(e.target.value)}
               className="bg-gray-700 rounded-md h-10 w-10 p-1 border-gray-600"
             />
-            <button type="submit" className="p-2 bg-indigo-600 hover:bg-indigo-700 rounded-md"><PlusIcon className="w-5 h-5"/></button>
+            <button type="submit" className="p-2 bg-indigo-600 hover:bg-indigo-700 rounded-md"><PlusIcon className="w-5 h-5" /></button>
           </form>
 
           <div className="space-y-4">
@@ -265,7 +273,7 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
                         onChange={(e) => setEditingCategory({ ...editingCategory, color: e.target.value })}
                         className="bg-gray-600 rounded-md h-8 w-8 p-1 ml-2"
                       />
-                      <button onClick={handleUpdateCategory} className="ml-2 text-green-400 hover:text-green-300"><CheckIcon className="w-5 h-5"/></button>
+                      <button onClick={handleUpdateCategory} className="ml-2 text-green-400 hover:text-green-300"><CheckIcon className="w-5 h-5" /></button>
                     </>
                   ) : (
                     <div className="flex items-center">
@@ -274,11 +282,11 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
                     </div>
                   )}
                   <div className="flex gap-2">
-                    <button onClick={() => setEditingCategory(cat)} className="text-gray-400 hover:text-white"><EditIcon className="w-5 h-5"/></button>
-                    <button onClick={() => onDeleteCategory(cat.id)} className="text-gray-400 hover:text-red-500"><TrashIcon className="w-5 h-5"/></button>
+                    <button onClick={() => setEditingCategory(cat)} className="text-gray-400 hover:text-white"><EditIcon className="w-5 h-5" /></button>
+                    <button onClick={() => onDeleteCategory(cat.id)} className="text-gray-400 hover:text-red-500"><TrashIcon className="w-5 h-5" /></button>
                   </div>
                 </div>
-                
+
                 <div className="pl-4 space-y-3 mb-4">
                   {cat.recurringTasks.map(task => (
                     <RecurringTaskItem
@@ -303,7 +311,7 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
                     placeholder="Add new recurring task..."
                     className="flex-grow bg-gray-600 border-gray-500 rounded-md p-2 text-white"
                   />
-                  <button type="submit" className="p-2 bg-indigo-500 hover:bg-indigo-600 rounded-md"><PlusIcon className="w-4 h-4"/></button>
+                  <button type="submit" className="p-2 bg-indigo-500 hover:bg-indigo-600 rounded-md"><PlusIcon className="w-4 h-4" /></button>
                 </form>
               </div>
             ))}
