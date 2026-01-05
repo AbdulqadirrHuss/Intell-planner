@@ -58,6 +58,7 @@ export interface StatDefinition {
   id: string;
   name: string;
   type: TrackerType;
+  frequency: 'daily' | 'weekly';
   linked_category_id?: string;
   target?: number;
   color?: string;

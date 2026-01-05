@@ -6,6 +6,8 @@ import DayTypeManager from './DayTypeManager';
 import CategoryManager from './CategoryManager';
 import Statistics from './Statistics';
 import TrackerManager from './TrackerManager';
+import MetricsDashboard from './components/metrics/MetricsDashboard';
+import MetricDetailView from './components/metrics/MetricDetailView';
 import TasksPage from './TasksPage';
 import { SettingsIcon, EditIcon, PlannerIcon, StatsIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon, CalendarIcon } from './icons';
 import { createClient } from '@supabase/supabase-js';
@@ -50,7 +52,8 @@ function App() {
     const [isTrackerManagerOpen, setTrackerManagerOpen] = useState(false);
     const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-    const [currentView, setCurrentView] = useState<'planner' | 'tasks'>('planner');
+    const [currentView, setCurrentView] = useState<'planner' | 'tasks' | 'metrics'>('planner');
+    const [selectedMetric, setSelectedMetric] = useState<StatDefinition | null>(null);
     const [newTaskText, setNewTaskText] = useState('');
     const [newTaskCategory, setNewTaskCategory] = useState('');
 
@@ -481,6 +484,25 @@ function App() {
     const handleAddCategoryToDayType = async (dtId: string, catId: string) => { if (!supabase) return; await supabase.from('day_type_categories').insert({ day_type_id: dtId, category_id: catId, sort_order: 99 }); const cat = categories.find(c => c.id === catId); setDayTypes(dayTypes.map(dt => dt.id === dtId ? { ...dt, categoryIds: [...dt.categoryIds, catId], recurringTasks: [...dt.recurringTasks, ...(cat?.recurringTasks || [])] } : dt)); };
     const onRemoveCategoryFromDayType = async (dtId: string, catId: string) => { if (!supabase) return; await supabase.from('day_type_categories').delete().eq('day_type_id', dtId).eq('category_id', catId); setDayTypes(dayTypes.map(dt => dt.id === dtId ? { ...dt, categoryIds: dt.categoryIds.filter(c => c !== catId), recurringTasks: dt.recurringTasks.filter(rt => rt.categoryId !== catId || rt.categoryId === 'uncategorized') } : dt)); };
 
+    const handleAddMetric = async (name: string, type: TrackerType, frequency: 'daily' | 'weekly', color: string, target?: number) => {
+        if (!supabase) return;
+        const { data } = await supabase.from('stat_definitions').insert({ name, type, frequency, color, target }).select().single();
+        if (data) setStatDefinitions([...statDefinitions, data]);
+    };
+
+    const handleUpdateMetric = async (id: string, updates: Partial<StatDefinition>) => {
+        if (!supabase) return;
+        const { data } = await supabase.from('stat_definitions').update(updates).eq('id', id).select().single();
+        if (data) setStatDefinitions(statDefinitions.map(s => s.id === id ? data : s));
+    };
+
+    const handleDeleteMetric = async (id: string) => {
+        if (!supabase) return;
+        await supabase.from('stat_definitions').delete().eq('id', id);
+        setStatDefinitions(statDefinitions.filter(s => s.id !== id));
+        if (selectedMetric?.id === id) setSelectedMetric(null);
+    };
+
     const handleAddTracker = async (name: string, type: TrackerType, linkedCategoryId?: string, target?: number, color?: string) => { if (!supabase) return; const { data } = await supabase.from('stat_definitions').insert({ name, type, linked_category_id: linkedCategoryId, target, color }).select().single(); if (data) setStatDefinitions([...statDefinitions, data]); };
     const handleUpdateTracker = async (id: string, updates: Partial<StatDefinition>) => { if (!supabase) return; const { data } = await supabase.from('stat_definitions').update(updates).eq('id', id).select().single(); if (data) setStatDefinitions(statDefinitions.map(s => s.id === id ? data : s)); };
     const handleDeleteTracker = async (id: string) => { if (!supabase) return; await supabase.from('stat_definitions').delete().eq('id', id); setStatDefinitions(statDefinitions.filter(s => s.id !== id)); };
@@ -528,6 +550,13 @@ function App() {
                         <CheckIcon className="w-4 h-4 inline mr-2" />
                         Tasks
                     </button>
+                    <button
+                        className={`toggle-pill ${currentView === 'metrics' ? 'active' : ''}`}
+                        onClick={() => setCurrentView('metrics')}
+                    >
+                        <AdjustmentsIcon className="w-4 h-4 inline mr-2" />
+                        Metrics
+                    </button>
                 </div>
             </div>
 
@@ -545,19 +574,19 @@ function App() {
                     <div className="text-right">
                         <div className="text-xs text-gray-400 uppercase tracking-wider mb-1">Daily Progress</div>
                         <div className="text-3xl font-bold text-white">{completionPercentage}%</div>
-                    </div>
-                </div>
+                    </div >
+                </div >
                 {/* Progress Bar */}
-                <div className="w-full bg-gray-700/50 h-2 rounded-full mt-4 overflow-hidden">
+                < div className="w-full bg-gray-700/50 h-2 rounded-full mt-4 overflow-hidden" >
                     <div
                         className="h-full bg-violet-500 transition-all duration-500"
                         style={{ width: `${completionPercentage}%` }}
                     />
-                </div>
-            </div>
+                </div >
+            </div >
 
             {/* Date Navigation Bar */}
-            <div className="nav-bar">
+            < div className="nav-bar" >
                 <button className="icon-btn" onClick={() => changeDate(-1)}>
                     <ChevronLeftIcon className="w-5 h-5" />
                 </button>
@@ -578,42 +607,116 @@ function App() {
                 <button className="icon-btn" onClick={() => changeDate(1)}>
                     <ChevronRightIcon className="w-5 h-5" />
                 </button>
-            </div>
+            </div >
 
             {/* Main Content */}
-            {currentView === 'planner' && (
-                <div className="animate-in fade-in">
-                    {/* Day Scaffold Selection */}
-                    <div className="content-card">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Apply Day Scaffold</h3>
-                            <div className="flex gap-2">
-                                <button onClick={() => setDayTypeManagerOpen(true)} className="text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded text-gray-300 transition-colors">
-                                    Edit Day Types
-                                </button>
-                                <button onClick={() => setCategoryManagerOpen(true)} className="text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded text-gray-300 transition-colors">
-                                    Edit Categories
-                                </button>
+            {
+                currentView === 'planner' && (
+                    <div className="animate-in fade-in">
+                        {/* Day Scaffold Selection */}
+                        <div className="content-card">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Apply Day Scaffold</h3>
+                                <div className="flex gap-2">
+                                    <button onClick={() => setDayTypeManagerOpen(true)} className="text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded text-gray-300 transition-colors">
+                                        Edit Day Types
+                                    </button>
+                                    <button onClick={() => setCategoryManagerOpen(true)} className="text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded text-gray-300 transition-colors">
+                                        Edit Categories
+                                    </button>
+                                </div>
                             </div>
+
+                            <select
+                                value={currentDailyLog.dayTypeId || ''}
+                                onChange={(e) => handleSelectDayTypeFromDropdown(e.target.value)}
+                                className="w-full bg-black/20 border border-white/10 text-white text-sm rounded-lg focus:ring-violet-500 focus:border-violet-500 block p-3"
+                            >
+                                <option value="" disabled>Choose a day type...</option>
+                                {dayTypes.map(dt => <option key={dt.id} value={dt.id}>{dt.name}</option>)}
+                            </select>
+                            <p className="text-xs text-gray-500 mt-2">Applying this generates scaffold for both Planner and Task List.</p>
                         </div>
 
-                        <select
-                            value={currentDailyLog.dayTypeId || ''}
-                            onChange={(e) => handleSelectDayTypeFromDropdown(e.target.value)}
-                            className="w-full bg-black/20 border border-white/10 text-white text-sm rounded-lg focus:ring-violet-500 focus:border-violet-500 block p-3"
-                        >
-                            <option value="" disabled>Choose a day type...</option>
-                            {dayTypes.map(dt => <option key={dt.id} value={dt.id}>{dt.name}</option>)}
-                        </select>
-                        <p className="text-xs text-gray-500 mt-2">Applying this generates scaffold for both Planner and Task List.</p>
-                    </div>
+                        {/* Task List */}
+                        <TaskList
+                            key={selectedDate}
+                            tasks={currentDailyLog.tasks}
+                            categories={categories.filter(c => c.id !== 'uncategorized')}
+                            sortedCategoryIds={dayTypes.find(dt => dt.id === currentDailyLog.dayTypeId)?.categoryIds || []}
+                            onReorderCategories={handleReorderCategories}
+                            onToggleTask={handleToggleTask}
+                            onDeleteTask={handleDeleteTask}
+                            onToggleSubtask={handleToggleSubtask}
+                            onDeleteSubtask={handleDeleteSubtask}
+                            onAddSubtask={handleAddSubtask}
+                            onUpdateTaskText={handleUpdateTaskText}
+                            onUpdateSubtaskText={handleUpdateSubtaskText}
+                            onToggleSubtaskRecurring={handleToggleSubtaskRecurring}
+                        />
 
-                    {/* Task List */}
-                    <TaskList
-                        key={selectedDate}
-                        tasks={currentDailyLog.tasks}
-                        categories={categories.filter(c => c.id !== 'uncategorized')}
-                        sortedCategoryIds={dayTypes.find(dt => dt.id === currentDailyLog.dayTypeId)?.categoryIds || []}
+                        {/* Add Task Input */}
+                        <div className="mt-6 relative">
+                            <div className="task-input-wrapper">
+                                <input
+                                    type="text"
+                                    placeholder="Add a new task..."
+                                    className="task-input"
+                                    value={newTaskText}
+                                    onChange={(e) => setNewTaskText(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            console.log("Adding task with category:", newTaskCategory);
+                                            handleAddTask(newTaskText, newTaskCategory || 'uncategorized');
+                                            // Optional: Keep category selected for rapid entry
+                                            // setNewTaskCategory(''); 
+                                        }
+                                    }}
+                                />
+                                <div className="flex items-center gap-2 pr-2">
+                                    <select
+                                        className="bg-transparent text-xs text-gray-400 border-none outline-none cursor-pointer hover:text-white max-w-[100px] truncate"
+                                        onChange={(e) => {
+                                            console.log("Category selected:", e.target.value);
+                                            setNewTaskCategory(e.target.value);
+                                        }}
+                                        value={newTaskCategory}
+                                    >
+                                        <option value="">No Link</option>
+                                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                    <button
+                                        className="fab-btn"
+                                        onClick={() => {
+                                            console.log("Adding task via button with category:", newTaskCategory);
+                                            handleAddTask(newTaskText, newTaskCategory || 'uncategorized');
+                                            // setNewTaskCategory('');
+                                        }}
+                                    >
+                                        <PlusIcon className="w-6 h-6" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {
+                currentView === 'tasks' && (
+                    <TasksPage
+                        selectedDate={selectedDate}
+                        setSelectedDate={setSelectedDate}
+                        completionPercentage={completionPercentage}
+                        dailyLog={currentDailyLog}
+                        dayTypes={dayTypes}
+                        categories={categories}
+                        statDefinitions={statDefinitions}
+                        statValues={statValues}
+                        onSelectDayType={handleSelectDayTypeFromDropdown}
+                        onOpenDayTypeManager={() => setDayTypeManagerOpen(true)}
+                        onOpenCategoryManager={() => setCategoryManagerOpen(true)}
+                        onOpenTrackerManager={() => setTrackerManagerOpen(true)}
                         onReorderCategories={handleReorderCategories}
                         onToggleTask={handleToggleTask}
                         onDeleteTask={handleDeleteTask}
@@ -623,81 +726,33 @@ function App() {
                         onUpdateTaskText={handleUpdateTaskText}
                         onUpdateSubtaskText={handleUpdateSubtaskText}
                         onToggleSubtaskRecurring={handleToggleSubtaskRecurring}
+                        onAddTask={handleAddTask}
+                        onUpdateStatValue={handleUpdateStatValue}
                     />
+                )
+            }
 
-                    {/* Add Task Input */}
-                    <div className="mt-6 relative">
-                        <div className="task-input-wrapper">
-                            <input
-                                type="text"
-                                placeholder="Add a new task..."
-                                className="task-input"
-                                value={newTaskText}
-                                onChange={(e) => setNewTaskText(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        console.log("Adding task with category:", newTaskCategory);
-                                        handleAddTask(newTaskText, newTaskCategory || 'uncategorized');
-                                        // Optional: Keep category selected for rapid entry
-                                        // setNewTaskCategory(''); 
-                                    }
-                                }}
-                            />
-                            <div className="flex items-center gap-2 pr-2">
-                                <select
-                                    className="bg-transparent text-xs text-gray-400 border-none outline-none cursor-pointer hover:text-white max-w-[100px] truncate"
-                                    onChange={(e) => {
-                                        console.log("Category selected:", e.target.value);
-                                        setNewTaskCategory(e.target.value);
-                                    }}
-                                    value={newTaskCategory}
-                                >
-                                    <option value="">No Link</option>
-                                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                </select>
-                                <button
-                                    className="fab-btn"
-                                    onClick={() => {
-                                        console.log("Adding task via button with category:", newTaskCategory);
-                                        handleAddTask(newTaskText, newTaskCategory || 'uncategorized');
-                                        // setNewTaskCategory('');
-                                    }}
-                                >
-                                    <PlusIcon className="w-6 h-6" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {currentView === 'tasks' && (
-                <TasksPage
-                    selectedDate={selectedDate}
-                    setSelectedDate={setSelectedDate}
-                    completionPercentage={completionPercentage}
-                    dailyLog={currentDailyLog}
-                    dayTypes={dayTypes}
-                    categories={categories}
-                    statDefinitions={statDefinitions}
-                    statValues={statValues}
-                    onSelectDayType={handleSelectDayTypeFromDropdown}
-                    onOpenDayTypeManager={() => setDayTypeManagerOpen(true)}
-                    onOpenCategoryManager={() => setCategoryManagerOpen(true)}
-                    onOpenTrackerManager={() => setTrackerManagerOpen(true)}
-                    onReorderCategories={handleReorderCategories}
-                    onToggleTask={handleToggleTask}
-                    onDeleteTask={handleDeleteTask}
-                    onToggleSubtask={handleToggleSubtask}
-                    onDeleteSubtask={handleDeleteSubtask}
-                    onAddSubtask={handleAddSubtask}
-                    onUpdateTaskText={handleUpdateTaskText}
-                    onUpdateSubtaskText={handleUpdateSubtaskText}
-                    onToggleSubtaskRecurring={handleToggleSubtaskRecurring}
-                    onAddTask={handleAddTask}
-                    onUpdateStatValue={handleUpdateStatValue}
-                />
-            )}
+            {
+                currentView === 'metrics' && (
+                    selectedMetric ? (
+                        <MetricDetailView
+                            metric={selectedMetric}
+                            statValues={statValues}
+                            onUpdateValue={handleUpdateStatValue}
+                            onUpdateMetric={handleUpdateMetric}
+                            onBack={() => setSelectedMetric(null)}
+                        />
+                    ) : (
+                        <MetricsDashboard
+                            statDefinitions={statDefinitions}
+                            statValues={statValues}
+                            onAddMetric={handleAddMetric}
+                            onUpdateMetric={handleUpdateMetric}
+                            onDeleteMetric={handleDeleteMetric}
+                            onOpenDetail={setSelectedMetric}
+                        />
+                    ))
+            }
 
             {/* Modals */}
             <DayTypeManager
@@ -729,7 +784,7 @@ function App() {
                 onUpdateRecurringSubtaskText={handleUpdateRecurringSubtaskText}
             />
             <TrackerManager isOpen={isTrackerManagerOpen} onClose={() => setTrackerManagerOpen(false)} statDefinitions={statDefinitions} categories={categories} onAddTracker={handleAddTracker} onUpdateTracker={handleUpdateTracker} onDeleteTracker={handleDeleteTracker} />
-        </div>
+        </div >
     );
 }
 
