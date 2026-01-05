@@ -82,12 +82,12 @@ const MetricsGraph: React.FC<MetricsGraphProps> = ({
 
             {/* Area Fill */}
             <defs>
-                <linearGradient id={`gradient-${color}`} x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={`gradient-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={color} stopOpacity="0.3" />
                     <stop offset="100%" stopColor={color} stopOpacity="0" />
                 </linearGradient>
             </defs>
-            <polygon points={areaPoints} fill={`url(#gradient-${color})`} />
+            <polygon points={areaPoints} fill={`url(#gradient-${color.replace('#', '')})`} />
 
             {/* Line */}
             <polyline points={points} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />

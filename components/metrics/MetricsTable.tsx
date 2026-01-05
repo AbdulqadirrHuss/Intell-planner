@@ -78,19 +78,25 @@ const EditableCell = ({ value, type, isEditable, onSave }: { value: any, type: T
     }
 
     return (
-        <input
-            type="number"
-            className="bg-transparent text-center w-full text-lg font-mono text-white outline-none placeholder-gray-700 focus:placeholder-gray-600"
-            value={val ?? ''}
-            onChange={e => setVal(e.target.value)}
-            onBlur={() => onSave(val === '' ? null : Number(val))}
-            onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                    e.currentTarget.blur();
-                }
-            }}
-            placeholder="-"
-        />
+    return (
+        <div className="relative group/cell w-full h-full flex items-center justify-center">
+            <input
+                type="number"
+                className="bg-transparent text-center w-full h-10 text-lg font-mono text-white outline-none placeholder-gray-700 
+                          focus:placeholder-gray-500 focus:bg-white/5 rounded-md transition-all
+                          group-hover/cell:bg-white/5 focus:ring-1 focus:ring-indigo-500/50"
+                value={val ?? ''}
+                onChange={e => setVal(e.target.value)}
+                onBlur={() => onSave(val === '' ? null : Number(val))}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                        e.currentTarget.blur();
+                    }
+                }}
+                placeholder="-"
+            />
+        </div>
+    );
     );
 };
 
