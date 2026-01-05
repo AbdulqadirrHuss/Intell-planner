@@ -35,8 +35,8 @@ const MetricDetailView: React.FC<MetricDetailViewProps> = ({
     }, [metric.frequency]);
 
     // --- Date Helpers ---
-    const getStartOfWeek = (d: Date) => {
-        const date = new Date(d);
+    const getStartOfWeek = (dateParam: Date) => {
+        const date = new Date(dateParam);
         const day = date.getDay();
         const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is sunday
         const start = new Date(date.setDate(diff));
@@ -44,7 +44,7 @@ const MetricDetailView: React.FC<MetricDetailViewProps> = ({
         return start;
     };
 
-    const formatDate = (d: Date) => d.toISOString().split('T')[0];
+    const formatDate = (dateParam: Date) => dateParam.toISOString().split('T')[0];
 
     // --- Data Generation ---
     const { dates, values, isEditable, dateLabels } = useMemo(() => {
