@@ -9,7 +9,7 @@ import TrackerManager from './TrackerManager';
 import MetricsDashboard from './components/metrics/MetricsDashboard';
 import MetricDetailView from './components/metrics/MetricDetailView';
 import TasksPage from './TasksPage';
-import { SettingsIcon, EditIcon, PlannerIcon, StatsIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon, CalendarIcon } from './icons';
+import { SettingsIcon, EditIcon, PlannerIcon, StatsIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon, CalendarIcon, AdjustmentsIcon } from './icons';
 import { createClient } from '@supabase/supabase-js';
 
 // --- 1. SAFE INITIALIZATION ---
