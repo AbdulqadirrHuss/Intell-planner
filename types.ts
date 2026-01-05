@@ -59,6 +59,7 @@ export interface StatDefinition {
   name: string;
   type: TrackerType;
   frequency: 'daily' | 'weekly';
+  target_days?: number[]; // Array of 0-6 (Sun-Sat) for specific daily targets
   linked_category_id?: string;
   target?: number;
   color?: string;

@@ -61,7 +61,10 @@ const EditableCell = ({ value, type, isEditable, onSave }: { value: any, type: T
 
     if (!isEditable) {
         if (value === null || value === undefined) return <span className="text-gray-600">-</span>;
-        if (type === 'check') return <div className="flex justify-center">{value ? <CheckIcon className="text-emerald-500/50 w-5 h-5" /> : <span className="text-gray-600">NO</span>}</div>;
+        if (type === 'check') {
+            if (typeof value === 'number') return <span className="font-mono text-gray-400">{value}%</span>;
+            return <div className="flex justify-center">{value ? <CheckIcon className="text-emerald-500/50 w-5 h-5" /> : <span className="text-gray-600">NO</span>}</div>;
+        }
         if (type === 'percent') return <span className="font-mono text-gray-400">{Math.round(Number(value))}%</span>;
         return <span className="font-mono text-gray-400">{Number(value)}</span>;
     }
@@ -77,7 +80,6 @@ const EditableCell = ({ value, type, isEditable, onSave }: { value: any, type: T
         );
     }
 
-    return (
     return (
         <div className="relative group/cell w-full h-full flex items-center justify-center">
             <input
@@ -96,7 +98,6 @@ const EditableCell = ({ value, type, isEditable, onSave }: { value: any, type: T
                 placeholder="-"
             />
         </div>
-    );
     );
 };
 

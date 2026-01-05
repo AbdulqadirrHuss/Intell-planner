@@ -61,11 +61,11 @@ const MetricDetailView: React.FC<MetricDetailViewProps> = ({
             // Let's center it slightly so user can see future? No, usually past.
             // Let's show [refDate - 13, refDate]
             for (let i = 13; i >= 0; i--) {
-                const d = new Date(current);
-                d.setDate(d.getDate() - i);
-                const dStr = formatDate(d);
+                const dailyDate = new Date(current);
+                dailyDate.setDate(dailyDate.getDate() - i);
+                const dStr = formatDate(dailyDate);
                 dateList.push(dStr);
-                labels[dStr] = d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
+                labels[dStr] = dailyDate.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
 
                 // Get Raw Value
                 const entry = statValues.find(v => v.stat_definition_id === metric.id && v.date === dStr);
@@ -75,15 +75,14 @@ const MetricDetailView: React.FC<MetricDetailViewProps> = ({
 
         } else if (viewMode === 'weekly') {
             // Show 12 weeks
-            // Align refDate to start of week
             const startOfCurrentWeek = getStartOfWeek(current);
 
             for (let i = 11; i >= 0; i--) {
-                const d = new Date(startOfCurrentWeek);
-                d.setDate(d.getDate() - (i * 7));
-                const dStr = formatDate(d);
+                const weekDate = new Date(startOfCurrentWeek);
+                weekDate.setDate(weekDate.getDate() - (i * 7));
+                const dStr = formatDate(weekDate);
                 dateList.push(dStr);
-                labels[dStr] = `Wk ${getWeekNumber(d)}`;
+                labels[dStr] = `Wk ${getWeekNumber(weekDate)}`;
 
                 if (metric.frequency === 'weekly') {
                     // Raw Data for Weekly Metric
@@ -92,20 +91,63 @@ const MetricDetailView: React.FC<MetricDetailViewProps> = ({
                     editable = true;
                 } else {
                     // Aggregated Average for Daily Metric
-                    // Get all days in this week
                     let sum = 0;
                     let count = 0;
+                    let targetDaysCount = 0;
+
+                    const expectedDays = metric.target_days && metric.target_days.length > 0 ? metric.target_days : [0, 1, 2, 3, 4, 5, 6];
+
                     for (let j = 0; j < 7; j++) {
-                        const dayInWeek = new Date(d);
+                        const dayInWeek = new Date(weekDate);
                         dayInWeek.setDate(dayInWeek.getDate() + j);
                         const dayStr = formatDate(dayInWeek);
                         const entry = statValues.find(v => v.stat_definition_id === metric.id && v.date === dayStr);
+
+                        // Check if this day is a target day
+                        const dayOfWeek = dayInWeek.getDay(); // 0-6
+                        if (expectedDays.includes(dayOfWeek)) {
+                            targetDaysCount++;
+                        }
+
                         if (entry) {
-                            sum += Number(entry.value); // Treat boolean as 1/0? Types say value is number.
+                            sum += Number(entry.value);
                             count++;
                         }
                     }
-                    valMap[dStr] = count > 0 ? (metric.type === 'percent' ? Math.round(sum / count) : sum) : null;
+
+                    // Calculate Value
+                    if (targetDaysCount > 0) {
+                        // If we have specific targets, completion is based on those targets
+                        if (metric.type === 'check') {
+                            // E.g. Target Mon, Wed (2 days). Did Mon, Wed, Fri (3 days). Result 3/2 = 150%?
+                            // Or should it be capped? User just said "affect average". 
+                            // Let's allow > 100% for now as it rewards extra effort.
+                            valMap[dStr] = Math.round((sum / targetDaysCount) * 100);
+                        } else {
+                            // For Count/Percent, usually we want Average per Day.
+                            // If I run 5km on Mon (Target) and 5km on Fri (Adhoc). Target Mon only.
+                            // Total 10km. Average per target day = 10 / 1 = 10km? Or Average per Active Day?
+                            // Default to Sum for Count (Total Volume) and Average for Percent?
+                            // User requirement is vague for Count/Percent. Let's stick to Average over Target Days for consistency with completion.
+                            valMap[dStr] = Math.round(sum / targetDaysCount);
+                        }
+                    } else {
+                        // Fallback if no target days (shouldn't happen with default)
+                        valMap[dStr] = count > 0 ? (metric.type === 'percent' ? Math.round(sum / count) : sum) : null;
+                    }
+
+                    // Special case: If type is 'check' but we calculated a percentage, we might want to display it as such.
+                    // But our Table expects boolean for 'check' type cells.
+                    // Wait, MetricDetailView table shows editable raw data for Daily view.
+                    // For Weekly view of Daily metrics, it shows AGGREGATES.
+                    // The Table component renders based on `metric.type`.
+                    // If metric.type is 'check', it expects boolean.
+                    // But here we are calculating a percentage (completion rate).
+                    // We might need to handle this display issue. 
+                    // Ideally, Weekly view for Check metrics should probably show a bar chart or percentage, NOT the check icon.
+                    // *Self-Correction*: The Table cell will try to render a CheckIcon for a number (100). That fails.
+                    // We need to either change the metric type passed to table or handle number in Check cell.
+
                     editable = false;
                 }
             }
@@ -115,16 +157,27 @@ const MetricDetailView: React.FC<MetricDetailViewProps> = ({
             const currentMonthStart = new Date(current.getFullYear(), current.getMonth(), 1);
 
             for (let i = 11; i >= 0; i--) {
-                const d = new Date(currentMonthStart);
-                d.setMonth(d.getMonth() - i);
-                const dStr = formatDate(d); // First day of month
+                const monthDate = new Date(currentMonthStart);
+                monthDate.setMonth(monthDate.getMonth() - i);
+                const dStr = formatDate(monthDate);
                 dateList.push(dStr);
-                labels[dStr] = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                labels[dStr] = monthDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
 
-                // Aggregate
-                // Find all entries in this month
-                const month = d.getMonth();
-                const year = d.getFullYear();
+                const month = monthDate.getMonth();
+                const year = monthDate.getFullYear();
+                const expectedDays = metric.target_days && metric.target_days.length > 0 ? metric.target_days : [0, 1, 2, 3, 4, 5, 6];
+
+                // Calculate target days in this month
+                // Iterate days in month
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                let targetDaysCount = 0;
+
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const tempDate = new Date(year, month, day);
+                    if (expectedDays.includes(tempDate.getDay())) {
+                        targetDaysCount++;
+                    }
+                }
 
                 const entriesInMonth = statValues.filter(v => {
                     if (v.stat_definition_id !== metric.id) return false;
@@ -132,11 +185,13 @@ const MetricDetailView: React.FC<MetricDetailViewProps> = ({
                     return vDate.getMonth() === month && vDate.getFullYear() === year;
                 });
 
-                if (entriesInMonth.length > 0) {
+                if (targetDaysCount > 0) {
                     const sum = entriesInMonth.reduce((acc, curr) => acc + Number(curr.value), 0);
-                    // For daily metric: divide by count of entries
-                    // For weekly metric: divide by count of entries (weeks)
-                    valMap[dStr] = metric.type === 'percent' ? Math.round(sum / entriesInMonth.length) : sum;
+                    if (metric.type === 'check') {
+                        valMap[dStr] = Math.round((sum / targetDaysCount) * 100);
+                    } else {
+                        valMap[dStr] = Math.round(sum / targetDaysCount);
+                    }
                 } else {
                     valMap[dStr] = null;
                 }
@@ -273,7 +328,7 @@ const MetricDetailView: React.FC<MetricDetailViewProps> = ({
             <AddEditMetricModal
                 isOpen={isEditModalOpen}
                 onClose={() => setIsEditModalOpen(false)}
-                onSave={(name, type, frequency, color, target) => onUpdateMetric(metric.id, { name, type, frequency, color, target })}
+                onSave={(name, type, frequency, color, target, targetDays) => onUpdateMetric(metric.id, { name, type, frequency, color, target, target_days: targetDays })}
                 initialData={metric}
             />
         </div>

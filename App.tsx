@@ -484,9 +484,9 @@ function App() {
     const handleAddCategoryToDayType = async (dtId: string, catId: string) => { if (!supabase) return; await supabase.from('day_type_categories').insert({ day_type_id: dtId, category_id: catId, sort_order: 99 }); const cat = categories.find(c => c.id === catId); setDayTypes(dayTypes.map(dt => dt.id === dtId ? { ...dt, categoryIds: [...dt.categoryIds, catId], recurringTasks: [...dt.recurringTasks, ...(cat?.recurringTasks || [])] } : dt)); };
     const onRemoveCategoryFromDayType = async (dtId: string, catId: string) => { if (!supabase) return; await supabase.from('day_type_categories').delete().eq('day_type_id', dtId).eq('category_id', catId); setDayTypes(dayTypes.map(dt => dt.id === dtId ? { ...dt, categoryIds: dt.categoryIds.filter(c => c !== catId), recurringTasks: dt.recurringTasks.filter(rt => rt.categoryId !== catId || rt.categoryId === 'uncategorized') } : dt)); };
 
-    const handleAddMetric = async (name: string, type: TrackerType, frequency: 'daily' | 'weekly', color: string, target?: number) => {
+    const handleAddMetric = async (name: string, type: TrackerType, frequency: 'daily' | 'weekly', color: string, target?: number, targetDays?: number[]) => {
         if (!supabase) return;
-        const { data } = await supabase.from('stat_definitions').insert({ name, type, frequency, color, target }).select().single();
+        const { data } = await supabase.from('stat_definitions').insert({ name, type, frequency, color, target, target_days: targetDays }).select().single();
         if (data) setStatDefinitions([...statDefinitions, data]);
     };
 

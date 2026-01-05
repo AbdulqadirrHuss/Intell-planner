@@ -5,13 +5,14 @@ import { PlusIcon, CheckIcon } from '../../icons';
 interface AddEditMetricModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (name: string, type: TrackerType, frequency: 'daily' | 'weekly', color: string, target?: number) => void;
+    onSave: (name: string, type: TrackerType, frequency: 'daily' | 'weekly', color: string, target?: number, targetDays?: number[]) => void;
     initialData?: {
         name: string;
         type: TrackerType;
         frequency: 'daily' | 'weekly';
         color: string;
         target?: number;
+        target_days?: number[];
     };
 }
 
@@ -21,6 +22,7 @@ const AddEditMetricModal: React.FC<AddEditMetricModalProps> = ({ isOpen, onClose
     const [frequency, setFrequency] = useState<'daily' | 'weekly'>('daily');
     const [color, setColor] = useState('#6366f1');
     const [target, setTarget] = useState('');
+    const [targetDays, setTargetDays] = useState<number[]>([]);
 
     useEffect(() => {
         if (isOpen) {
@@ -30,6 +32,7 @@ const AddEditMetricModal: React.FC<AddEditMetricModalProps> = ({ isOpen, onClose
                 setFrequency(initialData.frequency);
                 setColor(initialData.color);
                 setTarget(initialData.target ? String(initialData.target) : '');
+                setTargetDays(initialData.target_days || []);
             } else {
                 resetForm();
             }
@@ -42,12 +45,13 @@ const AddEditMetricModal: React.FC<AddEditMetricModalProps> = ({ isOpen, onClose
         setFrequency('daily');
         setColor('#6366f1');
         setTarget('');
+        setTargetDays([]);
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (name.trim()) {
-            onSave(name.trim(), type, frequency, color, target ? parseFloat(target) : undefined);
+            onSave(name.trim(), type, frequency, color, target ? parseFloat(target) : undefined, targetDays.length > 0 ? targetDays : undefined);
             onClose();
         }
     };
@@ -91,7 +95,6 @@ const AddEditMetricModal: React.FC<AddEditMetricModalProps> = ({ isOpen, onClose
                             </select>
                         </div>
 
-                        {/* Frequency */}
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-300">Frequency</label>
                             <select
@@ -103,6 +106,30 @@ const AddEditMetricModal: React.FC<AddEditMetricModalProps> = ({ isOpen, onClose
                                 <option value="weekly">Weekly</option>
                             </select>
                         </div>
+
+                        {frequency === 'daily' && (
+                            <div className="col-span-2 space-y-2">
+                                <label className="text-sm font-medium text-gray-300">Target Days (Optional)</label>
+                                <div className="flex justify-between gap-1">
+                                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                                        <button
+                                            key={i}
+                                            type="button"
+                                            onClick={() => {
+                                                const newDays = targetDays.includes(i)
+                                                    ? targetDays.filter(d => d !== i)
+                                                    : [...targetDays, i];
+                                                setTargetDays(newDays);
+                                            }}
+                                            className={`w-10 h-10 rounded-lg font-bold transition-all ${targetDays.includes(i) ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`}
+                                        >
+                                            {d}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="text-xs text-gray-500">Leaving all unchecked means "Every Day". Checks affect completion stats.</p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Target (Conditional) */}
