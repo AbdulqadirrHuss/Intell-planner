@@ -393,7 +393,10 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
             <AddEditMetricModal
                 isOpen={isEditModalOpen}
                 onClose={() => setIsEditModalOpen(false)}
-                onSave={(name, type, frequency, color, target, targetDays) => onUpdateMetric(metric.id, { name, type, frequency, color, target, target_days: targetDays })}
+                onSave={({ name, type, frequency, color, target, target_days }) =>
+                    onUpdateMetric(metric.id, { name, type, frequency, color, target, target_days })
+                }
+                onDelete={onDelete ? () => onDelete(metric.id) : undefined}
                 initialData={metric}
             />
         </div>
