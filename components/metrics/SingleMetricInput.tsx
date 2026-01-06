@@ -33,8 +33,8 @@ const SingleMetricInput: React.FC<SingleMetricInputProps> = ({ date, label, valu
                 <button
                     onClick={() => onUpdate(!isChecked)}
                     className={`w-32 h-32 rounded-2xl flex items-center justify-center transition-all duration-300 transform active:scale-95 ${isChecked
-                            ? 'bg-emerald-500/20 border-2 border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.3)]'
-                            : 'bg-slate-800 border-2 border-slate-600 hover:border-slate-500'
+                        ? 'bg-emerald-500/20 border-2 border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.3)]'
+                        : 'bg-slate-800 border-2 border-slate-600 hover:border-slate-500'
                         }`}
                 >
                     {isChecked ? (
@@ -46,6 +46,7 @@ const SingleMetricInput: React.FC<SingleMetricInputProps> = ({ date, label, valu
                 <div className="mt-6 text-xl font-medium text-slate-300">
                     {isChecked ? 'Completed' : 'Mark as Done'}
                 </div>
+                <div className="mt-2 text-slate-500 text-sm">{label}</div>
             </div>
         );
     }
@@ -66,7 +67,10 @@ const SingleMetricInput: React.FC<SingleMetricInputProps> = ({ date, label, valu
                     {metric.type === 'percent' ? '%' : ''}
                 </span>
             </div>
-            <div className="mt-8 text-slate-400 text-sm font-medium uppercase tracking-wider">
+
+            <div className="text-slate-400 text-lg font-medium mb-6">{label}</div>
+
+            <div className="mt-2 text-slate-500 text-sm font-medium uppercase tracking-wider">
                 {metric.type === 'percent' ? 'Percentage Score' : 'Count Value'}
             </div>
             {metric.target && (
