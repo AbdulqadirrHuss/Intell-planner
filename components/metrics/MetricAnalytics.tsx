@@ -213,9 +213,9 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
 
     // --- Graph Data Prep ---
     const graphData = useMemo(() => {
-        return dates.map(d => ({
-            label: dateLabels[d],
-            value: Number(values[d] || 0)
+        return dates.map(dateStr => ({
+            label: dateLabels[dateStr],
+            value: Number(values[dateStr] || 0)
         }));
     }, [dates, values, dateLabels]);
 
@@ -312,7 +312,7 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
                         metric={metric}
                         isEditable={isEditable}
                         onUpdateValue={onUpdateValue}
-                        formatDateHeader={(d) => dateLabels[d]}
+                        formatDateHeader={(dateStr) => dateLabels[dateStr]}
                     />
                 ) : (
                     <div className="bg-slate-900/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-2xl h-[400px]">
@@ -336,11 +336,11 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
 };
 
 // Helper
-function getWeekNumber(d: Date) {
-    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+function getWeekNumber(dateParam: Date) {
+    const targetDate = new Date(Date.UTC(dateParam.getFullYear(), dateParam.getMonth(), dateParam.getDate()));
+    targetDate.setUTCDate(targetDate.getUTCDate() + 4 - (targetDate.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(targetDate.getUTCFullYear(), 0, 1));
+    return Math.ceil((((targetDate.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 }
 
 export default MetricAnalytics;

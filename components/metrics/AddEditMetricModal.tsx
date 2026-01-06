@@ -111,19 +111,19 @@ const AddEditMetricModal: React.FC<AddEditMetricModalProps> = ({ isOpen, onClose
                             <div className="col-span-2 space-y-2">
                                 <label className="text-sm font-medium text-gray-300">Target Days (Optional)</label>
                                 <div className="flex justify-between gap-1">
-                                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((dayChar, i) => (
                                         <button
                                             key={i}
                                             type="button"
                                             onClick={() => {
                                                 const newDays = targetDays.includes(i)
-                                                    ? targetDays.filter(d => d !== i)
+                                                    ? targetDays.filter(dayIdx => dayIdx !== i)
                                                     : [...targetDays, i];
                                                 setTargetDays(newDays);
                                             }}
                                             className={`w-10 h-10 rounded-lg font-bold transition-all ${targetDays.includes(i) ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`}
                                         >
-                                            {d}
+                                            {dayChar}
                                         </button>
                                     ))}
                                 </div>
