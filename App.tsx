@@ -8,6 +8,7 @@ import Statistics from './Statistics';
 import TrackerManager from './TrackerManager';
 import MetricsDashboard from './components/metrics/MetricsDashboard';
 import MetricAnalytics from './components/metrics/MetricAnalytics';
+import ErrorBoundary from './components/ErrorBoundary';
 
 
 import TasksPage from './TasksPage';
@@ -737,13 +738,15 @@ function App() {
             {
                 currentView === 'metrics' && (
                     selectedMetric ? (
-                        <MetricAnalytics
-                            metric={selectedMetric}
-                            statValues={statValues}
-                            onUpdateValue={(date, value) => handleUpdateStatValue(date, selectedMetric.id, value)}
-                            onUpdateMetric={handleUpdateMetric}
-                            onBack={() => setSelectedMetric(null)}
-                        />
+                        <ErrorBoundary>
+                            <MetricAnalytics
+                                metric={selectedMetric}
+                                statValues={statValues}
+                                onUpdateValue={(date, value) => handleUpdateStatValue(date, selectedMetric.id, value)}
+                                onUpdateMetric={handleUpdateMetric}
+                                onBack={() => setSelectedMetric(null)}
+                            />
+                        </ErrorBoundary>
                     ) : (
                         <MetricsDashboard
                             statDefinitions={statDefinitions}
