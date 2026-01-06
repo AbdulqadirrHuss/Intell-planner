@@ -7,7 +7,9 @@ import CategoryManager from './CategoryManager';
 import Statistics from './Statistics';
 import TrackerManager from './TrackerManager';
 import MetricsDashboard from './components/metrics/MetricsDashboard';
-import MetricDetailView from './components/metrics/MetricDetailView';
+import MetricAnalytics from './components/metrics/MetricAnalytics';
+
+
 import TasksPage from './TasksPage';
 import { SettingsIcon, EditIcon, PlannerIcon, StatsIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon, CalendarIcon, AdjustmentsIcon } from './icons';
 import { createClient } from '@supabase/supabase-js';
@@ -735,10 +737,10 @@ function App() {
             {
                 currentView === 'metrics' && (
                     selectedMetric ? (
-                        <MetricDetailView
+                        <MetricAnalytics
                             metric={selectedMetric}
                             statValues={statValues}
-                            onUpdateValue={handleUpdateStatValue}
+                            onUpdateValue={(date, value) => handleUpdateStatValue(date, selectedMetric.id, value)}
                             onUpdateMetric={handleUpdateMetric}
                             onBack={() => setSelectedMetric(null)}
                         />

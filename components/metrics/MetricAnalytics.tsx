@@ -5,7 +5,7 @@ import MetricsTable from './MetricsTable';
 import MetricsGraph from './MetricsGraph';
 import AddEditMetricModal from './AddEditMetricModal';
 
-interface MetricDetailViewProps {
+interface MetricAnalyticsProps {
     metric: StatDefinition;
     statValues: StatValue[];
     onUpdateValue: (date: string, value: number | boolean | null) => void;
@@ -15,7 +15,7 @@ interface MetricDetailViewProps {
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
 
-const MetricDetailView: React.FC<MetricDetailViewProps> = ({
+const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
     metric,
     statValues,
     onUpdateValue,
