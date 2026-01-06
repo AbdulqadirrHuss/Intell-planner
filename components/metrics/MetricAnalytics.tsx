@@ -205,6 +205,13 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
         }));
     }, [dates, values, dateLabels]);
 
+    // Force view mode to match frequency when in table mode
+    useEffect(() => {
+        if (displayMode === 'table') {
+            setViewMode(metric.frequency as ViewMode);
+        }
+    }, [displayMode, metric.frequency]);
+
     return (
         <div className="space-y-6 pb-24 min-h-[80vh]">
             {/* Header */}
@@ -232,28 +239,34 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
             {/* Controls */}
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-900/40 p-2 rounded-xl border border-white/5">
                 {/* View Mode */}
-                <div className="flex bg-gray-800 rounded-lg p-1 gap-1">
-                    {metric.frequency === 'daily' && (
+                {displayMode === 'graph' ? (
+                    <div className="flex bg-gray-800 rounded-lg p-1 gap-1">
+                        {metric.frequency === 'daily' && (
+                            <button
+                                onClick={() => setViewMode('daily')}
+                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'daily' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
+                            >
+                                Daily
+                            </button>
+                        )}
                         <button
-                            onClick={() => setViewMode('daily')}
-                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'daily' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
+                            onClick={() => setViewMode('weekly')}
+                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'weekly' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
                         >
-                            Daily
+                            Weekly
                         </button>
-                    )}
-                    <button
-                        onClick={() => setViewMode('weekly')}
-                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'weekly' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
-                    >
-                        Weekly
-                    </button>
-                    <button
-                        onClick={() => setViewMode('monthly')}
-                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'monthly' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
-                    >
-                        Monthly
-                    </button>
-                </div>
+                        <button
+                            onClick={() => setViewMode('monthly')}
+                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'monthly' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
+                        >
+                            Monthly
+                        </button>
+                    </div>
+                ) : (
+                    <div className="px-4 py-1.5 text-sm font-medium text-gray-400">
+                        {metric.frequency === 'daily' ? 'Daily Log' : 'Weekly Log'}
+                    </div>
+                )}
 
                 {/* Display Mode */}
                 <div className="flex bg-gray-800 rounded-lg p-1 gap-1">
