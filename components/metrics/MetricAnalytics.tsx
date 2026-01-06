@@ -3,7 +3,10 @@ import { StatDefinition, StatValue } from '../../types';
 import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, AdjustmentsIcon } from '../../icons';
 import MetricsTable from './MetricsTable';
 import MetricsGraph from './MetricsGraph';
+import MetricsTable from './MetricsTable';
+import MetricsGraph from './MetricsGraph';
 import AddEditMetricModal from './AddEditMetricModal';
+import SingleMetricInput from './SingleMetricInput';
 
 interface MetricAnalyticsProps {
     metric: StatDefinition;
@@ -339,42 +342,44 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
 
             {/* Content Area */}
             <div className="min-h-[300px]">
-                {displayMode === 'table' ? (
-                    <MetricsTable
-                        dates={dates}
-                        values={values}
-                        metric={metric}
-                        isEditable={isEditable}
-                        onUpdateValue={onUpdateValue}
-                        formatDateHeader={(dateStr) => dateLabels[dateStr]}
-                    />
-                ) : (
-                    <div className="bg-slate-900/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-2xl h-[400px]">
-                        <MetricsGraph
-                            data={graphData}
-                            color={metric.color}
-                            type={metric.type === 'check' ? 'bar' : 'line'}
-                        />
-                    </div>
-                )}
-            </div>
+                <div className="min-h-[300px]">
+                    {displayMode === 'table' ? (
+                        <div className="max-w-xl mx-auto py-8">
+                            <SingleMetricInput
+                                date={dates[0] || refDate.toISOString().split('T')[0]}
+                                label={dateLabels[dates[0]] || ''}
+                                value={values[dates[0]]}
+                                metric={metric}
+                                onUpdate={(val) => onUpdateValue(dates[0], val)}
+                            />
+                        </div>
+                    ) : (
+                        <div className="bg-slate-900/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-2xl h-[400px]">
+                            <MetricsGraph
+                                data={graphData}
+                                color={metric.color}
+                                type={metric.type === 'check' ? 'bar' : 'line'}
+                            />
+                        </div>
+                    )}
+                </div>
 
-            <AddEditMetricModal
-                isOpen={isEditModalOpen}
-                onClose={() => setIsEditModalOpen(false)}
-                onSave={(name, type, frequency, color, target, targetDays) => onUpdateMetric(metric.id, { name, type, frequency, color, target, target_days: targetDays })}
-                initialData={metric}
-            />
-        </div>
-    );
+                <AddEditMetricModal
+                    isOpen={isEditModalOpen}
+                    onClose={() => setIsEditModalOpen(false)}
+                    onSave={(name, type, frequency, color, target, targetDays) => onUpdateMetric(metric.id, { name, type, frequency, color, target, target_days: targetDays })}
+                    initialData={metric}
+                />
+            </div>
+            );
 };
 
-// Helper
-function getWeekNumber(dateParam: Date) {
+            // Helper
+            function getWeekNumber(dateParam: Date) {
     const targetDate = new Date(Date.UTC(dateParam.getFullYear(), dateParam.getMonth(), dateParam.getDate()));
-    targetDate.setUTCDate(targetDate.getUTCDate() + 4 - (targetDate.getUTCDay() || 7));
-    const yearStart = new Date(Date.UTC(targetDate.getUTCFullYear(), 0, 1));
-    return Math.ceil((((targetDate.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+            targetDate.setUTCDate(targetDate.getUTCDate() + 4 - (targetDate.getUTCDay() || 7));
+            const yearStart = new Date(Date.UTC(targetDate.getUTCFullYear(), 0, 1));
+            return Math.ceil((((targetDate.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 }
 
-export default MetricAnalytics;
+            export default MetricAnalytics;
