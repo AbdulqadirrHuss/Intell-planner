@@ -92,8 +92,7 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
                 } else {
                     // Aggregated Average for Daily Metric
                     let sum = 0;
-                    let count = 0;
-                    let targetDaysCount = 0;
+                    let validEntryCount = 0;
 
                     const expectedDays = metric.target_days && metric.target_days.length > 0 ? metric.target_days : [0, 1, 2, 3, 4, 5, 6];
 
@@ -103,37 +102,24 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
                         const dayStr = formatDate(dayInWeek);
                         const entry = statValues.find(v => v.stat_definition_id === metric.id && v.date === dayStr);
 
-                        // Check if this day is a target day
                         const dayOfWeek = dayInWeek.getDay(); // 0-6
-                        if (expectedDays.includes(dayOfWeek)) {
-                            targetDaysCount++;
-                        }
 
-                        if (entry) {
+                        // Only consider if it's a target day AND has a value (ignore blanks)
+                        if (expectedDays.includes(dayOfWeek) && entry && entry.value !== null && entry.value !== undefined) {
                             sum += Number(entry.value);
-                            count++;
+                            validEntryCount++;
                         }
                     }
 
                     // Calculate Value
-                    if (targetDaysCount > 0) {
-                        // If we have specific targets, completion is based on those targets
+                    if (validEntryCount > 0) {
                         if (metric.type === 'check') {
-                            // E.g. Target Mon, Wed (2 days). Did Mon, Wed, Fri (3 days). Result 3/2 = 150%?
-                            // Or should it be capped? User just said "affect average". 
-                            // Let's allow > 100% for now as it rewards extra effort.
-                            valMap[dStr] = Math.round((sum / targetDaysCount) * 100);
+                            valMap[dStr] = Math.round((sum / validEntryCount) * 100);
                         } else {
-                            // For Count/Percent, usually we want Average per Day.
-                            // If I run 5km on Mon (Target) and 5km on Fri (Adhoc). Target Mon only.
-                            // Total 10km. Average per target day = 10 / 1 = 10km? Or Average per Active Day?
-                            // Default to Sum for Count (Total Volume) and Average for Percent?
-                            // User requirement is vague for Count/Percent. Let's stick to Average over Target Days for consistency with completion.
-                            valMap[dStr] = Math.round(sum / targetDaysCount);
+                            valMap[dStr] = Math.round(sum / validEntryCount);
                         }
                     } else {
-                        // Fallback if no target days (shouldn't happen with default)
-                        valMap[dStr] = count > 0 ? (metric.type === 'percent' ? Math.round(sum / count) : sum) : null;
+                        valMap[dStr] = null;
                     }
 
                     // Special case: If type is 'check' but we calculated a percentage, we might want to display it as such.
@@ -170,27 +156,27 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
                 // Calculate target days in this month
                 // Iterate days in month
                 const daysInMonth = new Date(year, month + 1, 0).getDate();
-                let targetDaysCount = 0;
+                let sum = 0;
+                let validEntryCount = 0;
 
                 for (let day = 1; day <= daysInMonth; day++) {
                     const tempDate = new Date(year, month, day);
-                    if (expectedDays.includes(tempDate.getDay())) {
-                        targetDaysCount++;
+                    const dayStr = formatDate(tempDate);
+
+                    // Find entry
+                    const entry = statValues.find(v => v.stat_definition_id === metric.id && v.date === dayStr);
+
+                    if (expectedDays.includes(tempDate.getDay()) && entry && entry.value !== null && entry.value !== undefined) {
+                        sum += Number(entry.value);
+                        validEntryCount++;
                     }
                 }
 
-                const entriesInMonth = statValues.filter(v => {
-                    if (v.stat_definition_id !== metric.id) return false;
-                    const vDate = new Date(v.date);
-                    return vDate.getMonth() === month && vDate.getFullYear() === year;
-                });
-
-                if (targetDaysCount > 0) {
-                    const sum = entriesInMonth.reduce((acc, curr) => acc + Number(curr.value), 0);
+                if (validEntryCount > 0) {
                     if (metric.type === 'check') {
-                        valMap[dStr] = Math.round((sum / targetDaysCount) * 100);
+                        valMap[dStr] = Math.round((sum / validEntryCount) * 100);
                     } else {
-                        valMap[dStr] = Math.round(sum / targetDaysCount);
+                        valMap[dStr] = Math.round(sum / validEntryCount);
                     }
                 } else {
                     valMap[dStr] = null;
