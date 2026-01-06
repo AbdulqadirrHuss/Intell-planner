@@ -744,6 +744,7 @@ function App() {
                                 statValues={statValues}
                                 onUpdateValue={(date, value) => handleUpdateStatValue(date, selectedMetric.id, value)}
                                 onUpdateMetric={handleUpdateMetric}
+                                onDelete={handleDeleteMetric}
                                 onBack={() => setSelectedMetric(null)}
                             />
                         </ErrorBoundary>

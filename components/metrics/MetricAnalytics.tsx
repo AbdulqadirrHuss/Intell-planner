@@ -11,6 +11,7 @@ interface MetricAnalyticsProps {
     statValues: StatValue[];
     onUpdateValue: (date: string, value: number | boolean | null) => void;
     onUpdateMetric: (id: string, updates: Partial<StatDefinition>) => void;
+    onDelete?: (id: string) => void;
     onBack: () => void;
 }
 
@@ -25,6 +26,7 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
     statValues,
     onUpdateValue,
     onUpdateMetric,
+    onDelete,
     onBack
 }) => {
     const [viewMode, setViewMode] = useState<ViewMode>(metric.frequency === 'weekly' ? 'weekly' : 'daily');
