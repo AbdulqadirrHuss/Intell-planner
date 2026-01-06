@@ -13,6 +13,10 @@ interface MetricAnalyticsProps {
     onBack: () => void;
 }
 
+// UK Date Formatter
+const formatDateUK = (date: Date) => date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
+const formatMonthUK = (date: Date) => date.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
+
 type ViewMode = 'daily' | 'weekly' | 'monthly';
 
 const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
@@ -59,13 +63,17 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
             // Show 14 days centered or ending at refDate? Let's say ending at refDate for history context
             // PRD says "Show last 14 days"
             // Let's center it slightly so user can see future? No, usually past.
-            // Let's show [refDate - 13, refDate]
-            for (let i = 13; i >= 0; i--) {
+            // If Table mode: Show just 1 day (the refDate). If Graph mode: Show last 14 days.
+            const range = displayMode === 'table' ? 0 : 13;
+
+            for (let i = range; i >= 0; i--) {
                 const dailyDate = new Date(current);
                 dailyDate.setDate(dailyDate.getDate() - i);
                 const dStr = formatDate(dailyDate);
                 dateList.push(dStr);
-                labels[dStr] = dailyDate.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
+                const dStr = formatDate(dailyDate);
+                dateList.push(dStr);
+                labels[dStr] = `${dailyDate.toLocaleDateString('en-GB', { weekday: 'short' })} ${formatDateUK(dailyDate)}`;
 
                 // Get Raw Value
                 const entry = statValues.find(v => v.stat_definition_id === metric.id && v.date === dStr);
@@ -74,15 +82,21 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
             editable = true;
 
         } else if (viewMode === 'weekly') {
-            // Show 12 weeks
+            // If Table mode: Show just 1 week. If Graph mode: Show 12 weeks.
+            const range = displayMode === 'table' ? 0 : 11;
+
             const startOfCurrentWeek = getStartOfWeek(current);
 
-            for (let i = 11; i >= 0; i--) {
+            for (let i = range; i >= 0; i--) {
                 const weekDate = new Date(startOfCurrentWeek);
                 weekDate.setDate(weekDate.getDate() - (i * 7));
                 const dStr = formatDate(weekDate);
                 dateList.push(dStr);
-                labels[dStr] = `Wk ${getWeekNumber(weekDate)}`;
+                const dStr = formatDate(weekDate);
+                dateList.push(dStr);
+                const weekEnd = new Date(weekDate);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+                labels[dStr] = `Wk ${formatDateUK(weekDate)} - ${formatDateUK(weekEnd)}`;
 
                 if (metric.frequency === 'weekly') {
                     // Raw Data for Weekly Metric
@@ -139,15 +153,18 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
             }
 
         } else if (viewMode === 'monthly') {
-            // Show 12 months
+            // If Table mode: Show 1 month. If Graph mode: Show 12 months
+            const range = displayMode === 'table' ? 0 : 11;
             const currentMonthStart = new Date(current.getFullYear(), current.getMonth(), 1);
 
-            for (let i = 11; i >= 0; i--) {
+            for (let i = range; i >= 0; i--) {
                 const monthDate = new Date(currentMonthStart);
                 monthDate.setMonth(monthDate.getMonth() - i);
                 const dStr = formatDate(monthDate);
                 dateList.push(dStr);
-                labels[dStr] = monthDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                const dStr = formatDate(monthDate);
+                dateList.push(dStr);
+                labels[dStr] = formatMonthUK(monthDate);
 
                 const month = monthDate.getMonth();
                 const year = monthDate.getFullYear();
@@ -186,14 +203,22 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
         }
 
         return { dates: dateList, values: valMap, isEditable: editable, dateLabels: labels };
-    }, [metric, statValues, viewMode, refDate]);
+    }, [metric, statValues, viewMode, refDate, displayMode]);
 
     // --- Navigation ---
     const navigate = (dir: number) => {
         const newDate = new Date(refDate);
-        if (viewMode === 'daily') newDate.setDate(newDate.getDate() + (dir * 14));
-        if (viewMode === 'weekly') newDate.setDate(newDate.getDate() + (dir * 7 * 12));
-        if (viewMode === 'monthly') newDate.setMonth(newDate.getMonth() + (dir * 12));
+        if (displayMode === 'table') {
+            // Single step navigation
+            if (viewMode === 'daily') newDate.setDate(newDate.getDate() + dir);
+            if (viewMode === 'weekly') newDate.setDate(newDate.getDate() + (dir * 7));
+            if (viewMode === 'monthly') newDate.setMonth(newDate.getMonth() + dir);
+        } else {
+            // Page navigation (Graph mode)
+            if (viewMode === 'daily') newDate.setDate(newDate.getDate() + (dir * 14));
+            if (viewMode === 'weekly') newDate.setDate(newDate.getDate() + (dir * 7 * 12));
+            if (viewMode === 'monthly') newDate.setMonth(newDate.getMonth() + (dir * 12));
+        }
         setRefDate(newDate);
     };
 
@@ -291,12 +316,22 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
                 <div className="flex items-center gap-2 text-slate-200 font-medium">
                     <CalendarIcon className="w-5 h-5 text-indigo-400" />
                     <span>
-                        {viewMode === 'daily' && `Last 14 Days`}
-                        {viewMode === 'weekly' && `Last 12 Weeks`}
-                        {viewMode === 'monthly' && `Last 12 Months`}
-                        <span className="text-gray-500 text-sm ml-2 font-normal">
-                            (ending {new Date(dates[0]).toLocaleDateString()})
-                        </span>
+                        {displayMode === 'table' ? (
+                            // Single entry view
+                            viewMode === 'daily' ? `Enter Data: ${formatDateUK(new Date(dates[0] || refDate))}` :
+                                viewMode === 'weekly' ? `Enter Data: Week of ${formatDateUK(new Date(dates[0] || refDate))}` :
+                                    `Enter Data: ${formatMonthUK(new Date(dates[0] || refDate))}`
+                        ) : (
+                            // Graph view range
+                            <>
+                                {viewMode === 'daily' && `Last 14 Days`}
+                                {viewMode === 'weekly' && `Last 12 Weeks`}
+                                {viewMode === 'monthly' && `Last 12 Months`}
+                                <span className="text-gray-500 text-sm ml-2 font-normal">
+                                    (ending {formatDateUK(new Date(dates[0]))})
+                                </span>
+                            </>
+                        )}
                     </span>
                 </div>
                 <button onClick={() => navigate(1)} className="p-2 text-slate-400 hover:text-white"><ChevronRightIcon /></button>
