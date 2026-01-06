@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StatDefinition } from '../../types';
-import { CheckIcon } from '../../icons';
+import { CheckIcon, XMarkIcon } from '../../icons';
 
 interface SingleMetricInputProps {
     date: string;
@@ -27,25 +27,55 @@ const SingleMetricInput: React.FC<SingleMetricInputProps> = ({ date, title, subt
         }
     };
 
+    const handleCheckToggle = () => {
+        // Cycle: Null -> 1 (Check) -> 0 (Cross) -> Null
+        // Treat true as 1, false as 0
+        let current = localVal;
+        if (current === true) current = 1;
+        if (current === false) current = 0;
+
+        let nextVal: number | null = null;
+
+        if (current === null || current === undefined) {
+             nextVal = 1;
+        } else if (Number(current) === 1) {
+             nextVal = 0;
+        } else {
+             nextVal = null;
+        }
+        
+        setLocalVal(nextVal);
+        onUpdate(nextVal);
+    };
+
     if (metric.type === 'check') {
-        const isChecked = localVal === true || localVal === 1; // Handle legacy 1/0 if needed, though usually boolean now
+        // Determine state
+        const isChecked = localVal === true || localVal === 1;
+        const isCrossed = localVal === false || localVal === 0;
+        const isNull = !isChecked && !isCrossed;
+
         return (
             <div className="flex flex-col items-center justify-center p-12 bg-slate-900/50 rounded-2xl border border-white/5 shadow-inner">
                 <button
-                    onClick={() => onUpdate(!isChecked)}
-                    className={`w-32 h-32 rounded-2xl flex items-center justify-center transition-all duration-300 transform active:scale-95 ${isChecked
-                        ? 'bg-emerald-500/20 border-2 border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.3)]'
+                    onClick={handleCheckToggle}
+                    className={`w-32 h-32 rounded-2xl flex items-center justify-center transition-all duration-300 transform active:scale-95 ${
+                        isChecked 
+                        ? 'bg-emerald-500/20 border-2 border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.3)]' 
+                        : isCrossed
+                        ? 'bg-red-500/20 border-2 border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.3)]'
                         : 'bg-slate-800 border-2 border-slate-600 hover:border-slate-500'
-                        }`}
+                    }`}
                 >
                     {isChecked ? (
                         <CheckIcon className="w-16 h-16 text-emerald-500" />
+                    ) : isCrossed ? (
+                        <XMarkIcon className="w-16 h-16 text-red-500" />
                     ) : (
                         <div className="w-16 h-16 rounded-full border-4 border-slate-700 dashed" />
                     )}
                 </button>
                 <div className="mt-6 text-xl font-medium text-slate-300">
-                    {isChecked ? 'Completed' : 'Mark as Done'}
+                    {isChecked ? 'Completed' : isCrossed ? 'Missed' : 'Mark Status'}
                 </div>
                 <div className="mt-4 flex flex-col items-center">
                     <span className="text-slate-200 font-bold text-lg">{title}</span>
