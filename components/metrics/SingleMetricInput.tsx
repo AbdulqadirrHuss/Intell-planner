@@ -4,13 +4,14 @@ import { CheckIcon } from '../../icons';
 
 interface SingleMetricInputProps {
     date: string;
-    label: string;
+    title: string;
+    subtitle: string;
     value: number | boolean | null;
     metric: StatDefinition;
     onUpdate: (value: number | boolean | null) => void;
 }
 
-const SingleMetricInput: React.FC<SingleMetricInputProps> = ({ date, label, value, metric, onUpdate }) => {
+const SingleMetricInput: React.FC<SingleMetricInputProps> = ({ date, title, subtitle, value, metric, onUpdate }) => {
     const [localVal, setLocalVal] = useState<string | number | boolean | null>(value);
 
     useEffect(() => {
@@ -46,7 +47,10 @@ const SingleMetricInput: React.FC<SingleMetricInputProps> = ({ date, label, valu
                 <div className="mt-6 text-xl font-medium text-slate-300">
                     {isChecked ? 'Completed' : 'Mark as Done'}
                 </div>
-                <div className="mt-2 text-slate-500 text-sm">{label}</div>
+                <div className="mt-4 flex flex-col items-center">
+                    <span className="text-slate-200 font-bold text-lg">{title}</span>
+                    <span className="text-slate-500 text-sm">{subtitle}</span>
+                </div>
             </div>
         );
     }
@@ -68,7 +72,10 @@ const SingleMetricInput: React.FC<SingleMetricInputProps> = ({ date, label, valu
                 </span>
             </div>
 
-            <div className="text-slate-400 text-lg font-medium mb-6">{label}</div>
+            <div className="flex flex-col items-center mb-6">
+                <span className="text-slate-200 font-bold text-2xl">{title}</span>
+                <span className="text-slate-500 text-sm mt-1">{subtitle}</span>
+            </div>
 
             <div className="mt-2 text-slate-500 text-sm font-medium uppercase tracking-wider">
                 {metric.type === 'percent' ? 'Percentage Score' : 'Count Value'}

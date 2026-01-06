@@ -217,6 +217,10 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
         setRefDate(newDate);
     };
 
+    const jumpToToday = () => {
+        setRefDate(new Date());
+    };
+
     // --- Graph Data Prep ---
     const graphData = useMemo(() => {
         return dates.map(dateStr => ({
@@ -231,6 +235,31 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
             setViewMode(metric.frequency as ViewMode);
         }
     }, [displayMode, metric.frequency]);
+
+    // --- Input Label Helpers ---
+    const currentInputDate = new Date(dates[0] || refDate);
+    let inputTitle = '';
+    let inputSubtitle = '';
+
+    if (viewMode === 'daily') {
+        inputTitle = currentInputDate.toLocaleDateString('en-GB', { weekday: 'long' });
+        inputSubtitle = formatDateUK(currentInputDate);
+    } else if (viewMode === 'weekly') {
+        // We need the week number and year
+        // We can re-use the getWeekNumber helper or just display start date
+        // User asked for "Week 1 2026"
+        const weekNum = getWeekNumber(currentInputDate);
+        inputTitle = `Week ${weekNum} ${currentInputDate.getFullYear()}`;
+
+        const start = getStartOfWeek(currentInputDate);
+        const end = new Date(start);
+        end.setDate(end.getDate() + 6);
+        inputSubtitle = `${formatDateUK(start)} - ${formatDateUK(end)}`;
+    } else { // monthly
+        inputTitle = currentInputDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+        // Subtitle can be blank or range
+        inputSubtitle = '';
+    }
 
     return (
         <div className="space-y-6 pb-24 min-h-[80vh]">
@@ -308,27 +337,31 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
             {/* Date Navigation */}
             <div className="flex items-center justify-between px-4">
                 <button onClick={() => navigate(-1)} className="p-2 text-slate-400 hover:text-white"><ChevronLeftIcon /></button>
-                <div className="flex items-center gap-2 text-slate-200 font-medium">
-                    <CalendarIcon className="w-5 h-5 text-indigo-400" />
-                    <span>
-                        {displayMode === 'table' ? (
-                            // Single entry view
-                            viewMode === 'daily' ? `Enter Data: ${formatDateUK(new Date(dates[0] || refDate))}` :
-                                viewMode === 'weekly' ? `Enter Data: Week of ${formatDateUK(new Date(dates[0] || refDate))}` :
-                                    `Enter Data: ${formatMonthUK(new Date(dates[0] || refDate))}`
-                        ) : (
-                            // Graph view range
-                            <>
+
+                <div className="flex flex-col items-center">
+                    {/* The date label is now inside SingleMetricInput for Table mode, but we keep the range for Graph mode?
+                        Actually, user wants to see "Today" button.
+                        Let's put the Today button here in the middle or next to arrows.
+                    */}
+                    {displayMode === 'graph' && (
+                        <div className="flex items-center gap-2 text-slate-200 font-medium mb-1">
+                            <CalendarIcon className="w-5 h-5 text-indigo-400" />
+                            <span>
                                 {viewMode === 'daily' && `Last 14 Days`}
                                 {viewMode === 'weekly' && `Last 12 Weeks`}
                                 {viewMode === 'monthly' && `Last 12 Months`}
-                                <span className="text-gray-500 text-sm ml-2 font-normal">
-                                    (ending {formatDateUK(new Date(dates[0]))})
-                                </span>
-                            </>
-                        )}
-                    </span>
+                            </span>
+                        </div>
+                    )}
+
+                    <button
+                        onClick={jumpToToday}
+                        className="px-3 py-1 rounded-full bg-indigo-600/20 text-indigo-400 text-xs font-bold hover:bg-indigo-600/30 transition-colors uppercase tracking-wide border border-indigo-500/30"
+                    >
+                        Jump to Today
+                    </button>
                 </div>
+
                 <button onClick={() => navigate(1)} className="p-2 text-slate-400 hover:text-white"><ChevronRightIcon /></button>
             </div>
 
@@ -338,7 +371,8 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
                     <div className="max-w-xl mx-auto py-8">
                         <SingleMetricInput
                             date={dates[0] || refDate.toISOString().split('T')[0]}
-                            label={dateLabels[dates[0]] || ''}
+                            title={inputTitle}
+                            subtitle={inputSubtitle}
                             value={values[dates[0]]}
                             metric={metric}
                             onUpdate={(val) => onUpdateValue(dates[0], val)}
