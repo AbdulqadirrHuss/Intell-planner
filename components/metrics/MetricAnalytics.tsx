@@ -382,6 +382,7 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
                             data={graphData}
                             color={metric.color}
                             type={metric.type === 'check' ? 'bar' : 'line'}
+                            maxValue={metric.type === 'check' ? 100 : undefined}
                         />
                     </div>
                 )}

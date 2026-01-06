@@ -5,13 +5,15 @@ interface MetricsGraphProps {
     color?: string;
     type?: 'line' | 'bar';
     height?: number;
+    maxValue?: number;
 }
 
 const MetricsGraph: React.FC<MetricsGraphProps> = ({
     data,
     color = '#6366f1',
     type = 'line',
-    height = 300
+    height = 300,
+    maxValue
 }) => {
     if (!data || data.length === 0) {
         return (
@@ -27,7 +29,7 @@ const MetricsGraph: React.FC<MetricsGraphProps> = ({
 
     // Calculate Max Y with some buffer
     const maxVal = Math.max(...data.map(p => p.value), 10);
-    const maxY = Math.ceil(maxVal * 1.1); // 10% buffer
+    const maxY = maxValue || Math.ceil(maxVal * 1.1); // Use fixed max if provided, else 10% buffer
 
     const getX = (i: number) => PAD + (i / (data.length - 1 || 1)) * (WIDTH - PAD * 2);
     const getY = (v: number) => HEIGHT - PAD - (v / maxY) * (HEIGHT - PAD * 2);
