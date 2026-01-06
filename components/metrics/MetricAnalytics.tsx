@@ -75,8 +75,14 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
                 if (expectedDays.includes(d.getDay())) {
                     // Check if entry exists and is NOT null (we ignore nulls)
                     if (entry && entry.value !== null && entry.value !== undefined) {
-                        const numVal = Number(entry.value);
-                        // For checks: 1 is Tick, 0 is Cross. Both count as attempts.
+                        let numVal = Number(entry.value);
+
+                        // Sanitize Check metrics: legacy data might be >1. 
+                        // We want 1 for Tick, 0 for Cross.
+                        if (metric.type === 'check') {
+                            numVal = numVal > 0 ? 1 : 0;
+                        }
+
                         // For numbers: Just add the value.
                         sum += numVal;
                         count++;
@@ -106,8 +112,14 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
                 labels[dStr] = d.toLocaleDateString('en-GB', { weekday: 'long' });
 
                 const entry = statValues.find(v => v.stat_definition_id === metric.id && v.date === dStr);
-                // For graph: if null, we want it to be null (gap). If 0 (Cross), it is 0.
-                valMap[dStr] = entry ? entry.value : null;
+                let val = entry ? entry.value : null;
+
+                // Normalize Daily Check values to 0-100 scale for consistency with other views
+                if (metric.type === 'check' && val !== null && val !== undefined) {
+                    val = Number(val) > 0 ? 100 : 0;
+                }
+
+                valMap[dStr] = val;
             }
             editable = true;
 
