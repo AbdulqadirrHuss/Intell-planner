@@ -72,8 +72,6 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
                 dailyDate.setDate(dailyDate.getDate() - i);
                 const dStr = formatDate(dailyDate);
                 dateList.push(dStr);
-                const dStr = formatDate(dailyDate);
-                dateList.push(dStr);
                 labels[dStr] = `${dailyDate.toLocaleDateString('en-GB', { weekday: 'short' })} ${formatDateUK(dailyDate)}`;
 
                 // Get Raw Value
@@ -91,8 +89,6 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
             for (let i = range; i >= 0; i--) {
                 const weekDate = new Date(startOfCurrentWeek);
                 weekDate.setDate(weekDate.getDate() - (i * 7));
-                const dStr = formatDate(weekDate);
-                dateList.push(dStr);
                 const dStr = formatDate(weekDate);
                 dateList.push(dStr);
                 const weekEnd = new Date(weekDate);
@@ -161,8 +157,6 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
             for (let i = range; i >= 0; i--) {
                 const monthDate = new Date(currentMonthStart);
                 monthDate.setMonth(monthDate.getMonth() - i);
-                const dStr = formatDate(monthDate);
-                dateList.push(dStr);
                 const dStr = formatDate(monthDate);
                 dateList.push(dStr);
                 labels[dStr] = formatMonthUK(monthDate);
@@ -357,24 +351,26 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
                             color={metric.color}
                             type={metric.type === 'check' ? 'bar' : 'line'}
                         />
-                    )}
-
-                        <AddEditMetricModal
-                            isOpen={isEditModalOpen}
-                            onClose={() => setIsEditModalOpen(false)}
-                            onSave={(name, type, frequency, color, target, targetDays) => onUpdateMetric(metric.id, { name, type, frequency, color, target, target_days: targetDays })}
-                            initialData={metric}
-                        />
                     </div>
-                );
+                )}
+            </div>
+
+            <AddEditMetricModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                onSave={(name, type, frequency, color, target, targetDays) => onUpdateMetric(metric.id, { name, type, frequency, color, target, target_days: targetDays })}
+                initialData={metric}
+            />
+        </div>
+    );
 };
 
-                // Helper
-                function getWeekNumber(dateParam: Date) {
+// Helper
+function getWeekNumber(dateParam: Date) {
     const targetDate = new Date(Date.UTC(dateParam.getFullYear(), dateParam.getMonth(), dateParam.getDate()));
-                targetDate.setUTCDate(targetDate.getUTCDate() + 4 - (targetDate.getUTCDay() || 7));
-                const yearStart = new Date(Date.UTC(targetDate.getUTCFullYear(), 0, 1));
-                return Math.ceil((((targetDate.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+    targetDate.setUTCDate(targetDate.getUTCDate() + 4 - (targetDate.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(targetDate.getUTCFullYear(), 0, 1));
+    return Math.ceil((((targetDate.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 }
 
-                export default MetricAnalytics;
+export default MetricAnalytics;
