@@ -199,7 +199,7 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
             }
         }
 
-        return { dates: dateList, values: valMap, isEditable, dateLabels: labels };
+        return { dates: dateList, values: valMap, isEditable: editable, dateLabels: labels };
     }, [metric, statValues, viewMode, refDate]);
 
     // --- Navigation ---
