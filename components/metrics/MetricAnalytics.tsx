@@ -18,7 +18,7 @@ interface MetricAnalyticsProps {
 const formatDateUK = (date: Date) => date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
 const formatMonthUK = (date: Date) => date.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
 
-type ViewMode = 'daily' | 'weekly' | 'monthly';
+type ViewMode = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
     metric,
@@ -60,139 +60,115 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
 
         const current = new Date(refDate);
 
+        // Helper for aggregation
+        const calculateAggregate = (startDate: Date, endDate: Date): number | null => {
+            let sum = 0;
+            let count = 0;
+            const expectedDays = metric.target_days && metric.target_days.length > 0 ? metric.target_days : [0, 1, 2, 3, 4, 5, 6];
+
+            // Iterate through every day in the range
+            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                const dayStr = formatDate(d);
+                const entry = statValues.find(v => v.stat_definition_id === metric.id && v.date === dayStr);
+
+                // If it's a target day
+                if (expectedDays.includes(d.getDay())) {
+                    // Check if entry exists and is NOT null (we ignore nulls)
+                    if (entry && entry.value !== null && entry.value !== undefined) {
+                        const numVal = Number(entry.value);
+                        // For checks: 1 is Tick, 0 is Cross. Both count as attempts.
+                        // For numbers: Just add the value.
+                        sum += numVal;
+                        count++;
+                    }
+                }
+            }
+
+            if (count === 0) return null;
+
+            if (metric.type === 'check') {
+                return Math.round((sum / count) * 100); // Percentage of Ticks vs (Ticks + Crosses)
+            } else {
+                return Math.round(sum / count); // Average value
+            }
+        };
+
         if (viewMode === 'daily') {
-            // Show 14 days centered or ending at refDate? Let's say ending at refDate for history context
-            // PRD says "Show last 14 days"
-            // Let's center it slightly so user can see future? No, usually past.
-            // If Table mode: Show just 1 day (the refDate). If Graph mode: Show last 14 days.
-            const range = displayMode === 'table' ? 0 : 13;
+            const range = displayMode === 'table' ? 0 : 6; // Show 7 days (Mon-Sun or just last 7)
+            // User requested "7 days a week monday tuesday...". Let's show last 7 days ending on refDate.
 
             for (let i = range; i >= 0; i--) {
-                const dailyDate = new Date(current);
-                dailyDate.setDate(dailyDate.getDate() - i);
-                const dStr = formatDate(dailyDate);
+                const d = new Date(current);
+                d.setDate(d.getDate() - i);
+                const dStr = formatDate(d);
                 dateList.push(dStr);
-                labels[dStr] = `${dailyDate.toLocaleDateString('en-GB', { weekday: 'short' })} ${formatDateUK(dailyDate)}`;
+                // "Monday", "Tuesday" etc.
+                labels[dStr] = d.toLocaleDateString('en-GB', { weekday: 'long' });
 
-                // Get Raw Value
                 const entry = statValues.find(v => v.stat_definition_id === metric.id && v.date === dStr);
+                // For graph: if null, we want it to be null (gap). If 0 (Cross), it is 0.
                 valMap[dStr] = entry ? entry.value : null;
             }
             editable = true;
 
         } else if (viewMode === 'weekly') {
-            // If Table mode: Show just 1 week. If Graph mode: Show 12 weeks.
-            const range = displayMode === 'table' ? 0 : 11;
-
+            const range = displayMode === 'table' ? 0 : 11; // 12 weeks
             const startOfCurrentWeek = getStartOfWeek(current);
 
             for (let i = range; i >= 0; i--) {
-                const weekDate = new Date(startOfCurrentWeek);
-                weekDate.setDate(weekDate.getDate() - (i * 7));
-                const dStr = formatDate(weekDate);
-                dateList.push(dStr);
-                const weekEnd = new Date(weekDate);
+                const weekStart = new Date(startOfCurrentWeek);
+                weekStart.setDate(weekStart.getDate() - (i * 7));
+                const weekEnd = new Date(weekStart);
                 weekEnd.setDate(weekEnd.getDate() + 6);
-                labels[dStr] = `Wk ${formatDateUK(weekDate)} - ${formatDateUK(weekEnd)}`;
+
+                const dStr = formatDate(weekStart);
+                dateList.push(dStr);
+                // "Wk 1 2026"
+                labels[dStr] = `Wk ${getWeekNumber(weekStart)} ${weekStart.getFullYear().toString().slice(-2)}`;
 
                 if (metric.frequency === 'weekly') {
-                    // Raw Data for Weekly Metric
                     const entry = statValues.find(v => v.stat_definition_id === metric.id && v.date === dStr);
                     valMap[dStr] = entry ? entry.value : null;
                     editable = true;
                 } else {
-                    // Aggregated Average for Daily Metric
-                    let sum = 0;
-                    let validEntryCount = 0;
-
-                    const expectedDays = metric.target_days && metric.target_days.length > 0 ? metric.target_days : [0, 1, 2, 3, 4, 5, 6];
-
-                    for (let j = 0; j < 7; j++) {
-                        const dayInWeek = new Date(weekDate);
-                        dayInWeek.setDate(dayInWeek.getDate() + j);
-                        const dayStr = formatDate(dayInWeek);
-                        const entry = statValues.find(v => v.stat_definition_id === metric.id && v.date === dayStr);
-
-                        const dayOfWeek = dayInWeek.getDay(); // 0-6
-
-                        // Only consider if it's a target day AND has a value (ignore blanks)
-                        if (expectedDays.includes(dayOfWeek) && entry && entry.value !== null && entry.value !== undefined) {
-                            sum += Number(entry.value);
-                            validEntryCount++;
-                        }
-                    }
-
-                    // Calculate Value
-                    if (validEntryCount > 0) {
-                        if (metric.type === 'check') {
-                            valMap[dStr] = Math.round((sum / validEntryCount) * 100);
-                        } else {
-                            valMap[dStr] = Math.round(sum / validEntryCount);
-                        }
-                    } else {
-                        valMap[dStr] = null;
-                    }
-
-                    // Special case: If type is 'check' but we calculated a percentage, we might want to display it as such.
-                    // But our Table expects boolean for 'check' type cells.
-                    // Wait, MetricDetailView table shows editable raw data for Daily view.
-                    // For Weekly view of Daily metrics, it shows AGGREGATES.
-                    // The Table component renders based on `metric.type`.
-                    // If metric.type is 'check', it expects boolean.
-                    // But here we are calculating a percentage (completion rate).
-                    // We might need to handle this display issue. 
-                    // Ideally, Weekly view for Check metrics should probably show a bar chart or percentage, NOT the check icon.
-                    // *Self-Correction*: The Table cell will try to render a CheckIcon for a number (100). That fails.
-                    // We need to either change the metric type passed to table or handle number in Check cell.
-
+                    valMap[dStr] = calculateAggregate(weekStart, weekEnd);
                     editable = false;
                 }
             }
 
         } else if (viewMode === 'monthly') {
-            // If Table mode: Show 1 month. If Graph mode: Show 12 months
-            const range = displayMode === 'table' ? 0 : 11;
+            const range = displayMode === 'table' ? 0 : 11; // 12 months
             const currentMonthStart = new Date(current.getFullYear(), current.getMonth(), 1);
 
             for (let i = range; i >= 0; i--) {
-                const monthDate = new Date(currentMonthStart);
-                monthDate.setMonth(monthDate.getMonth() - i);
-                const dStr = formatDate(monthDate);
+                const monthStart = new Date(currentMonthStart);
+                monthStart.setMonth(monthStart.getMonth() - i);
+                const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
+
+                const dStr = formatDate(monthStart);
                 dateList.push(dStr);
-                labels[dStr] = formatMonthUK(monthDate);
+                // "Jan", "Feb" etc.
+                labels[dStr] = monthStart.toLocaleDateString('en-GB', { month: 'short' });
 
-                const month = monthDate.getMonth();
-                const year = monthDate.getFullYear();
-                const expectedDays = metric.target_days && metric.target_days.length > 0 ? metric.target_days : [0, 1, 2, 3, 4, 5, 6];
+                valMap[dStr] = calculateAggregate(monthStart, monthEnd);
+                editable = false;
+            }
+        } else if (viewMode === 'yearly') {
+            // Show last 5 years?
+            const range = displayMode === 'table' ? 0 : 4;
+            const currentYearStart = new Date(current.getFullYear(), 0, 1);
 
-                // Calculate target days in this month
-                // Iterate days in month
-                const daysInMonth = new Date(year, month + 1, 0).getDate();
-                let sum = 0;
-                let validEntryCount = 0;
+            for (let i = range; i >= 0; i--) {
+                const yearStart = new Date(currentYearStart);
+                yearStart.setFullYear(yearStart.getFullYear() - i);
+                const yearEnd = new Date(yearStart.getFullYear(), 11, 31);
 
-                for (let day = 1; day <= daysInMonth; day++) {
-                    const tempDate = new Date(year, month, day);
-                    const dayStr = formatDate(tempDate);
+                const dStr = formatDate(yearStart);
+                dateList.push(dStr);
+                // "2024", "2025"
+                labels[dStr] = yearStart.getFullYear().toString();
 
-                    // Find entry
-                    const entry = statValues.find(v => v.stat_definition_id === metric.id && v.date === dayStr);
-
-                    if (expectedDays.includes(tempDate.getDay()) && entry && entry.value !== null && entry.value !== undefined) {
-                        sum += Number(entry.value);
-                        validEntryCount++;
-                    }
-                }
-
-                if (validEntryCount > 0) {
-                    if (metric.type === 'check') {
-                        valMap[dStr] = Math.round((sum / validEntryCount) * 100);
-                    } else {
-                        valMap[dStr] = Math.round(sum / validEntryCount);
-                    }
-                } else {
-                    valMap[dStr] = null;
-                }
+                valMap[dStr] = calculateAggregate(yearStart, yearEnd);
                 editable = false;
             }
         }
@@ -204,15 +180,15 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
     const navigate = (dir: number) => {
         const newDate = new Date(refDate);
         if (displayMode === 'table') {
-            // Single step navigation
             if (viewMode === 'daily') newDate.setDate(newDate.getDate() + dir);
             if (viewMode === 'weekly') newDate.setDate(newDate.getDate() + (dir * 7));
             if (viewMode === 'monthly') newDate.setMonth(newDate.getMonth() + dir);
+            if (viewMode === 'yearly') newDate.setFullYear(newDate.getFullYear() + dir);
         } else {
-            // Page navigation (Graph mode)
-            if (viewMode === 'daily') newDate.setDate(newDate.getDate() + (dir * 14));
+            if (viewMode === 'daily') newDate.setDate(newDate.getDate() + (dir * 7));
             if (viewMode === 'weekly') newDate.setDate(newDate.getDate() + (dir * 7 * 12));
             if (viewMode === 'monthly') newDate.setMonth(newDate.getMonth() + (dir * 12));
+            if (viewMode === 'yearly') newDate.setFullYear(newDate.getFullYear() + (dir * 5));
         }
         setRefDate(newDate);
     };
@@ -255,9 +231,12 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
         const end = new Date(start);
         end.setDate(end.getDate() + 6);
         inputSubtitle = `${formatDateUK(start)} - ${formatDateUK(end)}`;
-    } else { // monthly
+    } else if (viewMode === 'monthly') { // monthly
         inputTitle = currentInputDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
         // Subtitle can be blank or range
+        inputSubtitle = '';
+    } else { // yearly
+        inputTitle = currentInputDate.getFullYear().toString();
         inputSubtitle = '';
     }
 
@@ -310,6 +289,12 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
                         >
                             Monthly
                         </button>
+                        <button
+                            onClick={() => setViewMode('yearly')}
+                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'yearly' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
+                        >
+                            Yearly
+                        </button>
                     </div>
                 ) : (
                     <div className="px-4 py-1.5 text-sm font-medium text-gray-400">
@@ -347,9 +332,10 @@ const MetricAnalytics: React.FC<MetricAnalyticsProps> = ({
                         <div className="flex items-center gap-2 text-slate-200 font-medium mb-1">
                             <CalendarIcon className="w-5 h-5 text-indigo-400" />
                             <span>
-                                {viewMode === 'daily' && `Last 14 Days`}
+                                {viewMode === 'daily' && `Last 7 Days`}
                                 {viewMode === 'weekly' && `Last 12 Weeks`}
                                 {viewMode === 'monthly' && `Last 12 Months`}
+                                {viewMode === 'yearly' && `Last 5 Years`}
                             </span>
                         </div>
                     )}
