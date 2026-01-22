@@ -268,7 +268,7 @@ function App() {
                 logData = newLogData;
             }
             const { data: taskData } = await supabase.from('tasks').select('*').eq('log_date', date);
-            const { data: subtaskData } = await supabase.from('subtasks').select('*').eq('log_date', date);
+            let { data: subtaskData } = await supabase.from('subtasks').select('*').eq('log_date', date);
 
             // Enforce Schedule Consistency for Recurring Tasks (Today & Future)
             const [y, m, d] = date.split('-').map(Number);
@@ -306,6 +306,50 @@ function App() {
             if (tasksToDelete.length > 0) {
                 console.log("Cleaning up invalid recurring tasks:", tasksToDelete);
                 await supabase.from('tasks').delete().in('id', tasksToDelete);
+            }
+
+            // Create missing subtasks from recurring subtask templates
+            const subtasksToCreate: any[] = [];
+            const existingSubtasks = subtaskData || [];
+
+            for (const t of validTasks) {
+                if (t.is_recurring) {
+                    // Find the template for this recurring task
+                    let template = null;
+                    if (t.category_id) {
+                        const cat = categories.find(c => c.id === t.category_id);
+                        template = cat?.recurringTasks.find(rt => rt.text === t.text);
+                    } else {
+                        template = uncategorizedTemplates.find(rt => rt.text === t.text);
+                    }
+
+                    if (template && template.subtaskTemplates && template.subtaskTemplates.length > 0) {
+                        // Get existing subtasks for this task
+                        const taskSubtasks = existingSubtasks.filter((st: any) => st.parent_task_id === t.id);
+                        const existingTexts = taskSubtasks.map((st: any) => st.text);
+
+                        // Create any missing subtasks from templates
+                        for (const stTemplate of template.subtaskTemplates) {
+                            if (!existingTexts.includes(stTemplate.text)) {
+                                subtasksToCreate.push({
+                                    parent_task_id: t.id,
+                                    log_date: date,
+                                    text: stTemplate.text,
+                                    is_recurring: true,
+                                    completed: false
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Insert any new subtasks
+            if (subtasksToCreate.length > 0) {
+                const { data: newSubtasks } = await supabase.from('subtasks').insert(subtasksToCreate).select();
+                if (newSubtasks) {
+                    subtaskData = [...existingSubtasks, ...newSubtasks];
+                }
             }
 
             const subtasks = subtaskData ? subtaskData.map((st: any) => ({ ...st, isRecurring: st.is_recurring || false })) : [];
