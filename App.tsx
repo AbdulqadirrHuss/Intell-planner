@@ -135,15 +135,16 @@ function App() {
         //    a) General routines (uncategorized) attached to the Day Type
         //    b) Recurring tasks from ALL categories linked to this Day Type
 
+        // Track both the DB record and the original template for subtask creation
         const newRecurringTasksForDb: any[] = [];
+        const templateMap: Map<string, RecurringTaskTemplate> = new Map(); // key: "text|categoryId"
 
         // a) General routines
         selectedDayType.recurringTasks.forEach(rt => {
-            // Only include if it's a general routine (no category or uncategorized)
-            // OR if it's explicitly part of the day type's recurring tasks list (which might include some categorized ones if legacy)
-            // But primarily we want the ones defined on the Day Type itself.
             const isScheduled = rt.daysOfWeek && rt.daysOfWeek.includes(dayOfWeek);
             if (isScheduled && (!rt.categoryId || rt.categoryId === 'uncategorized')) {
+                const key = `${rt.text}|uncategorized`;
+                templateMap.set(key, rt);
                 newRecurringTasksForDb.push({
                     log_date: date,
                     text: rt.text,
@@ -155,12 +156,13 @@ function App() {
         });
 
         // b) Category-specific recurring tasks
-        //    We need to look up the actual Category objects to get their recurring tasks
         selectedDayType.categoryIds.forEach(catId => {
             const category = categories.find(c => c.id === catId);
             if (category) {
                 category.recurringTasks.forEach(rt => {
                     if (rt.daysOfWeek && rt.daysOfWeek.includes(dayOfWeek)) {
+                        const key = `${rt.text}|${catId}`;
+                        templateMap.set(key, rt);
                         newRecurringTasksForDb.push({
                             log_date: date,
                             text: rt.text,
@@ -174,28 +176,69 @@ function App() {
         });
 
         // 3. Delete OLD recurring tasks for this day from DB
-        //    (We replace them entirely to ensure the latest template is applied)
         const { data: oldRecTasks } = await supabase.from('tasks').select('id').eq('log_date', date).eq('is_recurring', true);
         const oldRecTaskIds = oldRecTasks?.map(t => t.id) || [];
 
         if (oldRecTaskIds.length > 0) {
-            // Delete subtasks first (cascade usually handles this but good to be safe)
             await supabase.from('subtasks').delete().in('parent_task_id', oldRecTaskIds);
             await supabase.from('tasks').delete().in('id', oldRecTaskIds);
         }
 
-        // 4. Insert NEW recurring tasks
+        // 4. Insert NEW recurring tasks and their subtasks from templates
         let newTasks: Task[] = [];
         if (newRecurringTasksForDb.length > 0) {
             const { data: newTasksData } = await supabase.from('tasks').insert(newRecurringTasksForDb).select();
             if (newTasksData) {
+                // For each new task, find its template and create subtasks from subtaskTemplates
+                const subtasksToInsert: any[] = [];
+                const taskSubtaskMap: Map<string, Subtask[]> = new Map(); // taskId -> subtasks
+
+                for (const t of newTasksData) {
+                    const catId = t.category_id || 'uncategorized';
+                    const key = `${t.text}|${catId}`;
+                    const template = templateMap.get(key);
+
+                    if (template && template.subtaskTemplates && template.subtaskTemplates.length > 0) {
+                        for (const st of template.subtaskTemplates) {
+                            subtasksToInsert.push({
+                                parent_task_id: t.id,
+                                log_date: date,
+                                text: st.text,
+                                is_recurring: true,
+                                completed: false
+                            });
+                        }
+                    }
+                }
+
+                // Insert all subtasks at once
+                if (subtasksToInsert.length > 0) {
+                    const { data: newSubtasksData } = await supabase.from('subtasks').insert(subtasksToInsert).select();
+                    if (newSubtasksData) {
+                        // Group subtasks by parent_task_id
+                        for (const st of newSubtasksData) {
+                            const existing = taskSubtaskMap.get(st.parent_task_id) || [];
+                            existing.push({
+                                id: st.id,
+                                parent_task_id: st.parent_task_id,
+                                log_date: st.log_date,
+                                text: st.text,
+                                completed: st.completed,
+                                isRecurring: st.is_recurring || false
+                            });
+                            taskSubtaskMap.set(st.parent_task_id, existing);
+                        }
+                    }
+                }
+
+                // Build final tasks with their subtasks
                 newTasks = newTasksData.map((t: any) => ({
                     id: t.id,
                     text: t.text,
                     completed: t.completed,
                     categoryId: t.category_id || 'uncategorized',
                     isRecurring: true,
-                    subtasks: []
+                    subtasks: taskSubtaskMap.get(t.id) || []
                 }));
             }
         }
