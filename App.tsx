@@ -458,7 +458,7 @@ function App() {
         setUncategorizedTemplates(uncategorizedTemplates.filter(t => t.id !== id));
         setDayTypes(dayTypes.map(dt => ({ ...dt, recurringTasks: dt.recurringTasks.filter(t => t.id !== id) })));
     };
-    const onAddRecurringSubtask = async (parentId: string, text: string) => { if (!supabase) return; const { data } = await supabase.from('recurring_subtask_templates').insert({ parent_template_id: parentId, text }).select().single(); if (data) { setCategories(categories.map(c => ({ ...c, recurringTasks: c.recurringTasks.map(rt => rt.id === parentId ? { ...rt, subtaskTemplates: [...rt.subtaskTemplates, { id: data.id, text, parentTemplateId: parentId }] } : rt) }))); } };
+    const onAddRecurringSubtask = async (parentId: string, text: string) => { if (!supabase) return; const { data, error } = await supabase.from('recurring_subtask_templates').insert({ parent_template_id: parentId, text }).select().single(); if (error) { console.error('Error adding recurring subtask:', error); return; } if (data) { setCategories(prev => prev.map(c => ({ ...c, recurringTasks: c.recurringTasks.map(rt => rt.id === parentId ? { ...rt, subtaskTemplates: [...rt.subtaskTemplates, { id: data.id, text, parentTemplateId: parentId }] } : rt) }))); } };
     const onDeleteRecurringSubtask = async (id: string) => { if (!supabase) return; await supabase.from('recurring_subtask_templates').delete().eq('id', id); setCategories(categories.map(c => ({ ...c, recurringTasks: c.recurringTasks.map(rt => ({ ...rt, subtaskTemplates: rt.subtaskTemplates.filter(st => st.id !== id) })) }))); };
     const handleUpdateRecurringTaskText = async (id: string, text: string) => { if (!supabase) return; await supabase.from('recurring_task_templates').update({ text }).eq('id', id); setCategories(categories.map(c => ({ ...c, recurringTasks: c.recurringTasks.map(rt => rt.id === id ? { ...rt, text } : rt) }))); };
     const handleUpdateRecurringSubtaskText = async (id: string, text: string) => { if (!supabase) return; await supabase.from('recurring_subtask_templates').update({ text }).eq('id', id); setCategories(categories.map(c => ({ ...c, recurringTasks: c.recurringTasks.map(rt => ({ ...rt, subtaskTemplates: rt.subtaskTemplates.map(st => st.id === id ? { ...st, text } : st) })) }))); };
@@ -633,10 +633,10 @@ function App() {
                             <select
                                 value={currentDailyLog.dayTypeId || ''}
                                 onChange={(e) => handleSelectDayTypeFromDropdown(e.target.value)}
-                                className="w-full bg-black/20 border border-white/10 text-white text-sm rounded-lg focus:ring-violet-500 focus:border-violet-500 block p-3"
+                                className="w-full bg-gray-800 border border-white/10 text-white text-sm rounded-lg focus:ring-violet-500 focus:border-violet-500 block p-3"
                             >
-                                <option value="" disabled>Choose a day type...</option>
-                                {dayTypes.map(dt => <option key={dt.id} value={dt.id}>{dt.name}</option>)}
+                                <option value="" disabled className="bg-gray-800 text-gray-300">Choose a day type...</option>
+                                {dayTypes.map(dt => <option key={dt.id} value={dt.id} className="bg-gray-800 text-white">{dt.name}</option>)}
                             </select>
                             <p className="text-xs text-gray-500 mt-2">Applying this generates scaffold for both Planner and Task List.</p>
                         </div>
