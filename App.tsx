@@ -559,15 +559,20 @@ function App() {
     const completionPercentage = useMemo(() => {
         const tasks = currentDailyLog.tasks;
         if (tasks.length === 0) return 0;
-        const valuePerTask = 100 / tasks.length;
-        let total = 0;
+        // Weight by leaf units: bare task = 1 unit, each subtask = 1 unit
+        let totalUnits = 0;
+        let completedUnits = 0;
         tasks.forEach(t => {
             if (t.subtasks && t.subtasks.length > 0) {
-                const comp = t.subtasks.filter(st => st.completed).length;
-                total += (comp / t.subtasks.length) * valuePerTask;
-            } else if (t.completed) total += valuePerTask;
+                totalUnits += t.subtasks.length;
+                completedUnits += t.subtasks.filter(st => st.completed).length;
+            } else {
+                totalUnits += 1;
+                if (t.completed) completedUnits += 1;
+            }
         });
-        return Math.round(total);
+        if (totalUnits === 0) return 0;
+        return Math.round((completedUnits / totalUnits) * 100);
     }, [currentDailyLog.tasks]);
 
     // --- NAVIGATION HELPERS ---
