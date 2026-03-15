@@ -205,22 +205,25 @@ interface TaskListProps {
 }
 
 const calculateProgress = (tasks: Task[]): number => {
-  const totalParentTasks = tasks.length;
-  if (totalParentTasks === 0) return 0;
+  if (tasks.length === 0) return 0;
 
-  const progressPerParent = 100 / totalParentTasks;
+  // Each bare task counts as 1 unit; a task with N subtasks counts as N units.
+  // This makes the progress bar proportional to actual subtask work.
+  let totalUnits = 0;
+  let completedUnits = 0;
 
-  const totalProgress = tasks.reduce((acc, task) => {
+  for (const task of tasks) {
     if (!task.subtasks || task.subtasks.length === 0) {
-      return acc + (task.completed ? progressPerParent : 0);
+      totalUnits += 1;
+      if (task.completed) completedUnits += 1;
     } else {
-      const progressPerSubtask = progressPerParent / task.subtasks.length;
-      const completedSubtasks = task.subtasks.filter(st => st.completed).length;
-      return acc + (completedSubtasks * progressPerSubtask);
+      totalUnits += task.subtasks.length;
+      completedUnits += task.subtasks.filter(st => st.completed).length;
     }
-  }, 0);
+  }
 
-  return Math.round(totalProgress);
+  if (totalUnits === 0) return 0;
+  return Math.round((completedUnits / totalUnits) * 100);
 };
 
 const TaskList: React.FC<TaskListProps> = ({
