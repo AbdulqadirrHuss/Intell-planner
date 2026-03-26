@@ -732,6 +732,41 @@ h1 { letter-spacing: -0.02em; }
     text-align: right;
 }
 
+/* ── Category groups inside expanded panel ── */
+.tile-cat-groups { display: flex; flex-direction: column; gap: 16px; }
+
+.tile-cat-group { display: flex; flex-direction: column; gap: 8px; }
+
+.tile-cat-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 2px 4px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.tile-cat-group-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.tile-cat-group-name {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    flex: 1;
+}
+
+.tile-cat-group-count {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-faint);
+}
+
 /* ── Empty state ── */
 .tile-empty {
     padding: 24px;

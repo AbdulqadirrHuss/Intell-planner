@@ -67,6 +67,8 @@ interface TrackedRenderItem {
     completed: boolean;
     type: 'task' | 'subtask';
     color: string;
+    categoryId: string;
+    categoryName: string;
     parentTaskId?: string;
     isRecurring: boolean;
 }
@@ -81,23 +83,22 @@ function getTrackedItemsForToday(bucket: TrackerBucket, categories: Category[], 
         const isCatTracked = bucket.categoryIds && bucket.categoryIds.includes(t.categoryId);
         const isTaskTracked = bucket.taskTexts && bucket.taskTexts.includes(t.text);
         
+        const categoryId = cat?.id || 'uncategorized';
+        const categoryName = cat?.name || 'Uncategorized';
+
         if (isCatTracked || isTaskTracked) {
-            // Task is tracked (either via category or exact match). Provide it entirely.
-            // If it has subtasks, we render the subtasks as the checkable units to match old total logic,
-            // OR render just the task if it has no subtasks.
             if (t.subtasks && t.subtasks.length > 0) {
                 t.subtasks.forEach(st => {
-                    items.push({ id: st.id, text: st.text, completed: st.completed, type: 'subtask', color, parentTaskId: t.id, isRecurring: st.isRecurring });
+                    items.push({ id: st.id, text: st.text, completed: st.completed, type: 'subtask', color, categoryId, categoryName, parentTaskId: t.id, isRecurring: st.isRecurring });
                 });
             } else {
-                items.push({ id: t.id, text: t.text, completed: t.completed, type: 'task', color, isRecurring: t.isRecurring });
+                items.push({ id: t.id, text: t.text, completed: t.completed, type: 'task', color, categoryId, categoryName, isRecurring: t.isRecurring });
             }
         } else {
-            // Task is NOT tracked, but maybe a specific subtask is?
             if (t.subtasks && t.subtasks.length > 0) {
                 t.subtasks.forEach(st => {
                     if (bucket.subtaskTexts && bucket.subtaskTexts.includes(st.text)) {
-                        items.push({ id: st.id, text: st.text, completed: st.completed, type: 'subtask', color, parentTaskId: t.id, isRecurring: st.isRecurring });
+                        items.push({ id: st.id, text: st.text, completed: st.completed, type: 'subtask', color, categoryId, categoryName, parentTaskId: t.id, isRecurring: st.isRecurring });
                     }
                 });
             }
@@ -330,34 +331,58 @@ function ExpandedPanel({
                 </div>
             )}
 
-            {!editMode && trackedItems.length > 0 && (
-                <div className={viewMode === 'grid' ? "tile-cat-grid" : "tile-items-list"}>
-                    {trackedItems.map(item => (
-                        <button 
-                            key={item.id} 
-                            className={`tile-tracked-item ${viewMode} ${item.completed ? 'completed' : ''}`}
-                            onClick={() => {
-                                if (item.type === 'task') {
-                                    onToggleTask(item.id, item.completed, item.isRecurring);
-                                } else if (item.parentTaskId) {
-                                    onToggleSubtask(item.id, item.parentTaskId, item.completed, item.isRecurring);
-                                }
-                            }}
-                        >
-                            <div className="flex items-center gap-3">
-                                <CheckCircleIcon 
-                                    className={`w-5 h-5 transition-all ${item.completed ? 'text-violet-400' : 'text-white/20'}`} 
-                                    checked={item.completed} 
-                                />
-                                <span className={`text-sm tracking-wide text-left ${item.completed ? 'opacity-50 line-through text-gray-500' : 'text-gray-200'}`}>
-                                    {item.text}
-                                </span>
+            {!editMode && trackedItems.length > 0 && (() => {
+                // Group items by category, preserving order of first appearance
+                const groups: { categoryId: string; categoryName: string; color: string; items: TrackedRenderItem[] }[] = [];
+                const seen = new Map<string, number>();
+                trackedItems.forEach(item => {
+                    if (!seen.has(item.categoryId)) {
+                        seen.set(item.categoryId, groups.length);
+                        groups.push({ categoryId: item.categoryId, categoryName: item.categoryName, color: item.color, items: [] });
+                    }
+                    groups[seen.get(item.categoryId)!].items.push(item);
+                });
+
+                return (
+                    <div className="tile-cat-groups">
+                        {groups.map((group, gi) => (
+                            <div key={group.categoryId} className="tile-cat-group">
+                                <div className="tile-cat-group-header">
+                                    <span className="tile-cat-group-dot" style={{ background: group.color }} />
+                                    <span className="tile-cat-group-name">{group.categoryName}</span>
+                                    <span className="tile-cat-group-count">{group.items.filter(i => i.completed).length}/{group.items.length}</span>
+                                </div>
+                                <div className={viewMode === 'grid' ? "tile-cat-grid" : "tile-items-list"}>
+                                    {group.items.map(item => (
+                                        <button
+                                            key={item.id}
+                                            className={`tile-tracked-item ${viewMode} ${item.completed ? 'completed' : ''}`}
+                                            onClick={() => {
+                                                if (item.type === 'task') {
+                                                    onToggleTask(item.id, item.completed, item.isRecurring);
+                                                } else if (item.parentTaskId) {
+                                                    onToggleSubtask(item.id, item.parentTaskId, item.completed, item.isRecurring);
+                                                }
+                                            }}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <CheckCircleIcon
+                                                    className={`w-5 h-5 transition-all ${item.completed ? 'text-violet-400' : 'text-white/20'}`}
+                                                    checked={item.completed}
+                                                />
+                                                <span className={`text-sm tracking-wide text-left ${item.completed ? 'opacity-50 line-through text-gray-500' : 'text-gray-200'}`}>
+                                                    {item.text}
+                                                </span>
+                                            </div>
+                                            {viewMode === 'list' && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: item.color }} />}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                            {viewMode === 'list' && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{background: item.color}} />}
-                        </button>
-                    ))}
-                </div>
-            )}
+                        ))}
+                    </div>
+                );
+            })()}
         </div>
     );
 }
