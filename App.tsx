@@ -574,34 +574,7 @@ function App() {
     const handleAddCategoryToDayType = async (dtId: string, catId: string) => { if (!supabase) return; await supabase.from('day_type_categories').insert({ day_type_id: dtId, category_id: catId, sort_order: 99 }); const cat = categories.find(c => c.id === catId); setDayTypes(dayTypes.map(dt => dt.id === dtId ? { ...dt, categoryIds: [...dt.categoryIds, catId], recurringTasks: [...dt.recurringTasks, ...(cat?.recurringTasks || [])] } : dt)); };
     const onRemoveCategoryFromDayType = async (dtId: string, catId: string) => { if (!supabase) return; await supabase.from('day_type_categories').delete().eq('day_type_id', dtId).eq('category_id', catId); setDayTypes(dayTypes.map(dt => dt.id === dtId ? { ...dt, categoryIds: dt.categoryIds.filter(c => c !== catId), recurringTasks: dt.recurringTasks.filter(rt => rt.categoryId !== catId || rt.categoryId === 'uncategorized') } : dt)); };
 
-    const completionPercentage = useMemo(() => {
-        const tasks = currentDailyLog.tasks;
-        if (tasks.length === 0) return 0;
-
-        // Determine which category IDs are in daily-mode buckets
-        const dailyBuckets = trackerBuckets.filter(b => b.mode === 'daily');
-        const dailyCatIds = new Set(dailyBuckets.flatMap(b => b.categoryIds));
-
-        // If daily buckets exist, only count tasks in those categories.
-        // Otherwise fall back to counting all tasks (backward-compat).
-        const relevantTasks = dailyBuckets.length > 0
-            ? tasks.filter(t => dailyCatIds.has(t.categoryId))
-            : tasks;
-
-        let totalUnits = 0;
-        let completedUnits = 0;
-        relevantTasks.forEach(t => {
-            if (t.subtasks && t.subtasks.length > 0) {
-                totalUnits += t.subtasks.length;
-                completedUnits += t.subtasks.filter(st => st.completed).length;
-            } else {
-                totalUnits += 1;
-                if (t.completed) completedUnits += 1;
-            }
-        });
-        if (totalUnits === 0) return 0;
-        return Math.round((completedUnits / totalUnits) * 100);
-    }, [currentDailyLog.tasks, trackerBuckets]);
+    // completionPercentage removed — each tracker tile has its own %
 
     // --- NAVIGATION HELPERS ---
     const changeDate = (days: number) => {
@@ -660,29 +633,31 @@ function App() {
         <div className="app-container">
 
             {/* Header */}
-            <div className="mb-8">
-                <h1 className="text-4xl font-bold text-white mb-2">IntelliDay</h1>
-                <div className="flex justify-between items-end">
-                    <p className="text-gray-400">
+            <div className="app-header">
+                <div>
+                    <h1 className="text-4xl font-bold text-white mb-1" style={{ letterSpacing: '-0.03em' }}>IntelliDay</h1>
+                    <p className="text-gray-400 text-sm">
                         {(() => {
                             const [y, m, d] = selectedDate.split('-').map(Number);
                             const dateObj = new Date(y, m - 1, d);
                             return dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
                         })()}
                     </p>
-                    <div className="text-right">
-                        <div className="text-xs text-gray-400 uppercase tracking-wider mb-1">Daily Progress</div>
-                        <div className="text-3xl font-bold text-white">{completionPercentage}%</div>
-                    </div >
-                </div >
-                {/* Progress Bar */}
-                < div className="w-full bg-gray-700/50 h-2 rounded-full mt-4 overflow-hidden" >
-                    <div
-                        className="h-full bg-violet-500 transition-all duration-500"
-                        style={{ width: `${completionPercentage}%` }}
-                    />
-                </div >
-            </div >
+                </div>
+            </div>
+
+            {/* Tracker Tiles Grid (at top) */}
+            <TrackerBuckets
+                buckets={trackerBuckets}
+                categories={categories}
+                tasks={currentDailyLog.tasks}
+                onAddBucket={handleAddBucket}
+                onUpdateBucket={handleUpdateBucket}
+                onDeleteBucket={handleDeleteBucket}
+                onToggleCollapsed={handleToggleBucketCollapsed}
+                onAddCategoryToBucket={handleAddCategoryToBucket}
+                onRemoveCategoryFromBucket={handleRemoveCategoryFromBucket}
+            />
 
             {/* Date Navigation Bar */}
             < div className="nav-bar" >
@@ -797,18 +772,7 @@ function App() {
                 </div>
             </div>
 
-            {/* Tracker Buckets */}
-            <TrackerBuckets
-                buckets={trackerBuckets}
-                categories={categories}
-                tasks={currentDailyLog.tasks}
-                onAddBucket={handleAddBucket}
-                onUpdateBucket={handleUpdateBucket}
-                onDeleteBucket={handleDeleteBucket}
-                onToggleCollapsed={handleToggleBucketCollapsed}
-                onAddCategoryToBucket={handleAddCategoryToBucket}
-                onRemoveCategoryFromBucket={handleRemoveCategoryFromBucket}
-            />
+
 
             {/* Modals */}
             <DayTypeManager
