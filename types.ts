@@ -82,6 +82,8 @@ export interface TrackerBucket {
   sort_order: number;
   collapsed: boolean;
   categoryIds: string[];
+  taskTexts: string[];
+  subtaskTexts: string[];
 }
 
 export interface DriveItem {

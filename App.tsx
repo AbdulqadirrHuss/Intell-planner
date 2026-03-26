@@ -48,6 +48,7 @@ function App() {
 
     const [newTaskText, setNewTaskText] = useState('');
     const [newTaskCategory, setNewTaskCategory] = useState('');
+    const [isMinimalView, setIsMinimalView] = useState(false);
 
     // --- DATA LOADING ---
     useEffect(() => {
@@ -98,6 +99,8 @@ function App() {
                 // Load tracker buckets
                 const { data: bucketsData } = await supabase.from('tracker_buckets').select('*').order('sort_order');
                 const { data: bucketCatsData } = await supabase.from('tracker_bucket_categories').select('*');
+                const { data: bucketTasksData } = await supabase.from('tracker_bucket_tasks').select('*');
+                const { data: bucketSubtasksData } = await supabase.from('tracker_bucket_subtasks').select('*');
                 if (bucketsData) {
                     const formattedBuckets: TrackerBucket[] = bucketsData.map((b: any) => ({
                         id: b.id,
@@ -107,6 +110,8 @@ function App() {
                         sort_order: b.sort_order || 0,
                         collapsed: b.collapsed || false,
                         categoryIds: (bucketCatsData || []).filter((bc: any) => bc.bucket_id === b.id).map((bc: any) => bc.category_id),
+                        taskTexts: (bucketTasksData || []).filter((bt: any) => bt.bucket_id === b.id).map((bt: any) => bt.task_text),
+                        subtaskTexts: (bucketSubtasksData || []).filter((bst: any) => bst.bucket_id === b.id).map((bst: any) => bst.subtask_text),
                     }));
                     setTrackerBuckets(formattedBuckets);
                 }
@@ -629,11 +634,35 @@ function App() {
         setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, categoryIds: b.categoryIds.filter(id => id !== categoryId) } : b));
     };
 
+    const handleAddBucketTask = async (bucketId: string, taskText: string) => {
+        if (!supabase) return;
+        await supabase.from('tracker_bucket_tasks').insert({ bucket_id: bucketId, task_text: taskText });
+        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, taskTexts: [...b.taskTexts, taskText] } : b));
+    };
+
+    const handleRemoveBucketTask = async (bucketId: string, taskText: string) => {
+        if (!supabase) return;
+        await supabase.from('tracker_bucket_tasks').delete().eq('bucket_id', bucketId).eq('task_text', taskText);
+        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, taskTexts: b.taskTexts.filter(t => t !== taskText) } : b));
+    };
+
+    const handleAddBucketSubtask = async (bucketId: string, subtaskText: string) => {
+        if (!supabase) return;
+        await supabase.from('tracker_bucket_subtasks').insert({ bucket_id: bucketId, subtask_text: subtaskText });
+        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, subtaskTexts: [...b.subtaskTexts, subtaskText] } : b));
+    };
+
+    const handleRemoveBucketSubtask = async (bucketId: string, subtaskText: string) => {
+        if (!supabase) return;
+        await supabase.from('tracker_bucket_subtasks').delete().eq('bucket_id', bucketId).eq('subtask_text', subtaskText);
+        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, subtaskTexts: b.subtaskTexts.filter(t => t !== subtaskText) } : b));
+    };
+
     return (
         <div className="app-container">
 
             {/* Header */}
-            <div className="app-header">
+            <div className="app-header flex justify-between items-start">
                 <div>
                     <h1 className="text-4xl font-bold text-white mb-1" style={{ letterSpacing: '-0.03em' }}>IntelliDay</h1>
                     <p className="text-gray-400 text-sm">
@@ -644,20 +673,14 @@ function App() {
                         })()}
                     </p>
                 </div>
+                <button 
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${isMinimalView ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30' : 'bg-white/5 text-gray-400 border border-white/5 hover:bg-white/10'}`}
+                  onClick={() => setIsMinimalView(!isMinimalView)}
+                >
+                  <span className={`w-2 h-2 rounded-full ${isMinimalView ? 'bg-violet-400 shadow-[0_0_8px_rgba(139,92,246,0.8)]' : 'bg-gray-500'}`} />
+                  Focus Mode
+                </button>
             </div>
-
-            {/* Tracker Tiles Grid (at top) */}
-            <TrackerBuckets
-                buckets={trackerBuckets}
-                categories={categories}
-                tasks={currentDailyLog.tasks}
-                onAddBucket={handleAddBucket}
-                onUpdateBucket={handleUpdateBucket}
-                onDeleteBucket={handleDeleteBucket}
-                onToggleCollapsed={handleToggleBucketCollapsed}
-                onAddCategoryToBucket={handleAddCategoryToBucket}
-                onRemoveCategoryFromBucket={handleRemoveCategoryFromBucket}
-            />
 
             {/* Date Navigation Bar */}
             < div className="nav-bar" >
@@ -710,69 +733,90 @@ function App() {
                     <p className="text-xs text-gray-500 mt-2">Applying this generates scaffold for both Planner and Task List.</p>
                 </div>
 
-                {/* Task List */}
-                <TaskList
-                    key={selectedDate}
+                {/* Tracker Tiles Grid (Moved here for Focus Mode) */}
+                <TrackerBuckets
+                    buckets={trackerBuckets}
+                    categories={categories}
                     tasks={currentDailyLog.tasks}
-                    categories={categories.filter(c => c.id !== 'uncategorized')}
-                    sortedCategoryIds={dayTypes.find(dt => dt.id === currentDailyLog.dayTypeId)?.categoryIds || []}
-                    onReorderCategories={handleReorderCategories}
+                    onAddBucket={handleAddBucket}
+                    onUpdateBucket={handleUpdateBucket}
+                    onDeleteBucket={handleDeleteBucket}
+                    onToggleCollapsed={handleToggleBucketCollapsed}
+                    onAddCategoryToBucket={handleAddCategoryToBucket}
+                    onRemoveCategoryFromBucket={handleRemoveCategoryFromBucket}
+                    onAddBucketTask={handleAddBucketTask}
+                    onRemoveBucketTask={handleRemoveBucketTask}
+                    onAddBucketSubtask={handleAddBucketSubtask}
+                    onRemoveBucketSubtask={handleRemoveBucketSubtask}
                     onToggleTask={handleToggleTask}
-                    onDeleteTask={handleDeleteTask}
                     onToggleSubtask={handleToggleSubtask}
-                    onDeleteSubtask={handleDeleteSubtask}
-                    onAddSubtask={handleAddSubtask}
-                    onUpdateTaskText={handleUpdateTaskText}
-                    onUpdateSubtaskText={handleUpdateSubtaskText}
-                    onToggleSubtaskRecurring={handleToggleSubtaskRecurring}
                 />
 
-                {/* Add Task Input */}
-                <div className="mt-6 relative">
-                    <div className="task-input-wrapper">
-                        <input
-                            type="text"
-                            placeholder="Add a new task..."
-                            className="task-input"
-                            value={newTaskText}
-                            onChange={(e) => setNewTaskText(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    console.log("Adding task with category:", newTaskCategory);
-                                    handleAddTask(newTaskText, newTaskCategory || 'uncategorized');
-                                    // Optional: Keep category selected for rapid entry
-                                    // setNewTaskCategory(''); 
-                                }
-                            }}
+                {!isMinimalView && (
+                    <>
+                        {/* Task List */}
+                        <TaskList
+                            key={selectedDate}
+                            tasks={currentDailyLog.tasks}
+                            categories={categories.filter(c => c.id !== 'uncategorized')}
+                            sortedCategoryIds={dayTypes.find(dt => dt.id === currentDailyLog.dayTypeId)?.categoryIds || []}
+                            onReorderCategories={handleReorderCategories}
+                            onToggleTask={handleToggleTask}
+                            onDeleteTask={handleDeleteTask}
+                            onToggleSubtask={handleToggleSubtask}
+                            onDeleteSubtask={handleDeleteSubtask}
+                            onAddSubtask={handleAddSubtask}
+                            onUpdateTaskText={handleUpdateTaskText}
+                            onUpdateSubtaskText={handleUpdateSubtaskText}
+                            onToggleSubtaskRecurring={handleToggleSubtaskRecurring}
                         />
-                        <div className="flex items-center gap-2 pr-2">
-                            <select
-                                className="bg-transparent text-xs text-gray-400 border-none outline-none cursor-pointer hover:text-white max-w-[100px] truncate"
-                                onChange={(e) => {
-                                    console.log("Category selected:", e.target.value);
-                                    setNewTaskCategory(e.target.value);
-                                }}
-                                value={newTaskCategory}
-                            >
-                                <option value="">No Link</option>
-                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
-                            <button
-                                className="fab-btn"
-                                onClick={() => {
-                                    console.log("Adding task via button with category:", newTaskCategory);
-                                    handleAddTask(newTaskText, newTaskCategory || 'uncategorized');
-                                    // setNewTaskCategory('');
-                                }}
-                            >
-                                <PlusIcon className="w-6 h-6" />
-                            </button>
+
+                        {/* Add Task Input */}
+                        <div className="mt-6 relative">
+                            <div className="task-input-wrapper">
+                                <input
+                                    type="text"
+                                    placeholder="Add a new task..."
+                                    className="task-input"
+                                    value={newTaskText}
+                                    onChange={(e) => setNewTaskText(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            console.log("Adding task with category:", newTaskCategory);
+                                            handleAddTask(newTaskText, newTaskCategory || 'uncategorized');
+                                            // Optional: Keep category selected for rapid entry
+                                            // setNewTaskCategory(''); 
+                                        }
+                                    }}
+                                />
+                                <div className="flex items-center gap-2 pr-2">
+                                    <select
+                                        className="bg-transparent text-xs text-gray-400 border-none outline-none cursor-pointer hover:text-white max-w-[100px] truncate"
+                                        onChange={(e) => {
+                                            console.log("Category selected:", e.target.value);
+                                            setNewTaskCategory(e.target.value);
+                                        }}
+                                        value={newTaskCategory}
+                                    >
+                                        <option value="">No Link</option>
+                                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                    <button
+                                        className="fab-btn"
+                                        onClick={() => {
+                                            console.log("Adding task via button with category:", newTaskCategory);
+                                            handleAddTask(newTaskText, newTaskCategory || 'uncategorized');
+                                            // setNewTaskCategory('');
+                                        }}
+                                    >
+                                        <PlusIcon className="w-6 h-6" />
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
+                    </>
+                )}
             </div>
-
-
 
             {/* Modals */}
             <DayTypeManager
