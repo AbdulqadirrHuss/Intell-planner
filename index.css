@@ -6,12 +6,12 @@
    DESIGN TOKENS
 ═══════════════════════════════════════════════ */
 :root {
-    /* Layered dark zinc palette — clear depth hierarchy */
-    --bg-base:    #18181b;   /* Zinc-900  — page canvas         */
-    --bg-surface: #27272a;   /* Zinc-800  — primary cards        */
-    --bg-raised:  #3f3f46;   /* Zinc-700  — elevated / hover     */
-    --bg-input:   #1f1f23;   /* Input fields                     */
-    --bg-overlay: #2a2a30;   /* Panels / overlays                */
+    /* Deep indigo palette — warm, alive, not dreary */
+    --bg-base:    #0f0e17;   /* Deep indigo canvas               */
+    --bg-surface: #191728;   /* Card surface                     */
+    --bg-raised:  #231f38;   /* Elevated / hover                 */
+    --bg-input:   #141221;   /* Input fields                     */
+    --bg-overlay: #1c1a2e;   /* Panels / overlays                */
 
     /* Accent */
     --accent:       #8b5cf6;                      /* Violet-500 */
@@ -841,3 +841,158 @@ h1 { letter-spacing: -0.02em; }
 }
 .tile-btn-create:hover { background: var(--accent-hover); box-shadow: 0 4px 12px var(--accent-glow); }
 .tile-btn-create:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+
+/* ═══════════════════════════════════════════════
+   TASK CARDS — tracked task + subtask structure
+═══════════════════════════════════════════════ */
+.tracked-tasks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* ── Task card ── */
+.tracked-task-card {
+    background: var(--bg-raised);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    min-height: 48px;
+    overflow: hidden;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.tracked-task-card:hover {
+    border-color: var(--border-mid);
+    box-shadow: var(--shadow-sm);
+}
+.tracked-task-card.done {
+    opacity: 0.5;
+    border-color: var(--border-subtle);
+}
+
+/* ── Task header row ── */
+.tracked-task-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    min-height: 48px;
+    width: 100%;
+}
+.tracked-task-header:hover .tracked-task-check { color: var(--accent); }
+
+/* ── Task checkbox ── */
+.tracked-task-check {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    color: rgba(255, 255, 255, 0.25);
+    transition: color 0.15s, transform 0.15s;
+}
+.tracked-task-check.checked {
+    color: var(--accent);
+}
+.tracked-task-check:hover { transform: scale(1.1); }
+
+/* ── Task text ── */
+.tracked-task-text {
+    flex: 1;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    min-width: 0;
+}
+.tracked-task-text.clamp {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.tracked-task-text.done {
+    text-decoration: line-through;
+    color: var(--text-faint);
+}
+
+/* ── Task subtask counter ── */
+.tracked-task-meta {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-faint);
+    flex-shrink: 0;
+    min-width: 28px;
+    text-align: right;
+}
+
+/* ── Subtask list inside card ── */
+.tracked-subtask-list {
+    border-top: 1px solid var(--border-subtle);
+    background: rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    padding: 4px 6px;
+}
+
+/* ── Subtask row ── */
+.tracked-subtask-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    transition: background 0.13s;
+}
+.tracked-subtask-item:hover { background: rgba(255, 255, 255, 0.06); }
+.tracked-subtask-item.done { opacity: 0.55; }
+
+/* ── Subtask checkbox ── */
+.tracked-sub-check {
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+    color: rgba(255, 255, 255, 0.22);
+    transition: color 0.15s;
+}
+.tracked-sub-check.checked { color: var(--accent); }
+
+/* ── Subtask text ── */
+.tracked-sub-text {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.tracked-sub-text.done {
+    text-decoration: line-through;
+    color: var(--text-faint);
+}
+
+/* ── "X done" toggle pill ── */
+.completed-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 9999px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    background: var(--bg-overlay);
+    color: var(--text-faint);
+    border: 1px solid var(--border-subtle);
+    transition: all 0.15s;
+    cursor: pointer;
+}
+.completed-toggle-btn:hover {
+    background: var(--bg-raised);
+    color: var(--text-secondary);
+    border-color: var(--border-soft);
+}
+.completed-toggle-btn.active {
+    background: var(--accent-soft);
+    color: #c4b5fd;
+    border-color: rgba(139, 92, 246, 0.35);
+}

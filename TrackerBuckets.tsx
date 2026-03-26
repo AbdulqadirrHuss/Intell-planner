@@ -61,56 +61,73 @@ interface Props {
     onToggleSubtask: (subtaskId: string, parentTaskId: string, currentStatus: boolean, isRecurring: boolean) => void;
 }
 
-interface TrackedRenderItem {
+interface TrackedSubtask {
     id: string;
     text: string;
     completed: boolean;
-    type: 'task' | 'subtask';
+    isRecurring: boolean;
+    parentTaskId: string;
+}
+
+interface TrackedTask {
+    id: string;
+    text: string;
+    completed: boolean;
+    isRecurring: boolean;
     color: string;
     categoryId: string;
     categoryName: string;
-    parentTaskId?: string;
-    isRecurring: boolean;
+    subtasks: TrackedSubtask[];
 }
 
-function getTrackedItemsForToday(bucket: TrackerBucket, categories: Category[], todayTasks: Task[]): TrackedRenderItem[] {
-    const items: TrackedRenderItem[] = [];
-    
+interface CategoryGroup {
+    categoryId: string;
+    categoryName: string;
+    color: string;
+    tasks: TrackedTask[];
+}
+
+function getTrackedGroups(bucket: TrackerBucket, categories: Category[], todayTasks: Task[]): CategoryGroup[] {
+    const groupMap = new Map<string, CategoryGroup>();
+
+    const addTask = (task: TrackedTask) => {
+        if (!groupMap.has(task.categoryId)) {
+            groupMap.set(task.categoryId, { categoryId: task.categoryId, categoryName: task.categoryName, color: task.color, tasks: [] });
+        }
+        groupMap.get(task.categoryId)!.tasks.push(task);
+    };
+
     todayTasks.forEach(t => {
         const cat = categories.find(c => c.id === t.categoryId);
         const color = cat?.color || bucket.color || '#8b5cf6';
-        
-        const isCatTracked = bucket.categoryIds && bucket.categoryIds.includes(t.categoryId);
-        const isTaskTracked = bucket.taskTexts && bucket.taskTexts.includes(t.text);
-        
         const categoryId = cat?.id || 'uncategorized';
         const categoryName = cat?.name || 'Uncategorized';
+        const isCatTracked = !!(bucket.categoryIds?.includes(t.categoryId));
+        const isTaskTracked = !!(bucket.taskTexts?.includes(t.text));
 
         if (isCatTracked || isTaskTracked) {
-            if (t.subtasks && t.subtasks.length > 0) {
-                t.subtasks.forEach(st => {
-                    items.push({ id: st.id, text: st.text, completed: st.completed, type: 'subtask', color, categoryId, categoryName, parentTaskId: t.id, isRecurring: st.isRecurring });
-                });
-            } else {
-                items.push({ id: t.id, text: t.text, completed: t.completed, type: 'task', color, categoryId, categoryName, isRecurring: t.isRecurring });
-            }
-        } else {
-            if (t.subtasks && t.subtasks.length > 0) {
-                t.subtasks.forEach(st => {
-                    if (bucket.subtaskTexts && bucket.subtaskTexts.includes(st.text)) {
-                        items.push({ id: st.id, text: st.text, completed: st.completed, type: 'subtask', color, categoryId, categoryName, parentTaskId: t.id, isRecurring: st.isRecurring });
-                    }
+            addTask({ id: t.id, text: t.text, completed: t.completed, isRecurring: t.isRecurring, color, categoryId, categoryName,
+                subtasks: (t.subtasks || []).map(st => ({ id: st.id, text: st.text, completed: st.completed, isRecurring: st.isRecurring, parentTaskId: t.id }))
+            });
+        } else if (t.subtasks && t.subtasks.length > 0) {
+            const tracked = t.subtasks.filter(st => bucket.subtaskTexts?.includes(st.text));
+            if (tracked.length > 0) {
+                addTask({ id: t.id, text: t.text, completed: t.completed, isRecurring: t.isRecurring, color, categoryId, categoryName,
+                    subtasks: tracked.map(st => ({ id: st.id, text: st.text, completed: st.completed, isRecurring: st.isRecurring, parentTaskId: t.id }))
                 });
             }
         }
     });
 
-    return items;
+    return Array.from(groupMap.values());
 }
 
-function calcBetterProgress(items: TrackedRenderItem[]) {
-    const total = items.length;
-    const completed = items.filter(i => i.completed).length;
+function calcProgress(groups: CategoryGroup[]) {
+    let completed = 0, total = 0;
+    groups.forEach(g => g.tasks.forEach(t => {
+        if (t.subtasks.length > 0) { t.subtasks.forEach(st => { total++; if (st.completed) completed++; }); }
+        else { total++; if (t.completed) completed++; }
+    }));
     return { completed, total, pct: total === 0 ? 0 : Math.round((completed / total) * 100) };
 }
 
@@ -185,19 +202,19 @@ function NewBucketForm({ onAdd, onCancel }: { onAdd: (name: string, color: strin
 // Expanded Panel
 // ═══════════════════════════════════════════════════════════
 function ExpandedPanel({
-    bucket, categories, trackedItems,
-    onUpdate, onDelete, 
+    bucket, categories, groups,
+    onUpdate, onDelete,
     onAddCategory, onRemoveCategory,
     onAddBucketTask, onRemoveBucketTask,
     onAddBucketSubtask, onRemoveBucketSubtask,
     onToggleTask, onToggleSubtask
 }: {
-    bucket: TrackerBucket; 
-    categories: Category[]; 
-    trackedItems: TrackedRenderItem[];
-    onUpdate: (u: Partial<TrackerBucket>) => void; 
+    bucket: TrackerBucket;
+    categories: Category[];
+    groups: CategoryGroup[];
+    onUpdate: (u: Partial<TrackerBucket>) => void;
     onDelete: () => void;
-    onAddCategory: (id: string) => void; 
+    onAddCategory: (id: string) => void;
     onRemoveCategory: (id: string) => void;
     onAddBucketTask: (bucketId: string, taskText: string) => void;
     onRemoveBucketTask: (bucketId: string, taskText: string) => void;
@@ -206,35 +223,72 @@ function ExpandedPanel({
     onToggleTask: (taskId: string, currentStatus: boolean, isRecurring: boolean) => void;
     onToggleSubtask: (subtaskId: string, parentTaskId: string, currentStatus: boolean, isRecurring: boolean) => void;
 }) {
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [editMode, setEditMode] = useState(false);
     const [editName, setEditName] = useState(bucket.name);
+    const [showCompleted, setShowCompleted] = useState(false);
+    const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
 
     const saveName = () => { if (editName.trim() && editName !== bucket.name) onUpdate({ name: editName.trim() }); setEditMode(false); };
 
-    // Group categories for settings tree
-    const bucketCats = (bucket.categoryIds || []);
-    const bucketTasks = (bucket.taskTexts || []);
-    const bucketSubtasks = (bucket.subtaskTexts || []);
+    const bucketCats = bucket.categoryIds || [];
+    const bucketTasks = bucket.taskTexts || [];
+    const bucketSubtasks = bucket.subtaskTexts || [];
+
+    const totalItems = groups.reduce((a, g) => a + g.tasks.length, 0);
+    const totalCompleted = groups.reduce((a, g) => a + g.tasks.filter(t => t.completed).length, 0);
+
+    const renderTask = (task: TrackedTask) => {
+        const isExpanded = expandedTaskId === task.id;
+        const doneSubs = task.subtasks.filter(s => s.completed).length;
+        return (
+            <div key={task.id} className={`tracked-task-card ${task.completed ? 'done' : ''}`}>
+                <div className="tracked-task-header"
+                    onClick={() => task.subtasks.length === 0
+                        ? onToggleTask(task.id, task.completed, task.isRecurring)
+                        : setExpandedTaskId(isExpanded ? null : task.id)
+                    }
+                >
+                    {task.subtasks.length === 0 && (
+                        <CheckCircleIcon className={`tracked-task-check ${task.completed ? 'checked' : ''}`} checked={task.completed} />
+                    )}
+                    <span className={`tracked-task-text ${!isExpanded ? 'clamp' : ''} ${task.completed ? 'done' : ''}`}>{task.text}</span>
+                    {task.subtasks.length > 0 && (
+                        <span className="tracked-task-meta">{doneSubs}/{task.subtasks.length}</span>
+                    )}
+                </div>
+                {task.subtasks.length > 0 && (
+                    <div className="tracked-subtask-list">
+                        {task.subtasks.map(st => (
+                            <button key={st.id} className={`tracked-subtask-item ${st.completed ? 'done' : ''}`}
+                                onClick={e => { e.stopPropagation(); onToggleSubtask(st.id, st.parentTaskId, st.completed, st.isRecurring); }}>
+                                <CheckCircleIcon className={`tracked-sub-check ${st.completed ? 'checked' : ''}`} checked={st.completed} />
+                                <span className={`tracked-sub-text ${st.completed ? 'done' : ''}`}>{st.text}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     return (
         <div className="tile-panel">
             {/* Toolbar */}
             <div className="tile-panel-toolbar">
-                <div className="tile-view-tabs">
-                    <button className={`tile-view-tab ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')} title="Grid view">
-                        <GridIcon className="w-4 h-4" />
-                    </button>
-                    <button className={`tile-view-tab ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setViewMode('list')} title="List view">
-                        <ListIcon className="w-4 h-4" />
-                    </button>
+                <div className="flex items-center gap-2">
+                    {totalCompleted > 0 && (
+                        <button className={`completed-toggle-btn ${showCompleted ? 'active' : ''}`}
+                            onClick={() => setShowCompleted(v => !v)}>
+                            {showCompleted ? '▾' : '▸'} {totalCompleted} done
+                        </button>
+                    )}
                 </div>
                 <button className={`tile-gear-btn ${editMode ? 'active' : ''}`} onClick={() => setEditMode(v => !v)} title="Settings">
                     <GearIcon className="w-4 h-4" />
                 </button>
             </div>
 
-            {/* Edit Mode Panel (Granular Selection Tree) */}
+            {/* Edit Panel */}
             {editMode && (
                 <div className="tile-edit-panel">
                     <div className="tile-edit-section">
@@ -251,28 +305,23 @@ function ExpandedPanel({
                             ))}
                         </div>
                     </div>
-                    
-                    {/* Settings Tree */}
                     <div className="tile-edit-section">
-                        <label className="tile-edit-label mb-2 block">Tracked Items (Click to link)</label>
-                        <div className="tile-granular-tree custom-scrollbar">
+                        <label className="tile-edit-label mb-2 block">Tracked Items</label>
+                        <div className="tile-granular-tree">
                             {categories.map(cat => {
                                 const isCatTracked = bucketCats.includes(cat.id);
                                 return (
                                     <div key={cat.id} className="mb-2 bg-black/20 rounded-md overflow-hidden">
                                         <div className="flex items-center justify-between p-2 hover:bg-white/5">
                                             <div className="flex items-center gap-2">
-                                                <span className="w-3 h-3 rounded-full" style={{background: cat.color}} />
+                                                <span className="w-3 h-3 rounded-full" style={{ background: cat.color }} />
                                                 <span className="text-sm font-medium text-white">{cat.name}</span>
                                             </div>
-                                            <button 
-                                                className={`text-xs px-2 py-1 rounded transition-colors ${isCatTracked ? 'bg-violet-500 text-white' : 'bg-white/10 text-gray-400 hover:text-white'}`}
-                                                onClick={() => isCatTracked ? onRemoveCategory(cat.id) : onAddCategory(cat.id)}
-                                            >
+                                            <button className={`text-xs px-2 py-1 rounded transition-colors ${isCatTracked ? 'bg-violet-500 text-white' : 'bg-white/10 text-gray-400 hover:text-white'}`}
+                                                onClick={() => isCatTracked ? onRemoveCategory(cat.id) : onAddCategory(cat.id)}>
                                                 {isCatTracked ? 'Linked' : 'Link All'}
                                             </button>
                                         </div>
-                                        
                                         {!isCatTracked && cat.recurringTasks && cat.recurringTasks.length > 0 && (
                                             <div className="pl-6 pr-2 pb-2 bg-black/40">
                                                 {cat.recurringTasks.map(rt => {
@@ -281,108 +330,74 @@ function ExpandedPanel({
                                                         <div key={rt.id} className="mt-1">
                                                             <div className="flex items-center justify-between py-1 border-b border-white/5">
                                                                 <span className="text-xs text-gray-300 truncate pr-2">↳ {rt.text}</span>
-                                                                <button 
-                                                                    className={`text-[10px] px-2 py-0.5 rounded transition-colors ${isTaskTracked ? 'bg-violet-500 text-white' : 'bg-white/5 text-gray-500 hover:text-white'}`}
-                                                                    onClick={() => isTaskTracked ? onRemoveBucketTask(bucket.id, rt.text) : onAddBucketTask(bucket.id, rt.text)}
-                                                                >
+                                                                <button className={`text-[10px] px-2 py-0.5 rounded transition-colors ${isTaskTracked ? 'bg-violet-500 text-white' : 'bg-white/5 text-gray-500 hover:text-white'}`}
+                                                                    onClick={() => isTaskTracked ? onRemoveBucketTask(bucket.id, rt.text) : onAddBucketTask(bucket.id, rt.text)}>
                                                                     {isTaskTracked ? 'Linked' : 'Link'}
                                                                 </button>
                                                             </div>
-                                                            
                                                             {!isTaskTracked && rt.subtaskTemplates && rt.subtaskTemplates.length > 0 && (
                                                                 <div className="pl-4 pb-1">
                                                                     {rt.subtaskTemplates.map(st => {
                                                                         const isSubTracked = bucketSubtasks.includes(st.text);
                                                                         return (
-                                                                             <div key={st.id} className="flex items-center justify-between py-1">
+                                                                            <div key={st.id} className="flex items-center justify-between py-1">
                                                                                 <span className="text-[11px] text-gray-500 truncate pr-2">• {st.text}</span>
-                                                                                <button 
-                                                                                    className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${isSubTracked ? 'bg-violet-500 text-white' : 'text-gray-600 border border-gray-600 hover:text-gray-300'}`}
-                                                                                    onClick={() => isSubTracked ? onRemoveBucketSubtask(bucket.id, st.text) : onAddBucketSubtask(bucket.id, st.text)}
-                                                                                >
+                                                                                <button className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${isSubTracked ? 'bg-violet-500 text-white' : 'text-gray-600 border border-gray-600 hover:text-gray-300'}`}
+                                                                                    onClick={() => isSubTracked ? onRemoveBucketSubtask(bucket.id, st.text) : onAddBucketSubtask(bucket.id, st.text)}>
                                                                                     {isSubTracked ? 'Linked' : 'Link'}
                                                                                 </button>
                                                                             </div>
-                                                                        )
+                                                                        );
                                                                     })}
                                                                 </div>
                                                             )}
                                                         </div>
-                                                    )
+                                                    );
                                                 })}
                                             </div>
                                         )}
                                     </div>
-                                )
+                                );
                             })}
                         </div>
                     </div>
-                    
                     <button className="tile-delete-btn mt-4" onClick={() => { if (confirm(`Delete "${bucket.name}"?`)) onDelete(); }}>
                         <TrashIcon className="w-3.5 h-3.5" /> Delete Dashboard
                     </button>
                 </div>
             )}
 
-            {/* Interactive Items */}
-            {!editMode && trackedItems.length === 0 && (
+            {!editMode && totalItems === 0 && (
                 <div className="tile-empty">
-                    No items tracked today. <br/> Tap <GearIcon className="w-3.5 h-3.5 inline text-gray-400" /> to link some!
+                    No items tracked today.<br />Tap <GearIcon className="w-3.5 h-3.5 inline text-gray-400" /> to link some!
                 </div>
             )}
 
-            {!editMode && trackedItems.length > 0 && (() => {
-                // Group items by category, preserving order of first appearance
-                const groups: { categoryId: string; categoryName: string; color: string; items: TrackedRenderItem[] }[] = [];
-                const seen = new Map<string, number>();
-                trackedItems.forEach(item => {
-                    if (!seen.has(item.categoryId)) {
-                        seen.set(item.categoryId, groups.length);
-                        groups.push({ categoryId: item.categoryId, categoryName: item.categoryName, color: item.color, items: [] });
-                    }
-                    groups[seen.get(item.categoryId)!].items.push(item);
-                });
-
-                return (
-                    <div className="tile-cat-groups">
-                        {groups.map((group, gi) => (
+            {!editMode && totalItems > 0 && (
+                <div className="tile-cat-groups">
+                    {groups.map(group => {
+                        const active = group.tasks.filter(t => !t.completed);
+                        const completed = group.tasks.filter(t => t.completed);
+                        const displayed = showCompleted ? group.tasks : active;
+                        if (group.tasks.length === 0) return null;
+                        return (
                             <div key={group.categoryId} className="tile-cat-group">
                                 <div className="tile-cat-group-header">
                                     <span className="tile-cat-group-dot" style={{ background: group.color }} />
                                     <span className="tile-cat-group-name">{group.categoryName}</span>
-                                    <span className="tile-cat-group-count">{group.items.filter(i => i.completed).length}/{group.items.length}</span>
+                                    <span className="tile-cat-group-count">{completed.length}/{group.tasks.length}</span>
                                 </div>
-                                <div className={viewMode === 'grid' ? "tile-cat-grid" : "tile-items-list"}>
-                                    {group.items.map(item => (
-                                        <button
-                                            key={item.id}
-                                            className={`tile-tracked-item ${viewMode} ${item.completed ? 'completed' : ''}`}
-                                            onClick={() => {
-                                                if (item.type === 'task') {
-                                                    onToggleTask(item.id, item.completed, item.isRecurring);
-                                                } else if (item.parentTaskId) {
-                                                    onToggleSubtask(item.id, item.parentTaskId, item.completed, item.isRecurring);
-                                                }
-                                            }}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <CheckCircleIcon
-                                                    className={`w-5 h-5 transition-all ${item.completed ? 'text-violet-400' : 'text-white/20'}`}
-                                                    checked={item.completed}
-                                                />
-                                                <span className={`text-sm tracking-wide text-left ${item.completed ? 'opacity-50 line-through text-gray-500' : 'text-gray-200'}`}>
-                                                    {item.text}
-                                                </span>
-                                            </div>
-                                            {viewMode === 'list' && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: item.color }} />}
-                                        </button>
-                                    ))}
+                                <div className="tracked-tasks-list">
+                                    {displayed.map(task => renderTask(task))}
+                                    {!showCompleted && active.length === 0 && (
+                                        <p className="text-xs text-center text-faint py-2 opacity-50">All done ✓</p>
+                                    )}
                                 </div>
                             </div>
-                        ))}
-                    </div>
-                );
-            })()}
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }
@@ -408,8 +423,8 @@ export default function TrackerBuckets(props: Props) {
             {/* Compact tile cards grid */}
             <div className="tile-grid">
                 {buckets.map(b => {
-                    const trackedItems = getTrackedItemsForToday(b, categories, tasks);
-                    const p = calcBetterProgress(trackedItems);
+                    const groups = getTrackedGroups(b, categories, tasks);
+                    const p = calcProgress(groups);
                     return (
                         <button key={b.id} className={`tile ${!b.collapsed ? 'expanded' : ''}`}
                             style={{ '--tile-color': b.color } as React.CSSProperties}
@@ -439,13 +454,13 @@ export default function TrackerBuckets(props: Props) {
             {/* Full-width expanded panels — outside the grid */}
             {buckets.map(b => {
                 if (b.collapsed) return null;
-                const trackedItems = getTrackedItemsForToday(b, categories, tasks);
+                const groups = getTrackedGroups(b, categories, tasks);
                 return (
                     <div key={`panel-${b.id}`} className="tile-panel-outer">
                         <ExpandedPanel
                             bucket={b}
                             categories={categories}
-                            trackedItems={trackedItems}
+                            groups={groups}
                             onUpdate={(u) => onUpdateBucket(b.id, u)}
                             onDelete={() => onDeleteBucket(b.id)}
                             onAddCategory={(catId) => onAddCategoryToBucket(b.id, catId)}
