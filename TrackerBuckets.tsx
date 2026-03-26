@@ -380,61 +380,66 @@ export default function TrackerBuckets(props: Props) {
                 <h3 className="tracker-buckets-title">Trackers</h3>
             </div>
 
-            <div className="tile-grid custom-scrollbar">
+            {/* Compact tile cards grid */}
+            <div className="tile-grid">
                 {buckets.map(b => {
                     const trackedItems = getTrackedItemsForToday(b, categories, tasks);
                     const p = calcBetterProgress(trackedItems);
-
                     return (
-                        <div key={b.id} className={`tile-wrapper ${!b.collapsed ? 'expanded' : ''}`}>
-                            <button className="tile shadow-xl" onClick={() => onToggleCollapsed(b.id)}>
-                                <div className="tile-top">
-                                    <div className="tile-icon-bg" style={{ background: `${b.color}20` }}>
-                                        <ProgressRing pct={p.pct} color={b.color} size={46} stroke={4} />
-                                    </div>
-                                    <div className="tile-info">
-                                        <span className="tile-name">{b.name}</span>
-                                        <span className="tile-count">{p.completed} / {p.total}</span>
-                                    </div>
+                        <button key={b.id} className={`tile ${!b.collapsed ? 'expanded' : ''}`}
+                            style={{ '--tile-color': b.color } as React.CSSProperties}
+                            onClick={() => onToggleCollapsed(b.id)}>
+                            <div className="tile-top">
+                                <div className="tile-icon-bg" style={{ background: `${b.color}20` }}>
+                                    <ProgressRing pct={p.pct} color={b.color} size={46} stroke={4} />
                                 </div>
-                            </button>
-
-                            {/* Expanded Panel */}
-                            <div className={`tile-panel-wrapper ${!b.collapsed ? 'open' : ''}`}>
-                                <ExpandedPanel
-                                    bucket={b}
-                                    categories={categories}
-                                    trackedItems={trackedItems}
-                                    onUpdate={(u) => onUpdateBucket(b.id, u)}
-                                    onDelete={() => onDeleteBucket(b.id)}
-                                    onAddCategory={(catId) => onAddCategoryToBucket(b.id, catId)}
-                                    onRemoveCategory={(catId) => onRemoveCategoryFromBucket(b.id, catId)}
-                                    onAddBucketTask={onAddBucketTask}
-                                    onRemoveBucketTask={onRemoveBucketTask}
-                                    onAddBucketSubtask={onAddBucketSubtask}
-                                    onRemoveBucketSubtask={onRemoveBucketSubtask}
-                                    onToggleTask={onToggleTask}
-                                    onToggleSubtask={onToggleSubtask}
-                                />
+                                <div className="tile-info">
+                                    <span className="tile-name">{b.name}</span>
+                                    <span className="tile-count">{p.completed} / {p.total}</span>
+                                </div>
                             </div>
-                        </div>
+                        </button>
                     );
                 })}
 
-                {/* Create New Button */}
-                {isCreating ? (
-                    <div className="tile-wrapper">
-                        <div className="tile-create-panel">
-                            <NewBucketForm onAdd={handleCreate} onCancel={() => setIsCreating(false)} />
-                        </div>
-                    </div>
-                ) : (
-                    <button className="tile-add-btn" onClick={() => setIsCreating(true)}>
-                        <PlusIcon className="w-6 h-6 text-gray-400 mb-1" />
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">+ New</span>
+                {/* Add New tile */}
+                {!isCreating && (
+                    <button className="tile tile-add" onClick={() => setIsCreating(true)}>
+                        <PlusIcon className="w-6 h-6 mb-1" />
+                        <span className="text-xs font-bold uppercase tracking-widest">New</span>
                     </button>
                 )}
             </div>
+
+            {/* Full-width expanded panels — outside the grid */}
+            {buckets.map(b => {
+                if (b.collapsed) return null;
+                const trackedItems = getTrackedItemsForToday(b, categories, tasks);
+                return (
+                    <div key={`panel-${b.id}`} className="tile-panel-outer">
+                        <ExpandedPanel
+                            bucket={b}
+                            categories={categories}
+                            trackedItems={trackedItems}
+                            onUpdate={(u) => onUpdateBucket(b.id, u)}
+                            onDelete={() => onDeleteBucket(b.id)}
+                            onAddCategory={(catId) => onAddCategoryToBucket(b.id, catId)}
+                            onRemoveCategory={(catId) => onRemoveCategoryFromBucket(b.id, catId)}
+                            onAddBucketTask={onAddBucketTask}
+                            onRemoveBucketTask={onRemoveBucketTask}
+                            onAddBucketSubtask={onAddBucketSubtask}
+                            onRemoveBucketSubtask={onRemoveBucketSubtask}
+                            onToggleTask={onToggleTask}
+                            onToggleSubtask={onToggleSubtask}
+                        />
+                    </div>
+                );
+            })}
+
+            {/* New bucket form */}
+            {isCreating && (
+                <NewBucketForm onAdd={handleCreate} onCancel={() => setIsCreating(false)} />
+            )}
         </div>
     );
 }
