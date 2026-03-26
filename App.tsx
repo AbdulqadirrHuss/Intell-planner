@@ -718,10 +718,10 @@ function App() {
                     <select
                         value={currentDailyLog.dayTypeId || ''}
                         onChange={(e) => handleSelectDayTypeFromDropdown(e.target.value)}
-                        className="w-full bg-gray-800 border border-white/10 text-white text-sm rounded-lg focus:ring-violet-500 focus:border-violet-500 block p-3"
+                        className="w-full bg-[#1f1f23] border border-white/10 text-white text-sm rounded-xl focus:ring-violet-500 focus:border-violet-500 block p-3 outline-none transition-colors hover:border-white/20"
                     >
-                        <option value="" disabled className="bg-gray-800 text-gray-300">Choose a day type...</option>
-                        {dayTypes.map(dt => <option key={dt.id} value={dt.id} className="bg-gray-800 text-white">{dt.name}</option>)}
+                        <option value="" disabled className="bg-[#1f1f23] text-zinc-400">Choose a day type...</option>
+                        {dayTypes.map(dt => <option key={dt.id} value={dt.id} className="bg-[#1f1f23] text-white">{dt.name}</option>)}
                     </select>
                     <p className="text-xs text-gray-500 mt-2">Applying this generates scaffold for both Planner and Task List.</p>
                 </div>
