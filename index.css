@@ -3,10 +3,10 @@
 @tailwind utilities;
 
 :root {
-    /* Ultra-Sleek, Dopamine-Driven Dark Theme */
-    --bg-primary: #09090b; /* Zinc-950 */
-    --bg-card: #18181b;    /* Zinc-900 */
-    --bg-input: #27272a;   /* Zinc-800 */
+    /* Matte Dark Theme */
+    --bg-primary: #52525b;
+    --bg-card: #606067;
+    --bg-input: #484850;
 
     --accent: #8b5cf6;
     /* Violet-500 - The purple accent */
@@ -206,38 +206,37 @@ h1 {
     justify-content: center;
     gap: 8px;
     padding: 18px 10px 14px;
-    background: rgba(39, 39, 42, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 16px;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); /* Bouncy spring */
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     position: relative;
     overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 .tile::before {
     content: '';
     position: absolute;
     inset: 0;
     background: radial-gradient(ellipse at 50% 0%, var(--tile-color, #8b5cf6) 0%, transparent 70%);
-    opacity: 0.1;
+    opacity: 0.06;
     transition: opacity 0.3s;
     pointer-events: none;
 }
 .tile:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    transform: translateY(-4px) scale(1.02);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.14);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
 }
-.tile:hover::before { opacity: 0.2; }
+.tile:hover::before { opacity: 0.12; }
 
 .tile.expanded {
     border-color: var(--tile-color, #8b5cf6);
-    box-shadow: 0 0 0 1px var(--tile-color, #8b5cf6), 0 8px 30px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 0 1px var(--tile-color, #8b5cf6), 0 8px 30px rgba(0, 0, 0, 0.3);
 }
-.tile.expanded::before { opacity: 0.25; }
+.tile.expanded::before { opacity: 0.15; }
 
 .tile-name {
     font-size: 0.78rem;

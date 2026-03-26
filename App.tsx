@@ -48,7 +48,7 @@ function App() {
 
     const [newTaskText, setNewTaskText] = useState('');
     const [newTaskCategory, setNewTaskCategory] = useState('');
-    const [isMinimalView, setIsMinimalView] = useState(false);
+    const [showFullList, setShowFullList] = useState(false);
 
     // --- DATA LOADING ---
     useEffect(() => {
@@ -487,7 +487,7 @@ function App() {
     const handleDeleteSubtask = async (subtaskId: string) => { if (!supabase) return; await supabase.from('subtasks').delete().eq('id', subtaskId); setDailyLogs(prev => { const log = prev[selectedDate] || currentDailyLog; return { ...prev, [selectedDate]: { ...log, tasks: log.tasks.map(t => ({ ...t, subtasks: t.subtasks.filter(st => st.id !== subtaskId) })) } }; }); };
     const handleUpdateSubtaskText = async (taskId: string, subtaskId: string, text: string) => { if (!supabase) return; await supabase.from('subtasks').update({ text }).eq('id', subtaskId); setDailyLogs(prev => { const log = prev[selectedDate] || currentDailyLog; return { ...prev, [selectedDate]: { ...log, tasks: log.tasks.map(t => t.id === taskId ? { ...t, subtasks: t.subtasks.map(st => st.id === subtaskId ? { ...st, text } : st) } : t) } }; }); };
     const handleToggleSubtask = async (taskId: string, subtaskId: string) => { if (!supabase) return; setDailyLogs(prev => { const log = prev[selectedDate] || currentDailyLog; const task = log.tasks.find(t => t.id === taskId); if (!task) return prev; const subtask = task.subtasks.find(st => st.id === subtaskId); if (!subtask) return prev; const newSubState = !subtask.completed; supabase!.from('subtasks').update({ completed: newSubState }).eq('id', subtaskId).then(); const newTasks = log.tasks.map(t => { if (t.id === taskId) { const newSubs = t.subtasks.map(st => st.id === subtaskId ? { ...st, completed: newSubState } : st); const allComplete = newSubs.every(st => st.completed); if (allComplete !== t.completed) supabase!.from('tasks').update({ completed: allComplete }).eq('id', taskId).then(); return { ...t, subtasks: newSubs, completed: allComplete }; } return t; }); return { ...prev, [selectedDate]: { ...log, tasks: newTasks } }; }); };
-    const handleToggleSubtaskRecurring = async (taskId: string, subtaskId: string) => { if (!supabase) return; setDailyLogs(prev => { const log = prev[selectedDate] || currentDailyLog; const task = log.tasks.find(t => t.id === taskId); if (!task) return prev; const subtask = task.subtasks.find(st => st.id === subtaskId); if (!subtask) return prev; const newRecurringState = !subtask.isRecurring; supabase!.from('subtasks').update({ is_recurring: newRecurringState }).eq('id', subtaskId).then(); if (newRecurringState && task.isRecurring) { const category = categories.find(c => c.id === task.categoryId); const recurringTask = category?.recurringTasks.find(rt => rt.text === task.text); if (recurringTask) { supabase!.from('recurring_subtask_templates').insert({ parent_template_id: recurringTask.id, text: subtask.text }).then(({ data }) => { if (data) { setCategories(prevCats => prevCats.map(cat => ({ ...cat, recurringTasks: cat.recurringTasks.map(rt => rt.id === recurringTask.id ? { ...rt, subtaskTemplates: [...rt.subtaskTemplates, { id: data.id, text: subtask.text, parentTemplateId: recurringTask.id }] } : rt) }))); } }); } } const newTasks = log.tasks.map(t => { if (t.id === taskId) { return { ...t, subtasks: t.subtasks.map(st => st.id === subtaskId ? { ...st, isRecurring: newRecurringState } : st) }; } return t; }); return { ...prev, [selectedDate]: { ...log, tasks: newTasks } }; }); };
+    const handleToggleSubtaskRecurring = async (taskId: string, subtaskId: string) => { if (!supabase) return; setDailyLogs(prev => { const log = prev[selectedDate] || currentDailyLog; const task = log.tasks.find(t => t.id === taskId); if (!task) return prev; const subtask = task.subtasks.find(st => st.id === subtaskId); if (!subtask) return prev; const newRecurringState = !subtask.isRecurring; supabase!.from('subtasks').update({ is_recurring: newRecurringState }).eq('id', subtaskId).then(); if (newRecurringState && task.isRecurring) { const category = categories.find(c => c.id === task.categoryId); const recurringTask = category?.recurringTasks.find(rt => rt.text === task.text); if (recurringTask) { supabase!.from('recurring_subtask_templates').insert({ parent_template_id: recurringTask.id, text: subtask.text }).select().single().then(({ data }) => { if (data) { setCategories(prevCats => prevCats.map(cat => ({ ...cat, recurringTasks: cat.recurringTasks.map(rt => rt.id === recurringTask.id ? { ...rt, subtaskTemplates: [...rt.subtaskTemplates, { id: data.id, text: subtask.text, parentTemplateId: recurringTask.id }] } : rt) }))); } }); } } const newTasks = log.tasks.map(t => { if (t.id === taskId) { return { ...t, subtasks: t.subtasks.map(st => st.id === subtaskId ? { ...st, isRecurring: newRecurringState } : st) }; } return t; }); return { ...prev, [selectedDate]: { ...log, tasks: newTasks } }; }); };
 
     const onUpdateRecurringTask = async (task: RecurringTaskTemplate) => {
         if (!supabase) return;
@@ -595,7 +595,7 @@ function App() {
         if (!supabase) return;
         const { data } = await supabase.from('tracker_buckets').insert({ name, mode, color, sort_order: trackerBuckets.length, collapsed: false }).select().single();
         if (data) {
-            setTrackerBuckets(prev => [...prev, { id: data.id, name: data.name, mode: data.mode, color: data.color, sort_order: data.sort_order, collapsed: data.collapsed, categoryIds: [] }]);
+            setTrackerBuckets(prev => [...prev, { id: data.id, name: data.name, mode: data.mode, color: data.color, sort_order: data.sort_order, collapsed: data.collapsed, categoryIds: [], taskTexts: [], subtaskTexts: [] }]);
         }
     };
 
@@ -662,7 +662,7 @@ function App() {
         <div className="app-container">
 
             {/* Header */}
-            <div className="app-header flex justify-between items-start">
+            <div className="app-header">
                 <div>
                     <h1 className="text-4xl font-bold text-white mb-1" style={{ letterSpacing: '-0.03em' }}>IntelliDay</h1>
                     <p className="text-gray-400 text-sm">
@@ -673,13 +673,6 @@ function App() {
                         })()}
                     </p>
                 </div>
-                <button 
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${isMinimalView ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30' : 'bg-white/5 text-gray-400 border border-white/5 hover:bg-white/10'}`}
-                  onClick={() => setIsMinimalView(!isMinimalView)}
-                >
-                  <span className={`w-2 h-2 rounded-full ${isMinimalView ? 'bg-violet-400 shadow-[0_0_8px_rgba(139,92,246,0.8)]' : 'bg-gray-500'}`} />
-                  Focus Mode
-                </button>
             </div>
 
             {/* Date Navigation Bar */}
@@ -733,7 +726,7 @@ function App() {
                     <p className="text-xs text-gray-500 mt-2">Applying this generates scaffold for both Planner and Task List.</p>
                 </div>
 
-                {/* Tracker Tiles Grid (Moved here for Focus Mode) */}
+                {/* Tracker Tiles Grid */}
                 <TrackerBuckets
                     buckets={trackerBuckets}
                     categories={categories}
@@ -752,7 +745,17 @@ function App() {
                     onToggleSubtask={handleToggleSubtask}
                 />
 
-                {!isMinimalView && (
+                {/* Toggle Master Task List */}
+                <div className="flex justify-center mt-6 mb-8">
+                    <button 
+                       onClick={() => setShowFullList(!showFullList)}
+                       className="text-xs font-bold text-gray-300 uppercase tracking-widest hover:text-white transition-colors border border-white/10 px-5 py-2.5 rounded-full bg-white/5 hover:bg-white/10 shadow-sm"
+                    >
+                       {showFullList ? 'Hide Master List' : 'View Full Master List'}
+                    </button>
+                </div>
+
+                {showFullList && (
                     <>
                         {/* Task List */}
                         <TaskList
