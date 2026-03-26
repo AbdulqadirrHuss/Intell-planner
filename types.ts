@@ -74,6 +74,16 @@ export interface StatValue {
   is_manual: boolean;
 }
 
+export interface TrackerBucket {
+  id: string;
+  name: string;
+  mode: 'daily' | 'independent';
+  color: string;
+  sort_order: number;
+  collapsed: boolean;
+  categoryIds: string[];
+}
+
 export interface DriveItem {
   id: string;
   created_at: string;

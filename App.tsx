@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Task, Category, DayType, RecurringTaskTemplate, DailyLog, Subtask, RecurringSubtaskTemplate } from './types';
+import { Task, Category, DayType, RecurringTaskTemplate, DailyLog, Subtask, RecurringSubtaskTemplate, TrackerBucket } from './types';
 import TaskList from './TaskList';
 import DayTypeManager from './DayTypeManager';
 import CategoryManager from './CategoryManager';
+import TrackerBuckets from './TrackerBuckets';
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, CalendarIcon } from './icons';
 import { createClient } from '@supabase/supabase-js';
 
@@ -39,6 +40,7 @@ function App() {
     const [dailyLogs, setDailyLogs] = useState<{ [date: string]: DailyLog }>({});
     const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
     const [uncategorizedTemplates, setUncategorizedTemplates] = useState<RecurringTaskTemplate[]>([]);
+    const [trackerBuckets, setTrackerBuckets] = useState<TrackerBucket[]>([]);
 
     const [isDayTypeManagerOpen, setDayTypeManagerOpen] = useState(false);
     const [isCategoryManagerOpen, setCategoryManagerOpen] = useState(false);
@@ -91,6 +93,22 @@ function App() {
                         return { id: dt.id, name: dt.name, categoryIds: catIds, recurringTasks: dayRecurringTasks };
                     });
                     setDayTypes(formattedDayTypes);
+                }
+
+                // Load tracker buckets
+                const { data: bucketsData } = await supabase.from('tracker_buckets').select('*').order('sort_order');
+                const { data: bucketCatsData } = await supabase.from('tracker_bucket_categories').select('*');
+                if (bucketsData) {
+                    const formattedBuckets: TrackerBucket[] = bucketsData.map((b: any) => ({
+                        id: b.id,
+                        name: b.name,
+                        mode: b.mode,
+                        color: b.color || '#8b5cf6',
+                        sort_order: b.sort_order || 0,
+                        collapsed: b.collapsed || false,
+                        categoryIds: (bucketCatsData || []).filter((bc: any) => bc.bucket_id === b.id).map((bc: any) => bc.category_id),
+                    }));
+                    setTrackerBuckets(formattedBuckets);
                 }
 
             } catch (error) { console.error("Error loading data", error); } finally { setIsDataLoaded(true); }
@@ -559,10 +577,20 @@ function App() {
     const completionPercentage = useMemo(() => {
         const tasks = currentDailyLog.tasks;
         if (tasks.length === 0) return 0;
-        // Weight by leaf units: bare task = 1 unit, each subtask = 1 unit
+
+        // Determine which category IDs are in daily-mode buckets
+        const dailyBuckets = trackerBuckets.filter(b => b.mode === 'daily');
+        const dailyCatIds = new Set(dailyBuckets.flatMap(b => b.categoryIds));
+
+        // If daily buckets exist, only count tasks in those categories.
+        // Otherwise fall back to counting all tasks (backward-compat).
+        const relevantTasks = dailyBuckets.length > 0
+            ? tasks.filter(t => dailyCatIds.has(t.categoryId))
+            : tasks;
+
         let totalUnits = 0;
         let completedUnits = 0;
-        tasks.forEach(t => {
+        relevantTasks.forEach(t => {
             if (t.subtasks && t.subtasks.length > 0) {
                 totalUnits += t.subtasks.length;
                 completedUnits += t.subtasks.filter(st => st.completed).length;
@@ -573,7 +601,7 @@ function App() {
         });
         if (totalUnits === 0) return 0;
         return Math.round((completedUnits / totalUnits) * 100);
-    }, [currentDailyLog.tasks]);
+    }, [currentDailyLog.tasks, trackerBuckets]);
 
     // --- NAVIGATION HELPERS ---
     const changeDate = (days: number) => {
@@ -583,6 +611,50 @@ function App() {
     };
 
     const goToToday = () => setSelectedDate(getTodayDateString());
+
+    // ── Tracker Bucket Handlers ──
+    const handleAddBucket = async (name: string, mode: 'daily' | 'independent', color: string) => {
+        if (!supabase) return;
+        const { data } = await supabase.from('tracker_buckets').insert({ name, mode, color, sort_order: trackerBuckets.length, collapsed: false }).select().single();
+        if (data) {
+            setTrackerBuckets(prev => [...prev, { id: data.id, name: data.name, mode: data.mode, color: data.color, sort_order: data.sort_order, collapsed: data.collapsed, categoryIds: [] }]);
+        }
+    };
+
+    const handleUpdateBucket = async (id: string, updates: Partial<TrackerBucket>) => {
+        if (!supabase) return;
+        const dbUpdates: any = {};
+        if (updates.name !== undefined) dbUpdates.name = updates.name;
+        if (updates.mode !== undefined) dbUpdates.mode = updates.mode;
+        if (updates.color !== undefined) dbUpdates.color = updates.color;
+        if (updates.collapsed !== undefined) dbUpdates.collapsed = updates.collapsed;
+        await supabase.from('tracker_buckets').update(dbUpdates).eq('id', id);
+        setTrackerBuckets(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
+    };
+
+    const handleDeleteBucket = async (id: string) => {
+        if (!supabase) return;
+        await supabase.from('tracker_buckets').delete().eq('id', id);
+        setTrackerBuckets(prev => prev.filter(b => b.id !== id));
+    };
+
+    const handleToggleBucketCollapsed = (id: string) => {
+        const bucket = trackerBuckets.find(b => b.id === id);
+        if (!bucket) return;
+        handleUpdateBucket(id, { collapsed: !bucket.collapsed });
+    };
+
+    const handleAddCategoryToBucket = async (bucketId: string, categoryId: string) => {
+        if (!supabase) return;
+        await supabase.from('tracker_bucket_categories').insert({ bucket_id: bucketId, category_id: categoryId });
+        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, categoryIds: [...b.categoryIds, categoryId] } : b));
+    };
+
+    const handleRemoveCategoryFromBucket = async (bucketId: string, categoryId: string) => {
+        if (!supabase) return;
+        await supabase.from('tracker_bucket_categories').delete().eq('bucket_id', bucketId).eq('category_id', categoryId);
+        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, categoryIds: b.categoryIds.filter(id => id !== categoryId) } : b));
+    };
 
     return (
         <div className="app-container">
@@ -724,6 +796,19 @@ function App() {
                     </div>
                 </div>
             </div>
+
+            {/* Tracker Buckets */}
+            <TrackerBuckets
+                buckets={trackerBuckets}
+                categories={categories}
+                tasks={currentDailyLog.tasks}
+                onAddBucket={handleAddBucket}
+                onUpdateBucket={handleUpdateBucket}
+                onDeleteBucket={handleDeleteBucket}
+                onToggleCollapsed={handleToggleBucketCollapsed}
+                onAddCategoryToBucket={handleAddCategoryToBucket}
+                onRemoveCategoryFromBucket={handleRemoveCategoryFromBucket}
+            />
 
             {/* Modals */}
             <DayTypeManager
