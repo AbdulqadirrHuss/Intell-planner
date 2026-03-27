@@ -225,7 +225,8 @@ function ExpandedPanel({
 }) {
     const [editMode, setEditMode] = useState(false);
     const [editName, setEditName] = useState(bucket.name);
-    const [showCompleted, setShowCompleted] = useState(false);
+    const [viewMode, setViewMode] = useState<'box' | 'list'>('box');
+    const [expandedCompletedGroups, setExpandedCompletedGroups] = useState<Set<string>>(new Set());
     const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
 
     const saveName = () => { if (editName.trim() && editName !== bucket.name) onUpdate({ name: editName.trim() }); setEditMode(false); };
@@ -234,8 +235,17 @@ function ExpandedPanel({
     const bucketTasks = bucket.taskTexts || [];
     const bucketSubtasks = bucket.subtaskTexts || [];
 
+    const p = calcProgress(groups);
     const totalItems = groups.reduce((a, g) => a + g.tasks.length, 0);
-    const totalCompleted = groups.reduce((a, g) => a + g.tasks.filter(t => t.completed).length, 0);
+
+    const toggleCompletedGroup = (catId: string) => {
+        setExpandedCompletedGroups(prev => {
+            const next = new Set(prev);
+            if (next.has(catId)) next.delete(catId);
+            else next.add(catId);
+            return next;
+        });
+    };
 
     const renderTask = (task: TrackedTask) => {
         const isExpanded = expandedTaskId === task.id;
@@ -272,23 +282,37 @@ function ExpandedPanel({
     };
 
     return (
-        <div className="tile-panel">
-            {/* Toolbar */}
+        <div className="tile-panel" style={{ '--panel-color': bucket.color } as React.CSSProperties}>
+
+            {/* ── Panel header: frames the panel with name + big total % ── */}
+            {!editMode && (
+                <div className="panel-bucket-header">
+                    <ProgressRing pct={p.pct} color={bucket.color} size={76} stroke={6} />
+                    <div className="panel-bucket-info">
+                        <h2 className="panel-bucket-name">{bucket.name}</h2>
+                        <p className="panel-bucket-stats">{p.completed} of {p.total} complete</p>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Toolbar: view toggle + gear ── */}
             <div className="tile-panel-toolbar">
-                <div className="flex items-center gap-2">
-                    {totalCompleted > 0 && (
-                        <button className={`completed-toggle-btn ${showCompleted ? 'active' : ''}`}
-                            onClick={() => setShowCompleted(v => !v)}>
-                            {showCompleted ? '▾' : '▸'} {totalCompleted} done
-                        </button>
-                    )}
+                <div className="tile-view-tabs">
+                    <button className={`tile-view-tab ${viewMode === 'box' ? 'active' : ''}`}
+                        onClick={() => setViewMode('box')} title="Box view">
+                        <GridIcon className="w-3.5 h-3.5" />
+                    </button>
+                    <button className={`tile-view-tab ${viewMode === 'list' ? 'active' : ''}`}
+                        onClick={() => setViewMode('list')} title="List view">
+                        <ListIcon className="w-3.5 h-3.5" />
+                    </button>
                 </div>
                 <button className={`tile-gear-btn ${editMode ? 'active' : ''}`} onClick={() => setEditMode(v => !v)} title="Settings">
                     <GearIcon className="w-4 h-4" />
                 </button>
             </div>
 
-            {/* Edit Panel */}
+            {/* ── Edit Panel ── */}
             {editMode && (
                 <div className="tile-edit-panel">
                     <div className="tile-edit-section">
@@ -369,16 +393,17 @@ function ExpandedPanel({
 
             {!editMode && totalItems === 0 && (
                 <div className="tile-empty">
-                    No items tracked today.<br />Tap <GearIcon className="w-3.5 h-3.5 inline text-gray-400" /> to link some!
+                    No items tracked today.<br />Tap <GearIcon className="w-3.5 h-3.5 inline" style={{ color: 'var(--text-faint)' }} /> to link some!
                 </div>
             )}
 
+            {/* ── Category groups ── */}
             {!editMode && totalItems > 0 && (
                 <div className="tile-cat-groups">
                     {groups.map(group => {
                         const active = group.tasks.filter(t => !t.completed);
                         const completed = group.tasks.filter(t => t.completed);
-                        const displayed = showCompleted ? group.tasks : active;
+                        const showCompleted = expandedCompletedGroups.has(group.categoryId);
                         if (group.tasks.length === 0) return null;
                         return (
                             <div key={group.categoryId} className="tile-cat-group">
@@ -387,12 +412,25 @@ function ExpandedPanel({
                                     <span className="tile-cat-group-name">{group.categoryName}</span>
                                     <span className="tile-cat-group-count">{completed.length}/{group.tasks.length}</span>
                                 </div>
-                                <div className="tracked-tasks-list">
-                                    {displayed.map(task => renderTask(task))}
-                                    {!showCompleted && active.length === 0 && (
-                                        <p className="text-xs text-center text-faint py-2 opacity-50">All done ✓</p>
+                                {/* Active tasks */}
+                                <div className={`tracked-tasks-list ${viewMode === 'list' ? 'list-view' : ''}`}>
+                                    {active.map(task => renderTask(task))}
+                                    {active.length === 0 && !showCompleted && (
+                                        <p className="all-done-msg">All done ✓</p>
                                     )}
                                 </div>
+                                {/* Per-section completed toggle */}
+                                {completed.length > 0 && (
+                                    <button className={`completed-toggle-btn ${showCompleted ? 'active' : ''}`}
+                                        onClick={() => toggleCompletedGroup(group.categoryId)}>
+                                        {showCompleted ? '▾' : '▸'} {completed.length} done
+                                    </button>
+                                )}
+                                {showCompleted && (
+                                    <div className={`tracked-tasks-list ${viewMode === 'list' ? 'list-view' : ''}`} style={{ marginTop: '6px' }}>
+                                        {completed.map(task => renderTask(task))}
+                                    </div>
+                                )}
                             </div>
                         );
                     })}
@@ -431,11 +469,21 @@ export default function TrackerBuckets(props: Props) {
                             onClick={() => onToggleCollapsed(b.id)}>
                             <div className="tile-top">
                                 <div className="tile-icon-bg" style={{ background: `${b.color}20` }}>
-                                    <ProgressRing pct={p.pct} color={b.color} size={46} stroke={4} />
+                                    <ProgressRing pct={p.pct} color={b.color} size={62} stroke={5} />
                                 </div>
                                 <div className="tile-info">
                                     <span className="tile-name">{b.name}</span>
                                     <span className="tile-count">{p.completed} / {p.total}</span>
+                                    {groups.length > 0 && (
+                                        <div className="tile-cat-chips">
+                                            {groups.slice(0, 4).map(g => (
+                                                <span key={g.categoryId} className="tile-cat-chip"
+                                                    style={{ background: g.color + '28', color: g.color }}>
+                                                    {g.categoryName}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </button>

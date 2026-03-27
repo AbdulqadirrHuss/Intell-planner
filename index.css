@@ -250,7 +250,7 @@ h1 { letter-spacing: -0.02em; }
     flex-direction: row;
     align-items: center;
     gap: 0;
-    padding: 14px 16px;
+    padding: 18px 20px;
     background: var(--bg-surface);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-lg);
@@ -262,6 +262,7 @@ h1 { letter-spacing: -0.02em; }
     text-align: left;
     min-width: 0;
     width: 100%;
+    min-height: 100px;
 }
 
 /* ── Tile inner layout elements ── */
@@ -274,9 +275,9 @@ h1 { letter-spacing: -0.02em; }
 }
 
 .tile-icon-bg {
-    width: 54px;
-    height: 54px;
-    border-radius: 14px;
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -336,15 +337,31 @@ h1 { letter-spacing: -0.02em; }
 .tile.expanded::before { opacity: 0.18; }
 
 .tile-name {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    text-align: center;
+    font-size: 0.93rem;
+    font-weight: 700;
+    color: var(--text-primary);
     line-height: 1.25;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* ── Category chips on tile ── */
+.tile-cat-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+}
+.tile-cat-chip {
+    font-size: 0.62rem;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    text-transform: uppercase;
 }
 .tile-fraction {
     font-size: 0.68rem;
@@ -995,4 +1012,103 @@ h1 { letter-spacing: -0.02em; }
     background: var(--accent-soft);
     color: #c4b5fd;
     border-color: rgba(139, 92, 246, 0.35);
+}
+
+/* ═══════════════════════════════════════════════
+   PANEL BUCKET HEADER — frames the open panel
+═══════════════════════════════════════════════ */
+.tile-panel {
+    border-left: 3px solid var(--panel-color, var(--accent));
+}
+
+.panel-bucket-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 18px 20px 18px;
+    margin: -18px -20px 18px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.04), transparent);
+    border-bottom: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
+.panel-bucket-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.panel-bucket-name {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.panel-bucket-stats {
+    font-size: 0.83rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* ── "All done" message ── */
+.all-done-msg {
+    font-size: 0.78rem;
+    text-align: center;
+    color: var(--text-faint);
+    padding: 8px 0 4px;
+    opacity: 0.6;
+}
+
+/* ═══════════════════════════════════════════════
+   LIST VIEW — flat compact rows (no card borders)
+═══════════════════════════════════════════════ */
+.tracked-tasks-list.list-view {
+    gap: 0;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.tracked-tasks-list.list-view .tracked-task-card {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border-subtle);
+    border-radius: 0;
+    min-height: 42px;
+}
+.tracked-tasks-list.list-view .tracked-task-card:last-child {
+    border-bottom: none;
+}
+.tracked-tasks-list.list-view .tracked-task-card.done {
+    opacity: 0.45;
+}
+.tracked-tasks-list.list-view .tracked-task-header {
+    padding: 9px 12px;
+    min-height: 42px;
+}
+.tracked-tasks-list.list-view .tracked-task-check {
+    width: 18px;
+    height: 18px;
+}
+.tracked-tasks-list.list-view .tracked-subtask-list {
+    background: transparent;
+    border-top: none;
+    padding: 0 12px 8px 42px;
+}
+.tracked-tasks-list.list-view .tracked-subtask-item {
+    padding: 4px 6px;
+    border-radius: 4px;
+}
+.tracked-tasks-list.list-view .tracked-sub-check {
+    width: 14px;
+    height: 14px;
+}
+.tracked-tasks-list.list-view .tracked-sub-text {
+    font-size: 0.79rem;
 }
