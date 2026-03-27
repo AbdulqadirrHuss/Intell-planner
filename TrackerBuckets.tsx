@@ -335,26 +335,26 @@ function ExpandedPanel({
                             {categories.map(cat => {
                                 const isCatTracked = bucketCats.includes(cat.id);
                                 return (
-                                    <div key={cat.id} className="mb-2 bg-black/20 rounded-md overflow-hidden">
-                                        <div className="flex items-center justify-between p-2 hover:bg-white/5">
+                                    <div key={cat.id} className="mb-2 bg-gray-50 rounded-md overflow-hidden border border-gray-100">
+                                        <div className="flex items-center justify-between p-2 hover:bg-gray-100">
                                             <div className="flex items-center gap-2">
                                                 <span className="w-3 h-3 rounded-full" style={{ background: cat.color }} />
-                                                <span className="text-sm font-medium text-white">{cat.name}</span>
+                                                <span className="text-sm font-medium text-gray-800">{cat.name}</span>
                                             </div>
-                                            <button className={`text-xs px-2 py-1 rounded transition-colors ${isCatTracked ? 'bg-violet-500 text-white' : 'bg-white/10 text-gray-400 hover:text-white'}`}
+                                            <button className={`text-xs px-2 py-1 rounded transition-colors ${isCatTracked ? 'bg-violet-600 text-white' : 'bg-gray-200 text-gray-500 hover:text-gray-800'}`}
                                                 onClick={() => isCatTracked ? onRemoveCategory(cat.id) : onAddCategory(cat.id)}>
                                                 {isCatTracked ? 'Linked' : 'Link All'}
                                             </button>
                                         </div>
                                         {!isCatTracked && cat.recurringTasks && cat.recurringTasks.length > 0 && (
-                                            <div className="pl-6 pr-2 pb-2 bg-black/40">
+                                            <div className="pl-6 pr-2 pb-2 bg-gray-100/80">
                                                 {cat.recurringTasks.map(rt => {
                                                     const isTaskTracked = bucketTasks.includes(rt.text);
                                                     return (
                                                         <div key={rt.id} className="mt-1">
-                                                            <div className="flex items-center justify-between py-1 border-b border-white/5">
-                                                                <span className="text-xs text-gray-300 truncate pr-2">↳ {rt.text}</span>
-                                                                <button className={`text-[10px] px-2 py-0.5 rounded transition-colors ${isTaskTracked ? 'bg-violet-500 text-white' : 'bg-white/5 text-gray-500 hover:text-white'}`}
+                                                            <div className="flex items-center justify-between py-1 border-b border-gray-200">
+                                                                <span className="text-xs text-gray-600 truncate pr-2">↳ {rt.text}</span>
+                                                                <button className={`text-[10px] px-2 py-0.5 rounded transition-colors ${isTaskTracked ? 'bg-violet-600 text-white' : 'bg-gray-200 text-gray-500 hover:text-gray-800'}`}
                                                                     onClick={() => isTaskTracked ? onRemoveBucketTask(bucket.id, rt.text) : onAddBucketTask(bucket.id, rt.text)}>
                                                                     {isTaskTracked ? 'Linked' : 'Link'}
                                                                 </button>
@@ -366,7 +366,7 @@ function ExpandedPanel({
                                                                         return (
                                                                             <div key={st.id} className="flex items-center justify-between py-1">
                                                                                 <span className="text-[11px] text-gray-500 truncate pr-2">• {st.text}</span>
-                                                                                <button className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${isSubTracked ? 'bg-violet-500 text-white' : 'text-gray-600 border border-gray-600 hover:text-gray-300'}`}
+                                                                                <button className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${isSubTracked ? 'bg-violet-600 text-white' : 'text-gray-500 border border-gray-300 hover:text-gray-700'}`}
                                                                                     onClick={() => isSubTracked ? onRemoveBucketSubtask(bucket.id, st.text) : onAddBucketSubtask(bucket.id, st.text)}>
                                                                                     {isSubTracked ? 'Linked' : 'Link'}
                                                                                 </button>
