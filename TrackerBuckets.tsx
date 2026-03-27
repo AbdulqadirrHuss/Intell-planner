@@ -252,18 +252,19 @@ function ExpandedPanel({
         const doneSubs = task.subtasks.filter(s => s.completed).length;
         return (
             <div key={task.id} className={`tracked-task-card ${task.completed ? 'done' : ''}`}>
-                <div className="tracked-task-header"
-                    onClick={() => task.subtasks.length === 0
-                        ? onToggleTask(task.id, task.completed, task.isRecurring)
-                        : setExpandedTaskId(isExpanded ? null : task.id)
-                    }
-                >
-                    {task.subtasks.length === 0 && (
-                        <CheckCircleIcon className={`tracked-task-check ${task.completed ? 'checked' : ''}`} checked={task.completed} />
-                    )}
-                    <span className={`tracked-task-text ${!isExpanded ? 'clamp' : ''} ${task.completed ? 'done' : ''}`}>{task.text}</span>
+                <div className="tracked-task-header">
+                    <CheckCircleIcon
+                        className={`tracked-task-check ${task.completed ? 'checked' : ''}`}
+                        checked={task.completed}
+                        onClick={e => { e.stopPropagation(); onToggleTask(task.id, task.completed, task.isRecurring); }}
+                    />
+                    <span
+                        className={`tracked-task-text ${!isExpanded ? 'clamp' : ''} ${task.completed ? 'done' : ''}`}
+                        onClick={() => task.subtasks.length > 0 ? setExpandedTaskId(isExpanded ? null : task.id) : onToggleTask(task.id, task.completed, task.isRecurring)}
+                        style={{ cursor: 'pointer' }}
+                    >{task.text}</span>
                     {task.subtasks.length > 0 && (
-                        <span className="tracked-task-meta">{doneSubs}/{task.subtasks.length}</span>
+                        <span className="tracked-task-meta" onClick={() => setExpandedTaskId(isExpanded ? null : task.id)} style={{ cursor: 'pointer' }}>{doneSubs}/{task.subtasks.length}</span>
                     )}
                 </div>
                 {task.subtasks.length > 0 && (

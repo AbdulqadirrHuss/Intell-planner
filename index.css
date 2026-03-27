@@ -918,7 +918,9 @@ h1 { letter-spacing: -0.02em; }
     flex-shrink: 0;
     color: rgba(255, 255, 255, 0.3);
     transition: color 0.15s, transform 0.15s;
+    cursor: pointer;
 }
+.tracked-task-check:hover { color: var(--accent) !important; transform: scale(1.15); }
 .tracked-task-check.checked {
     color: var(--accent);
 }
