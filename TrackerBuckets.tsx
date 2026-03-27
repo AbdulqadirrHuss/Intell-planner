@@ -341,7 +341,7 @@ function ExpandedPanel({
                                                 <span className="w-3 h-3 rounded-full" style={{ background: cat.color }} />
                                                 <span className="text-sm font-medium text-gray-800">{cat.name}</span>
                                             </div>
-                                            <button className={`text-xs px-2 py-1 rounded transition-colors ${isCatTracked ? 'bg-sky-500 text-white' : 'bg-gray-200 text-gray-500 hover:text-gray-800'}`}
+                                            <button className={`text-xs px-2 py-1 rounded transition-colors ${isCatTracked ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500 hover:text-gray-800'}`}
                                                 onClick={() => isCatTracked ? onRemoveCategory(cat.id) : onAddCategory(cat.id)}>
                                                 {isCatTracked ? 'Linked' : 'Link All'}
                                             </button>
@@ -354,7 +354,7 @@ function ExpandedPanel({
                                                         <div key={rt.id} className="mt-1">
                                                             <div className="flex items-center justify-between py-1 border-b border-gray-200">
                                                                 <span className="text-xs text-gray-600 truncate pr-2">↳ {rt.text}</span>
-                                                                <button className={`text-[10px] px-2 py-0.5 rounded transition-colors ${isTaskTracked ? 'bg-sky-500 text-white' : 'bg-gray-200 text-gray-500 hover:text-gray-800'}`}
+                                                                <button className={`text-[10px] px-2 py-0.5 rounded transition-colors ${isTaskTracked ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500 hover:text-gray-800'}`}
                                                                     onClick={() => isTaskTracked ? onRemoveBucketTask(bucket.id, rt.text) : onAddBucketTask(bucket.id, rt.text)}>
                                                                     {isTaskTracked ? 'Linked' : 'Link'}
                                                                 </button>
@@ -366,7 +366,7 @@ function ExpandedPanel({
                                                                         return (
                                                                             <div key={st.id} className="flex items-center justify-between py-1">
                                                                                 <span className="text-[11px] text-gray-500 truncate pr-2">• {st.text}</span>
-                                                                                <button className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${isSubTracked ? 'bg-sky-500 text-white' : 'text-gray-500 border border-gray-300 hover:text-gray-700'}`}
+                                                                                <button className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${isSubTracked ? 'bg-blue-600 text-white' : 'text-gray-500 border border-gray-300 hover:text-gray-700'}`}
                                                                                     onClick={() => isSubTracked ? onRemoveBucketSubtask(bucket.id, st.text) : onAddBucketSubtask(bucket.id, st.text)}>
                                                                                     {isSubTracked ? 'Linked' : 'Link'}
                                                                                 </button>
