@@ -6,34 +6,38 @@
    DESIGN TOKENS
 ═══════════════════════════════════════════════ */
 :root {
-    /* Deep indigo palette — warm, alive, not dreary */
-    --bg-base:    #0f0e17;   /* Deep indigo canvas               */
-    --bg-surface: #191728;   /* Card surface                     */
-    --bg-raised:  #231f38;   /* Elevated / hover                 */
-    --bg-input:   #141221;   /* Input fields                     */
-    --bg-overlay: #1c1a2e;   /* Panels / overlays                */
+    /* ── Warm midnight palette — deep but alive, not cold ── */
+    --bg-base:    #0e0b16;   /* Warm plum-black canvas           */
+    --bg-surface: #16122a;   /* Card surface — warm dark purple  */
+    --bg-raised:  #1f1b36;   /* Elevated / hover                 */
+    --bg-input:   #120f20;   /* Input fields                     */
+    --bg-overlay: #1a172e;   /* Panels / overlays                */
 
-    /* Accent */
-    --accent:       #8b5cf6;                      /* Violet-500 */
-    --accent-hover: #7c3aed;
-    --accent-soft:  rgba(139, 92, 246, 0.18);
-    --accent-glow:  rgba(139, 92, 246, 0.35);
+    /* Accent — bright warm violet, energising */
+    --accent:       #a78bfa;                      /* Violet-400 — lighter, warmer */
+    --accent-hover: #9164f7;
+    --accent-soft:  rgba(167, 139, 250, 0.15);
+    --accent-glow:  rgba(167, 139, 250, 0.45);
 
-    /* Text */
-    --text-primary:   #f4f4f5;  /* Zinc-100 */
-    --text-secondary: #d4d4d8;  /* Zinc-300 */
-    --text-muted:     #a1a1aa;  /* Zinc-400 */
-    --text-faint:     #71717a;  /* Zinc-500 */
+    /* Warm highlight — amber, used for special moments */
+    --warm:         #f59e0b;
+    --warm-glow:    rgba(245, 158, 11, 0.3);
 
-    /* Borders */
-    --border-subtle: rgba(255, 255, 255, 0.06);
-    --border-soft:   rgba(255, 255, 255, 0.10);
-    --border-mid:    rgba(255, 255, 255, 0.15);
+    /* Text — warm off-whites with a lavender tint, not cold zinc */
+    --text-primary:   #f0eaff;  /* Warm white-violet            */
+    --text-secondary: #c9bdf0;  /* Warm lavender                */
+    --text-muted:     #9b8ec4;  /* Muted purple                 */
+    --text-faint:     #6b5f8a;  /* Faint purple                 */
+
+    /* Borders — warm purple tinted */
+    --border-subtle: rgba(167, 139, 250, 0.08);
+    --border-soft:   rgba(167, 139, 250, 0.14);
+    --border-mid:    rgba(167, 139, 250, 0.25);
 
     /* Shadows */
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
-    --shadow-md: 0 4px 12px rgba(0,0,0,0.45), 0 2px 4px rgba(0,0,0,0.3);
-    --shadow-lg: 0 8px 28px rgba(0,0,0,0.5), 0 4px 10px rgba(0,0,0,0.35);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.3);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.55), 0 4px 12px rgba(0,0,0,0.35);
 
     /* Radii */
     --radius-sm:  8px;
@@ -50,6 +54,10 @@
 
 body {
     background-color: var(--bg-base);
+    background-image:
+        radial-gradient(ellipse at 20% 0%, rgba(120, 60, 230, 0.22) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 5%, rgba(167, 139, 250, 0.08) 0%, transparent 40%),
+        radial-gradient(ellipse at 70% 95%, rgba(245, 158, 11, 0.05) 0%, transparent 45%);
     color: var(--text-primary);
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     overflow-x: hidden;
@@ -151,7 +159,7 @@ h1 { letter-spacing: -0.02em; }
     position: absolute;
     top: 0; left: 16px; right: 16px;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+    background: linear-gradient(90deg, transparent, rgba(167, 139, 250, 0.3), transparent);
     border-radius: 1px;
     pointer-events: none;
 }
@@ -317,8 +325,8 @@ h1 { letter-spacing: -0.02em; }
     position: absolute;
     top: 0; left: 16px; right: 16px;
     height: 1px;
-    background: linear-gradient(90deg, transparent, var(--tile-color, rgba(255,255,255,0.2)), transparent);
-    opacity: 0.5;
+    background: linear-gradient(90deg, transparent, var(--tile-color, rgba(167,139,250,0.5)), transparent);
+    opacity: 0.6;
     pointer-events: none;
 }
 .tile:hover {
@@ -331,10 +339,12 @@ h1 { letter-spacing: -0.02em; }
 
 .tile.expanded {
     border-color: var(--tile-color, var(--accent));
-    box-shadow: 0 0 0 1px var(--tile-color, var(--accent)), var(--shadow-lg);
+    box-shadow: 0 0 0 1px var(--tile-color, var(--accent)),
+                0 0 24px rgba(167, 139, 250, 0.15),
+                var(--shadow-lg);
     background: var(--bg-raised);
 }
-.tile.expanded::before { opacity: 0.18; }
+.tile.expanded::before { opacity: 0.22; }
 
 .tile-name {
     font-size: 0.93rem;
@@ -393,7 +403,7 @@ h1 { letter-spacing: -0.02em; }
 
 /* ── Ring ── */
 .tile-ring text { font-family: 'Inter', system-ui, sans-serif; }
-.drop-shadow-glow { filter: drop-shadow(0 0 6px currentColor); }
+.drop-shadow-glow { filter: drop-shadow(0 0 8px currentColor) drop-shadow(0 0 3px currentColor); }
 
 /* ═══════════════════════════════════════════════
    EXPANDED PANEL (Accordion)
@@ -1025,10 +1035,13 @@ h1 { letter-spacing: -0.02em; }
     display: flex;
     align-items: center;
     gap: 20px;
-    padding: 18px 20px 18px;
-    margin: -18px -20px 18px;
-    background: linear-gradient(135deg, rgba(255,255,255,0.04), transparent);
-    border-bottom: 1px solid var(--border-subtle);
+    padding: 20px 22px 20px;
+    margin: -18px -20px 20px;
+    background: linear-gradient(135deg,
+        rgba(167, 139, 250, 0.1) 0%,
+        rgba(167, 139, 250, 0.04) 50%,
+        transparent 100%);
+    border-bottom: 1px solid var(--border-soft);
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 }
 
@@ -1042,7 +1055,10 @@ h1 { letter-spacing: -0.02em; }
 .panel-bucket-name {
     font-size: 1.3rem;
     font-weight: 800;
-    color: var(--text-primary);
+    background: linear-gradient(90deg, #f0eaff 0%, #c4b5fd 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     letter-spacing: -0.025em;
     line-height: 1.2;
     overflow: hidden;
