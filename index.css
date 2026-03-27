@@ -6,43 +6,42 @@
    DESIGN TOKENS
 ═══════════════════════════════════════════════ */
 :root {
-    /* ── Clean sky blue — crisp, clear, focused ── */
-    --bg-base:    #f4f6f8;   /* Neutral grey-white, zero tint    */
-    --bg-surface: #ffffff;   /* Pure white cards                 */
-    --bg-raised:  #edf1f5;   /* Light grey for hover/raised      */
-    --bg-input:   #f8fafc;   /* Inputs                           */
-    --bg-overlay: #eef2f7;   /* Overlays                         */
+    /* ── #264FFF blue world — vivid blue bg, orange accent ── */
+    --bg-base:    #1332e8;   /* Deep rich blue canvas            */
+    --bg-surface: #264fff;   /* #264FFF — user's colour as cards */
+    --bg-raised:  #3a62ff;   /* Lighter blue for hover/raised    */
+    --bg-input:   #0f28d4;   /* Deep input background            */
+    --bg-overlay: #1d3ef5;   /* Overlay panels                   */
 
-    /* Primary accent — electric royal blue */
-    --accent:       #264fff;
-    --accent-hover: #1a3de8;
-    --accent-soft:  rgba(38, 79, 255, 0.1);
-    --accent-glow:  rgba(38, 79, 255, 0.22);
+    /* Primary accent — coral-orange (pops on blue) */
+    --accent:       #ff6b2b;
+    --accent-hover: #f05a18;
+    --accent-soft:  rgba(255, 107, 43, 0.18);
+    --accent-glow:  rgba(255, 107, 43, 0.35);
 
-    /* Secondary accent — vivid coral-orange (complementary) */
-    --secondary:      #ff6b2b;
-    --secondary-soft: rgba(255, 107, 43, 0.1);
-    --secondary-glow: rgba(255, 107, 43, 0.22);
+    /* Secondary — bright white-blue for subtle highlights */
+    --secondary:      #7da8ff;
+    --secondary-soft: rgba(125, 168, 255, 0.15);
+    --secondary-glow: rgba(125, 168, 255, 0.25);
 
-    /* Warm alias kept for compat */
     --warm:      #ff6b2b;
-    --warm-glow: rgba(255, 107, 43, 0.2);
+    --warm-glow: rgba(255, 107, 43, 0.3);
 
-    /* Text — slate tones, crisp and readable */
-    --text-primary:   #0f172a;  /* Slate-900                    */
-    --text-secondary: #334155;  /* Slate-700                    */
-    --text-muted:     #64748b;  /* Slate-500                    */
-    --text-faint:     #94a3b8;  /* Slate-400                    */
+    /* Text — white on blue */
+    --text-primary:   #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.82);
+    --text-muted:     rgba(255, 255, 255, 0.55);
+    --text-faint:     rgba(255, 255, 255, 0.35);
 
-    /* Borders */
-    --border-subtle: rgba(0, 0, 0, 0.05);
-    --border-soft:   rgba(0, 0, 0, 0.09);
-    --border-mid:    rgba(0, 0, 0, 0.14);
+    /* Borders — white overlays on blue */
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-soft:   rgba(255, 255, 255, 0.14);
+    --border-mid:    rgba(255, 255, 255, 0.24);
 
     /* Shadows */
-    --shadow-sm: 0 1px 4px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
-    --shadow-md: 0 4px 14px rgba(0,0,0,0.09), 0 2px 4px rgba(0,0,0,0.05);
-    --shadow-lg: 0 8px 28px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.07);
+    --shadow-sm: 0 1px 4px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.15);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.15);
+    --shadow-lg: 0 8px 30px rgba(0,0,0,0.32), 0 4px 10px rgba(0,0,0,0.2);
 
     /* Radii */
     --radius-sm:  8px;
@@ -60,8 +59,8 @@
 body {
     background-color: var(--bg-base);
     background-image:
-        radial-gradient(ellipse at 10% 0%, rgba(38, 79, 255, 0.09) 0%, transparent 50%),
-        radial-gradient(ellipse at 88% 98%, rgba(255, 107, 43, 0.07) 0%, transparent 45%);
+        radial-gradient(ellipse at 0% 0%, rgba(255, 255, 255, 0.12) 0%, transparent 55%),
+        radial-gradient(ellipse at 100% 100%, rgba(255, 107, 43, 0.18) 0%, transparent 50%);
     color: var(--text-primary);
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     overflow-x: hidden;
@@ -74,10 +73,10 @@ h1 { letter-spacing: -0.02em; }
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-    background: rgba(0,0,0,0.15);
+    background: rgba(255,255,255,0.2);
     border-radius: 4px;
 }
-::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.35); }
 
 /* ═══════════════════════════════════════════════
    LAYOUT
@@ -163,7 +162,7 @@ h1 { letter-spacing: -0.02em; }
     position: absolute;
     top: 0; left: 16px; right: 16px;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(38, 79, 255, 0.2), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
     border-radius: 1px;
     pointer-events: none;
 }
@@ -329,7 +328,7 @@ h1 { letter-spacing: -0.02em; }
     position: absolute;
     top: 0; left: 16px; right: 16px;
     height: 1px;
-    background: linear-gradient(90deg, transparent, var(--tile-color, rgba(14,165,233,0.35)), transparent);
+    background: linear-gradient(90deg, transparent, var(--tile-color, rgba(255,255,255,0.25)), transparent);
     opacity: 0.7;
     pointer-events: none;
 }
@@ -917,7 +916,7 @@ h1 { letter-spacing: -0.02em; }
     width: 22px;
     height: 22px;
     flex-shrink: 0;
-    color: rgba(0, 0, 0, 0.2);
+    color: rgba(255, 255, 255, 0.3);
     transition: color 0.15s, transform 0.15s;
 }
 .tracked-task-check.checked {
@@ -982,7 +981,7 @@ h1 { letter-spacing: -0.02em; }
     width: 17px;
     height: 17px;
     flex-shrink: 0;
-    color: rgba(0, 0, 0, 0.18);
+    color: rgba(255, 255, 255, 0.25);
     transition: color 0.15s;
 }
 .tracked-sub-check.checked { color: var(--accent); }
@@ -1042,8 +1041,8 @@ h1 { letter-spacing: -0.02em; }
     padding: 20px 22px 20px;
     margin: -18px -20px 20px;
     background: linear-gradient(135deg,
-        rgba(38, 79, 255, 0.08) 0%,
-        rgba(38, 79, 255, 0.02) 60%,
+        rgba(255, 255, 255, 0.08) 0%,
+        rgba(255, 255, 255, 0.02) 60%,
         transparent 100%);
     border-bottom: 1px solid var(--border-soft);
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
@@ -1059,7 +1058,7 @@ h1 { letter-spacing: -0.02em; }
 .panel-bucket-name {
     font-size: 1.3rem;
     font-weight: 800;
-    background: linear-gradient(90deg, #0f172a 0%, #264fff 100%);
+    background: linear-gradient(90deg, #ffffff 0%, #ff6b2b 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
