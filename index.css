@@ -27,11 +27,11 @@
     --warm:      #ff6b2b;
     --warm-glow: rgba(255, 107, 43, 0.3);
 
-    /* Text — white on blue */
+    /* Text — white on blue, high contrast */
     --text-primary:   #ffffff;
-    --text-secondary: rgba(255, 255, 255, 0.82);
-    --text-muted:     rgba(255, 255, 255, 0.55);
-    --text-faint:     rgba(255, 255, 255, 0.35);
+    --text-secondary: rgba(255, 255, 255, 0.95);
+    --text-muted:     rgba(255, 255, 255, 0.75);
+    --text-faint:     rgba(255, 255, 255, 0.52);
 
     /* Borders — white overlays on blue */
     --border-subtle: rgba(255, 255, 255, 0.08);
@@ -787,7 +787,7 @@ h1 { letter-spacing: -0.02em; }
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--text-muted);
+    color: var(--text-primary);
     flex: 1;
 }
 
@@ -927,8 +927,9 @@ h1 { letter-spacing: -0.02em; }
 /* ── Task text ── */
 .tracked-task-text {
     flex: 1;
-    font-size: 0.88rem;
-    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
     line-height: 1.4;
     min-width: 0;
 }
@@ -988,8 +989,9 @@ h1 { letter-spacing: -0.02em; }
 
 /* ── Subtask text ── */
 .tracked-sub-text {
-    font-size: 0.82rem;
-    color: var(--text-muted);
+    font-size: 0.84rem;
+    font-weight: 500;
+    color: var(--text-secondary);
     flex: 1;
     min-width: 0;
     overflow: hidden;
