@@ -1,7 +1,7 @@
 #!/bin/bash
 # Smart git push — auto-detects the correct local proxy port if it has rotated.
 REPO="AbdulqadirrHuss/Intell-planner"
-BRANCH="master"
+BRANCH="main"
 
 push_with_port() {
     local port=$1
