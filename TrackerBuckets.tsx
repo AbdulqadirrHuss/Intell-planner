@@ -225,7 +225,7 @@ function ExpandedPanel({
 }) {
     const [editMode, setEditMode] = useState(false);
     const [editName, setEditName] = useState(bucket.name);
-    const [viewMode, setViewMode] = useState<'box' | 'list'>('box');
+    const [viewMode, setViewMode] = useState<'box' | 'list'>('list');
     const [expandedCompletedGroups, setExpandedCompletedGroups] = useState<Set<string>>(new Set());
     const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
 
@@ -472,15 +472,16 @@ export default function TrackerBuckets(props: Props) {
                             style={{ '--tile-color': b.color } as React.CSSProperties}
                             onClick={() => onToggleCollapsed(b.id)}>
                             <div className="tile-top">
-                                <div className="tile-icon-bg" style={{ background: `${b.color}20` }}>
-                                    <ProgressRing pct={p.pct} color={b.color} size={62} stroke={5} />
+                                <div className="tile-icon-bg" style={{ background: `${b.color}22` }}>
+                                    <ProgressRing pct={p.pct} color={b.color} size={38} stroke={4} />
                                 </div>
                                 <div className="tile-info">
                                     <span className="tile-name">{b.name}</span>
-                                    <span className="tile-count">{p.completed} / {p.total}</span>
+                                    <span className="tile-big-stat">{p.pct}%</span>
+                                    <span className="tile-count">{p.completed} of {p.total} done</span>
                                     {groups.length > 0 && (
                                         <div className="tile-cat-chips">
-                                            {groups.slice(0, 4).map(g => (
+                                            {groups.slice(0, 3).map(g => (
                                                 <span key={g.categoryId} className="tile-cat-chip"
                                                     style={{ background: g.color + '28', color: g.color }}>
                                                     {g.categoryName}

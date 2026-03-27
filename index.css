@@ -6,37 +6,37 @@
    DESIGN TOKENS
 ═══════════════════════════════════════════════ */
 :root {
-    /* ── #264FFF blue world — vivid blue bg, orange accent ── */
-    --bg-base:    #1332e8;   /* Deep rich blue canvas            */
-    --bg-surface: #264fff;   /* #264FFF — user's colour as cards */
-    --bg-raised:  #3a62ff;   /* Lighter blue for hover/raised    */
-    --bg-input:   #0f28d4;   /* Deep input background            */
-    --bg-overlay: #1d3ef5;   /* Overlay panels                   */
+    /* ── Warm dark purple — brighter, energetic, motivating ── */
+    --bg-base:    #13102b;   /* Deep warm purple-black canvas    */
+    --bg-surface: #1e1a3a;   /* Slightly lighter purple surface  */
+    --bg-raised:  #2a2550;   /* Raised elements                  */
+    --bg-input:   #0f0d22;   /* Deep input background            */
+    --bg-overlay: #171430;   /* Overlay panels                   */
 
-    /* Primary accent — coral-orange (pops on blue) */
-    --accent:       #ff6b2b;
-    --accent-hover: #f05a18;
-    --accent-soft:  rgba(255, 107, 43, 0.18);
-    --accent-glow:  rgba(255, 107, 43, 0.35);
+    /* Primary accent — vivid electric violet (energetic, motivating) */
+    --accent:       #a855f7;
+    --accent-hover: #9333ea;
+    --accent-soft:  rgba(168, 85, 247, 0.18);
+    --accent-glow:  rgba(168, 85, 247, 0.40);
 
-    /* Secondary — bright white-blue for subtle highlights */
-    --secondary:      #7da8ff;
-    --secondary-soft: rgba(125, 168, 255, 0.15);
-    --secondary-glow: rgba(125, 168, 255, 0.25);
+    /* Secondary — warm gold/amber (pairs beautifully with purple) */
+    --secondary:      #f59e0b;
+    --secondary-soft: rgba(245, 158, 11, 0.15);
+    --secondary-glow: rgba(245, 158, 11, 0.30);
 
-    --warm:      #ff6b2b;
-    --warm-glow: rgba(255, 107, 43, 0.3);
+    --warm:      #f59e0b;
+    --warm-glow: rgba(245, 158, 11, 0.3);
 
-    /* Text — white on blue, high contrast */
+    /* Text — crisp white, max contrast on dark purple */
     --text-primary:   #ffffff;
-    --text-secondary: rgba(255, 255, 255, 0.95);
-    --text-muted:     rgba(255, 255, 255, 0.75);
-    --text-faint:     rgba(255, 255, 255, 0.52);
+    --text-secondary: rgba(255, 255, 255, 0.92);
+    --text-muted:     rgba(255, 255, 255, 0.72);
+    --text-faint:     rgba(255, 255, 255, 0.48);
 
-    /* Borders — white overlays on blue */
-    --border-subtle: rgba(255, 255, 255, 0.08);
-    --border-soft:   rgba(255, 255, 255, 0.14);
-    --border-mid:    rgba(255, 255, 255, 0.24);
+    /* Borders — purple-tinted overlays */
+    --border-subtle: rgba(168, 85, 247, 0.10);
+    --border-soft:   rgba(168, 85, 247, 0.18);
+    --border-mid:    rgba(168, 85, 247, 0.32);
 
     /* Shadows */
     --shadow-sm: 0 1px 4px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.15);
@@ -59,8 +59,8 @@
 body {
     background-color: var(--bg-base);
     background-image:
-        radial-gradient(ellipse at 0% 0%, rgba(255, 255, 255, 0.12) 0%, transparent 55%),
-        radial-gradient(ellipse at 100% 100%, rgba(255, 107, 43, 0.18) 0%, transparent 50%);
+        radial-gradient(ellipse at 0% 0%, rgba(168, 85, 247, 0.20) 0%, transparent 55%),
+        radial-gradient(ellipse at 100% 100%, rgba(245, 158, 11, 0.12) 0%, transparent 50%);
     color: var(--text-primary);
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     overflow-x: hidden;
@@ -250,45 +250,47 @@ h1 { letter-spacing: -0.02em; }
 
 .tile-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 14px;
     margin-bottom: 4px;
 }
 
-/* ── Tile card — horizontal layout (icon left, info right) ── */
+/* ── Tile card — vertical dashboard-style layout ── */
 .tile {
     display: flex;
-    flex-direction: row;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
     gap: 0;
-    padding: 18px 20px;
+    padding: 0;
     background: var(--bg-surface);
     border: 1px solid var(--border-soft);
+    border-top: 3px solid var(--tile-color, var(--accent));
     border-radius: var(--radius-lg);
     cursor: pointer;
     transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-md);
     text-align: left;
     min-width: 0;
     width: 100%;
-    min-height: 100px;
+    min-height: 165px;
 }
 
 /* ── Tile inner layout elements ── */
 .tile-top {
     display: flex;
-    align-items: center;
-    gap: 14px;
+    flex-direction: column;
+    gap: 10px;
     width: 100%;
+    padding: 20px 20px 16px;
     min-width: 0;
 }
 
 .tile-icon-bg {
-    width: 72px;
-    height: 72px;
-    border-radius: 16px;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -298,15 +300,17 @@ h1 { letter-spacing: -0.02em; }
 .tile-info {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px;
     flex: 1;
     min-width: 0;
+    width: 100%;
 }
 
 .tile-count {
     font-size: 0.72rem;
-    color: var(--text-faint);
+    color: var(--text-muted);
     font-weight: 500;
+    letter-spacing: 0.02em;
 }
 
 /* ── Full-width expanded panel below the tiles grid ── */
@@ -318,20 +322,12 @@ h1 { letter-spacing: -0.02em; }
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse at 50% 0%, var(--tile-color, #8b5cf6) 0%, transparent 68%);
-    opacity: 0.07;
+    background: radial-gradient(ellipse at 50% 0%, var(--tile-color, #a855f7) 0%, transparent 65%);
+    opacity: 0.06;
     transition: opacity 0.3s;
     pointer-events: none;
 }
-.tile::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 16px; right: 16px;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--tile-color, rgba(255,255,255,0.25)), transparent);
-    opacity: 0.7;
-    pointer-events: none;
-}
+.tile::after { display: none; }
 .tile:hover {
     border-color: var(--border-mid);
     transform: translateY(-3px);
@@ -350,14 +346,25 @@ h1 { letter-spacing: -0.02em; }
 .tile.expanded::before { opacity: 0.22; }
 
 .tile-name {
-    font-size: 0.93rem;
+    font-size: 0.68rem;
     font-weight: 700;
-    color: var(--text-primary);
-    line-height: 1.25;
+    color: var(--text-muted);
+    line-height: 1.2;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+}
+
+/* ── Big percentage/stat display on tile ── */
+.tile-big-stat {
+    font-size: 2.6rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--tile-color, var(--accent));
+    letter-spacing: -0.03em;
 }
 
 /* ── Category chips on tile ── */
@@ -388,18 +395,20 @@ h1 { letter-spacing: -0.02em; }
     align-items: center;
     justify-content: center;
     border-style: dashed;
+    border-top-style: dashed;
     border-color: var(--border-subtle);
     color: var(--text-faint);
     gap: 4px;
     box-shadow: none;
     background: transparent;
-    min-height: 82px;
+    min-height: 100px;
+    padding: 20px;
 }
 .tile.tile-add::before,
 .tile.tile-add::after { display: none; }
 .tile.tile-add:hover {
-    border-color: rgba(139, 92, 246, 0.45);
-    color: #c4b5fd;
+    border-color: rgba(168, 85, 247, 0.45);
+    color: #d8b4fe;
     background: var(--accent-soft);
     transform: translateY(-2px);
 }
@@ -1062,7 +1071,7 @@ h1 { letter-spacing: -0.02em; }
 .panel-bucket-name {
     font-size: 1.3rem;
     font-weight: 800;
-    background: linear-gradient(90deg, #ffffff 0%, #ff6b2b 100%);
+    background: linear-gradient(90deg, #ffffff 0%, #a855f7 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
