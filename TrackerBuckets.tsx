@@ -225,7 +225,7 @@ function ExpandedPanel({
 }) {
     const [editMode, setEditMode] = useState(false);
     const [editName, setEditName] = useState(bucket.name);
-    const [viewMode, setViewMode] = useState<'box' | 'list'>('list');
+    const [viewMode, setViewMode] = useState<'box' | 'list'>('box');
     const [expandedCompletedGroups, setExpandedCompletedGroups] = useState<Set<string>>(new Set());
     const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
 
@@ -401,8 +401,54 @@ function ExpandedPanel({
                 </div>
             )}
 
-            {/* ── Category groups ── */}
-            {!editMode && totalItems > 0 && (
+            {/* ── Category groups: BOX grid view ── */}
+            {!editMode && totalItems > 0 && viewMode === 'box' && (
+                <div className="cat-box-grid">
+                    {groups.map(group => {
+                        const done = group.tasks.filter(t => t.completed).length;
+                        const pct = group.tasks.length ? Math.round((done / group.tasks.length) * 100) : 0;
+                        const active = group.tasks.filter(t => !t.completed);
+                        const completed = group.tasks.filter(t => t.completed);
+                        const showCompleted = expandedCompletedGroups.has(group.categoryId);
+                        if (group.tasks.length === 0) return null;
+                        return (
+                            <div key={group.categoryId} className="cat-box-card"
+                                style={{ '--cat-color': group.color } as React.CSSProperties}>
+                                <div className="cat-box-header">
+                                    <span className="cat-box-name">{group.categoryName}</span>
+                                    <div className="cat-box-stats">
+                                        <span className="cat-box-pct">{pct}%</span>
+                                        <span className="cat-box-fraction">{done}/{group.tasks.length}</span>
+                                    </div>
+                                </div>
+                                <div className="cat-box-bar">
+                                    <div className="cat-box-bar-fill" style={{ width: `${pct}%`, background: group.color }} />
+                                </div>
+                                <div className="cat-box-tasks">
+                                    {active.map(task => renderTask(task))}
+                                    {active.length === 0 && !showCompleted && (
+                                        <p className="all-done-msg">All done ✓</p>
+                                    )}
+                                </div>
+                                {completed.length > 0 && (
+                                    <button className={`completed-toggle-btn ${showCompleted ? 'active' : ''}`}
+                                        onClick={() => toggleCompletedGroup(group.categoryId)}>
+                                        {showCompleted ? '▾' : '▸'} {completed.length} done
+                                    </button>
+                                )}
+                                {showCompleted && (
+                                    <div className="cat-box-tasks" style={{ marginTop: '6px' }}>
+                                        {completed.map(task => renderTask(task))}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* ── Category groups: LIST view ── */}
+            {!editMode && totalItems > 0 && viewMode === 'list' && (
                 <div className="tile-cat-groups">
                     {groups.map(group => {
                         const active = group.tasks.filter(t => !t.completed);
@@ -416,14 +462,12 @@ function ExpandedPanel({
                                     <span className="tile-cat-group-name">{group.categoryName}</span>
                                     <span className="tile-cat-group-count">{completed.length}/{group.tasks.length}</span>
                                 </div>
-                                {/* Active tasks */}
-                                <div className={`tracked-tasks-list ${viewMode === 'list' ? 'list-view' : ''}`}>
+                                <div className="tracked-tasks-list list-view">
                                     {active.map(task => renderTask(task))}
                                     {active.length === 0 && !showCompleted && (
                                         <p className="all-done-msg">All done ✓</p>
                                     )}
                                 </div>
-                                {/* Per-section completed toggle */}
                                 {completed.length > 0 && (
                                     <button className={`completed-toggle-btn ${showCompleted ? 'active' : ''}`}
                                         onClick={() => toggleCompletedGroup(group.categoryId)}>
@@ -431,7 +475,7 @@ function ExpandedPanel({
                                     </button>
                                 )}
                                 {showCompleted && (
-                                    <div className={`tracked-tasks-list ${viewMode === 'list' ? 'list-view' : ''}`} style={{ marginTop: '6px' }}>
+                                    <div className="tracked-tasks-list list-view" style={{ marginTop: '6px' }}>
                                         {completed.map(task => renderTask(task))}
                                     </div>
                                 )}
