@@ -199,11 +199,11 @@ function NewBucketForm({ onAdd, onCancel }: { onAdd: (name: string, color: strin
 
 
 // ═══════════════════════════════════════════════════════════
-// Expanded Panel
+// Bucket Detail View  (replaces tile grid on click)
 // ═══════════════════════════════════════════════════════════
-function ExpandedPanel({
+function BucketDetailView({
     bucket, categories, groups,
-    onUpdate, onDelete,
+    onBack, onUpdate, onDelete,
     onAddCategory, onRemoveCategory,
     onAddBucketTask, onRemoveBucketTask,
     onAddBucketSubtask, onRemoveBucketSubtask,
@@ -212,6 +212,7 @@ function ExpandedPanel({
     bucket: TrackerBucket;
     categories: Category[];
     groups: CategoryGroup[];
+    onBack: () => void;
     onUpdate: (u: Partial<TrackerBucket>) => void;
     onDelete: () => void;
     onAddCategory: (id: string) => void;
@@ -225,7 +226,6 @@ function ExpandedPanel({
 }) {
     const [editMode, setEditMode] = useState(false);
     const [editName, setEditName] = useState(bucket.name);
-    const [viewMode, setViewMode] = useState<'box' | 'list'>('box');
     const [expandedCompletedGroups, setExpandedCompletedGroups] = useState<Set<string>>(new Set());
     const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
 
@@ -283,30 +283,22 @@ function ExpandedPanel({
     };
 
     return (
-        <div className="tile-panel" style={{ '--panel-color': bucket.color } as React.CSSProperties}>
+        <div className="bucket-detail-view">
 
-            {/* ── Panel header: frames the panel with name + big total % ── */}
-            {!editMode && (
-                <div className="panel-bucket-header">
-                    <ProgressRing pct={p.pct} color={bucket.color} size={76} stroke={6} />
-                    <div className="panel-bucket-info">
-                        <h2 className="panel-bucket-name">{bucket.name}</h2>
-                        <p className="panel-bucket-stats">{p.completed} of {p.total} complete</p>
+            {/* ── Header: back button + name + overall progress ── */}
+            <div className="bucket-detail-header" style={{ '--panel-color': bucket.color } as React.CSSProperties}>
+                <button className="bucket-back-btn" onClick={onBack}>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" style={{width:16,height:16}}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                    </svg>
+                    Trackers
+                </button>
+                <div className="bucket-detail-title-area">
+                    <ProgressRing pct={p.pct} color={bucket.color} size={52} stroke={5} />
+                    <div>
+                        <h2 className="bucket-detail-name">{bucket.name}</h2>
+                        <p className="bucket-detail-stats">{p.completed} of {p.total} done · {p.pct}%</p>
                     </div>
-                </div>
-            )}
-
-            {/* ── Toolbar: view toggle + gear ── */}
-            <div className="tile-panel-toolbar">
-                <div className="tile-view-tabs">
-                    <button className={`tile-view-tab ${viewMode === 'box' ? 'active' : ''}`}
-                        onClick={() => setViewMode('box')} title="Box view">
-                        <GridIcon className="w-3.5 h-3.5" />
-                    </button>
-                    <button className={`tile-view-tab ${viewMode === 'list' ? 'active' : ''}`}
-                        onClick={() => setViewMode('list')} title="List view">
-                        <ListIcon className="w-3.5 h-3.5" />
-                    </button>
                 </div>
                 <button className={`tile-gear-btn ${editMode ? 'active' : ''}`} onClick={() => setEditMode(v => !v)} title="Settings">
                     <GearIcon className="w-4 h-4" />
@@ -397,12 +389,12 @@ function ExpandedPanel({
 
             {!editMode && totalItems === 0 && (
                 <div className="tile-empty">
-                    No items tracked today.<br />Tap <GearIcon className="w-3.5 h-3.5 inline" style={{ color: 'var(--text-faint)' }} /> to link some!
+                    No items tracked.<br />Tap <GearIcon className="w-3.5 h-3.5 inline" style={{ color: 'var(--text-faint)' }} /> to link categories!
                 </div>
             )}
 
-            {/* ── Category groups: BOX grid view ── */}
-            {!editMode && totalItems > 0 && viewMode === 'box' && (
+            {/* ── Category box grid ── */}
+            {!editMode && totalItems > 0 && (
                 <div className="cat-box-grid">
                     {groups.map(group => {
                         const done = group.tasks.filter(t => t.completed).length;
@@ -446,44 +438,6 @@ function ExpandedPanel({
                     })}
                 </div>
             )}
-
-            {/* ── Category groups: LIST view ── */}
-            {!editMode && totalItems > 0 && viewMode === 'list' && (
-                <div className="tile-cat-groups">
-                    {groups.map(group => {
-                        const active = group.tasks.filter(t => !t.completed);
-                        const completed = group.tasks.filter(t => t.completed);
-                        const showCompleted = expandedCompletedGroups.has(group.categoryId);
-                        if (group.tasks.length === 0) return null;
-                        return (
-                            <div key={group.categoryId} className="tile-cat-group">
-                                <div className="tile-cat-group-header">
-                                    <span className="tile-cat-group-dot" style={{ background: group.color }} />
-                                    <span className="tile-cat-group-name">{group.categoryName}</span>
-                                    <span className="tile-cat-group-count">{completed.length}/{group.tasks.length}</span>
-                                </div>
-                                <div className="tracked-tasks-list list-view">
-                                    {active.map(task => renderTask(task))}
-                                    {active.length === 0 && !showCompleted && (
-                                        <p className="all-done-msg">All done ✓</p>
-                                    )}
-                                </div>
-                                {completed.length > 0 && (
-                                    <button className={`completed-toggle-btn ${showCompleted ? 'active' : ''}`}
-                                        onClick={() => toggleCompletedGroup(group.categoryId)}>
-                                        {showCompleted ? '▾' : '▸'} {completed.length} done
-                                    </button>
-                                )}
-                                {showCompleted && (
-                                    <div className="tracked-tasks-list list-view" style={{ marginTop: '6px' }}>
-                                        {completed.map(task => renderTask(task))}
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
         </div>
     );
 }
@@ -492,29 +446,51 @@ function ExpandedPanel({
 // Main TrackerBuckets Component
 // ═══════════════════════════════════════════════════════════
 export default function TrackerBuckets(props: Props) {
-    const { buckets, categories, tasks, onAddBucket, onUpdateBucket, onDeleteBucket, onToggleCollapsed, onAddCategoryToBucket, onRemoveCategoryFromBucket, onAddBucketTask, onRemoveBucketTask, onAddBucketSubtask, onRemoveBucketSubtask, onToggleTask, onToggleSubtask } = props;
+    const { buckets, categories, tasks, onAddBucket, onUpdateBucket, onDeleteBucket, onAddCategoryToBucket, onRemoveCategoryFromBucket, onAddBucketTask, onRemoveBucketTask, onAddBucketSubtask, onRemoveBucketSubtask, onToggleTask, onToggleSubtask } = props;
     const [isCreating, setIsCreating] = useState(false);
+    const [selectedBucketId, setSelectedBucketId] = useState<string | null>(null);
 
-    const handleCreate = (name: string, color: string) => {
-        onAddBucket(name, 'independent', color);
-        setIsCreating(false);
-    };
+    // ── Drill-down: show detail view for selected bucket ──
+    if (selectedBucketId) {
+        const bucket = buckets.find(b => b.id === selectedBucketId);
+        if (bucket) {
+            const groups = getTrackedGroups(bucket, categories, tasks);
+            return (
+                <BucketDetailView
+                    bucket={bucket}
+                    categories={categories}
+                    groups={groups}
+                    onBack={() => setSelectedBucketId(null)}
+                    onUpdate={(u) => onUpdateBucket(bucket.id, u)}
+                    onDelete={() => { onDeleteBucket(bucket.id); setSelectedBucketId(null); }}
+                    onAddCategory={(catId) => onAddCategoryToBucket(bucket.id, catId)}
+                    onRemoveCategory={(catId) => onRemoveCategoryFromBucket(bucket.id, catId)}
+                    onAddBucketTask={onAddBucketTask}
+                    onRemoveBucketTask={onRemoveBucketTask}
+                    onAddBucketSubtask={onAddBucketSubtask}
+                    onRemoveBucketSubtask={onRemoveBucketSubtask}
+                    onToggleTask={onToggleTask}
+                    onToggleSubtask={onToggleSubtask}
+                />
+            );
+        }
+    }
 
+    // ── Tile grid: overview of all buckets ──
     return (
         <div className="tracker-buckets-root">
             <div className="tracker-buckets-header">
                 <h3 className="tracker-buckets-title">Trackers</h3>
             </div>
 
-            {/* Compact tile cards grid */}
             <div className="tile-grid">
                 {buckets.map(b => {
                     const groups = getTrackedGroups(b, categories, tasks);
                     const p = calcProgress(groups);
                     return (
-                        <button key={b.id} className={`tile ${!b.collapsed ? 'expanded' : ''}`}
+                        <button key={b.id} className="tile"
                             style={{ '--tile-color': b.color } as React.CSSProperties}
-                            onClick={() => onToggleCollapsed(b.id)}>
+                            onClick={() => setSelectedBucketId(b.id)}>
                             <div className="tile-top">
                                 <div className="tile-icon-bg" style={{ background: `${b.color}22` }}>
                                     <ProgressRing pct={p.pct} color={b.color} size={38} stroke={4} />
@@ -539,7 +515,6 @@ export default function TrackerBuckets(props: Props) {
                     );
                 })}
 
-                {/* Add New tile */}
                 {!isCreating && (
                     <button className="tile tile-add" onClick={() => setIsCreating(true)}>
                         <PlusIcon className="w-6 h-6 mb-1" />
@@ -548,34 +523,8 @@ export default function TrackerBuckets(props: Props) {
                 )}
             </div>
 
-            {/* Full-width expanded panels — outside the grid */}
-            {buckets.map(b => {
-                if (b.collapsed) return null;
-                const groups = getTrackedGroups(b, categories, tasks);
-                return (
-                    <div key={`panel-${b.id}`} className="tile-panel-outer">
-                        <ExpandedPanel
-                            bucket={b}
-                            categories={categories}
-                            groups={groups}
-                            onUpdate={(u) => onUpdateBucket(b.id, u)}
-                            onDelete={() => onDeleteBucket(b.id)}
-                            onAddCategory={(catId) => onAddCategoryToBucket(b.id, catId)}
-                            onRemoveCategory={(catId) => onRemoveCategoryFromBucket(b.id, catId)}
-                            onAddBucketTask={onAddBucketTask}
-                            onRemoveBucketTask={onRemoveBucketTask}
-                            onAddBucketSubtask={onAddBucketSubtask}
-                            onRemoveBucketSubtask={onRemoveBucketSubtask}
-                            onToggleTask={onToggleTask}
-                            onToggleSubtask={onToggleSubtask}
-                        />
-                    </div>
-                );
-            })}
-
-            {/* New bucket form */}
             {isCreating && (
-                <NewBucketForm onAdd={handleCreate} onCancel={() => setIsCreating(false)} />
+                <NewBucketForm onAdd={(name, color) => { onAddBucket(name, 'independent', color); setIsCreating(false); }} onCancel={() => setIsCreating(false)} />
             )}
         </div>
     );

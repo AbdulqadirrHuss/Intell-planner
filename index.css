@@ -775,8 +775,8 @@ h1 { letter-spacing: -0.02em; }
 /* ── Category box grid (box view) ── */
 .cat-box-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
 }
 
 .cat-box-card {
@@ -784,11 +784,11 @@ h1 { letter-spacing: -0.02em; }
     border: 1px solid var(--border-soft);
     border-top: 3px solid var(--cat-color, var(--accent));
     border-radius: var(--radius-lg);
-    padding: 18px 16px 14px;
+    padding: 20px 18px 16px;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    min-height: 170px;
+    min-height: 190px;
     transition: all 0.2s ease;
     box-shadow: var(--shadow-sm);
 }
@@ -1171,6 +1171,72 @@ h1 { letter-spacing: -0.02em; }
     font-size: 0.83rem;
     color: var(--text-muted);
     font-weight: 500;
+}
+
+/* ═══════════════════════════════════════════════
+   BUCKET DETAIL VIEW (drill-down from tile grid)
+═══════════════════════════════════════════════ */
+.bucket-detail-view {
+    animation: tileSlideIn 0.18s ease-out;
+}
+
+.bucket-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-xl);
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-md);
+}
+
+.bucket-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-raised);
+    border: 1px solid var(--border-soft);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+.bucket-back-btn:hover {
+    background: rgba(168, 85, 247, 0.15);
+    border-color: var(--accent);
+    color: white;
+}
+
+.bucket-detail-title-area {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
+    min-width: 0;
+}
+
+.bucket-detail-name {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bucket-detail-stats {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-top: 2px;
 }
 
 /* ── "All done" message ── */
