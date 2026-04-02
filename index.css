@@ -776,7 +776,8 @@ h1 { letter-spacing: -0.02em; }
 .cat-box-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 16px;
+    gap: 14px;
+    align-items: start;   /* cards size to their own content — no whitespace */
 }
 
 .cat-box-card {
@@ -784,11 +785,11 @@ h1 { letter-spacing: -0.02em; }
     border: 1px solid var(--border-soft);
     border-top: 3px solid var(--cat-color, var(--accent));
     border-radius: var(--radius-lg);
-    padding: 20px 18px 16px;
+    padding: 18px 16px 14px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    min-height: 190px;
+    gap: 8px;
+    /* no min-height — height is purely content-driven */
     transition: all 0.2s ease;
     box-shadow: var(--shadow-sm);
 }
@@ -980,9 +981,47 @@ h1 { letter-spacing: -0.02em; }
     background: var(--bg-raised);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-md);
-    min-height: 48px;
     overflow: hidden;
     transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+/* Inside category box cards — tighter, no double background */
+.cat-box-tasks .tracked-task-card {
+    background: rgba(255,255,255,0.04);
+    border-color: var(--border-subtle);
+}
+.cat-box-tasks .tracked-task-card.expanded {
+    border-color: var(--cat-color, var(--accent));
+    box-shadow: 0 0 0 1px rgba(168,85,247,0.12);
+}
+.cat-box-tasks .tracked-task-header {
+    padding: 8px 10px;
+    min-height: 38px;
+}
+.cat-box-tasks .tracked-task-check {
+    width: 18px;
+    height: 18px;
+}
+.cat-box-tasks .tracked-task-text {
+    font-size: 0.83rem;
+}
+.cat-box-tasks .tracked-subtask-list {
+    background: rgba(0,0,0,0.3);
+    animation: subtaskSlideIn 0.15s ease;
+}
+.cat-box-tasks .tracked-subtask-item {
+    padding: 5px 8px;
+}
+.cat-box-tasks .tracked-sub-check {
+    width: 15px;
+    height: 15px;
+}
+.cat-box-tasks .tracked-sub-text {
+    font-size: 0.78rem;
+}
+@keyframes subtaskSlideIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 .tracked-task-card:hover {
     border-color: var(--border-mid);
@@ -998,9 +1037,8 @@ h1 { letter-spacing: -0.02em; }
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 12px 14px;
+    padding: 10px 14px;
     cursor: pointer;
-    min-height: 48px;
     width: 100%;
 }
 .tracked-task-header:hover .tracked-task-check { color: var(--accent); }

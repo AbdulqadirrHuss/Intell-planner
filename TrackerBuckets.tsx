@@ -250,8 +250,9 @@ function BucketDetailView({
     const renderTask = (task: TrackedTask) => {
         const isExpanded = expandedTaskId === task.id;
         const doneSubs = task.subtasks.filter(s => s.completed).length;
+        const hasSubs = task.subtasks.length > 0;
         return (
-            <div key={task.id} className={`tracked-task-card ${task.completed ? 'done' : ''}`}>
+            <div key={task.id} className={`tracked-task-card ${task.completed ? 'done' : ''} ${isExpanded ? 'expanded' : ''}`}>
                 <div className="tracked-task-header">
                     <CheckCircleIcon
                         className={`tracked-task-check ${task.completed ? 'checked' : ''}`}
@@ -259,15 +260,19 @@ function BucketDetailView({
                         onClick={e => { e.stopPropagation(); onToggleTask(task.id, task.completed, task.isRecurring); }}
                     />
                     <span
-                        className={`tracked-task-text ${!isExpanded ? 'clamp' : ''} ${task.completed ? 'done' : ''}`}
-                        onClick={() => task.subtasks.length > 0 ? setExpandedTaskId(isExpanded ? null : task.id) : onToggleTask(task.id, task.completed, task.isRecurring)}
+                        className={`tracked-task-text ${task.completed ? 'done' : ''}`}
+                        onClick={() => hasSubs ? setExpandedTaskId(isExpanded ? null : task.id) : onToggleTask(task.id, task.completed, task.isRecurring)}
                         style={{ cursor: 'pointer' }}
                     >{task.text}</span>
-                    {task.subtasks.length > 0 && (
-                        <span className="tracked-task-meta" onClick={() => setExpandedTaskId(isExpanded ? null : task.id)} style={{ cursor: 'pointer' }}>{doneSubs}/{task.subtasks.length}</span>
+                    {hasSubs && (
+                        <span className={`tracked-task-meta ${isExpanded ? 'open' : ''}`}
+                            onClick={() => setExpandedTaskId(isExpanded ? null : task.id)}
+                            style={{ cursor: 'pointer', flexShrink: 0 }}>
+                            {doneSubs}/{task.subtasks.length} {isExpanded ? '▾' : '▸'}
+                        </span>
                     )}
                 </div>
-                {task.subtasks.length > 0 && (
+                {isExpanded && hasSubs && (
                     <div className="tracked-subtask-list">
                         {task.subtasks.map(st => (
                             <button key={st.id} className={`tracked-subtask-item ${st.completed ? 'done' : ''}`}
