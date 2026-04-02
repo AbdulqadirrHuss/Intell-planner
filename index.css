@@ -772,24 +772,22 @@ h1 { letter-spacing: -0.02em; }
 }
 
 /* ── Category groups inside expanded panel ── */
-/* ── Category box grid (box view) ── */
+/* ── Category box grid — CSS columns for true masonry fill ── */
 .cat-box-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 14px;
-    align-items: start;   /* cards size to their own content — no whitespace */
+    columns: 260px;        /* as many ~260px columns as fit */
+    column-gap: 14px;
 }
 
 .cat-box-card {
+    break-inside: avoid;   /* never split a card across columns */
+    display: block;
+    margin-bottom: 14px;
     background: var(--bg-raised);
     border: 1px solid var(--border-soft);
     border-top: 3px solid var(--cat-color, var(--accent));
     border-radius: var(--radius-lg);
     padding: 18px 16px 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    /* no min-height — height is purely content-driven */
+    /* height is purely content-driven — no min-height */
     transition: all 0.2s ease;
     box-shadow: var(--shadow-sm);
 }
@@ -842,7 +840,7 @@ h1 { letter-spacing: -0.02em; }
     background: rgba(255,255,255,0.07);
     border-radius: 2px;
     overflow: hidden;
-    flex-shrink: 0;
+    margin-top: 8px;
 }
 .cat-box-bar-fill {
     height: 100%;
@@ -854,7 +852,7 @@ h1 { letter-spacing: -0.02em; }
     display: flex;
     flex-direction: column;
     gap: 4px;
-    flex: 1;
+    margin-top: 6px;
 }
 
 /* ── Category list (list view) ── */

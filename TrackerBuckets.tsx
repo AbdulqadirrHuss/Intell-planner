@@ -58,7 +58,7 @@ interface Props {
     onRemoveBucketSubtask: (bucketId: string, subtaskText: string) => void;
 
     onToggleTask: (taskId: string, currentStatus: boolean, isRecurring: boolean) => void;
-    onToggleSubtask: (subtaskId: string, parentTaskId: string, currentStatus: boolean, isRecurring: boolean) => void;
+    onToggleSubtask: (taskId: string, subtaskId: string) => void;
 }
 
 interface TrackedSubtask {
@@ -222,7 +222,7 @@ function BucketDetailView({
     onAddBucketSubtask: (bucketId: string, subtaskText: string) => void;
     onRemoveBucketSubtask: (bucketId: string, subtaskText: string) => void;
     onToggleTask: (taskId: string, currentStatus: boolean, isRecurring: boolean) => void;
-    onToggleSubtask: (subtaskId: string, parentTaskId: string, currentStatus: boolean, isRecurring: boolean) => void;
+    onToggleSubtask: (taskId: string, subtaskId: string) => void;
 }) {
     const [editMode, setEditMode] = useState(false);
     const [editName, setEditName] = useState(bucket.name);
@@ -276,7 +276,7 @@ function BucketDetailView({
                     <div className="tracked-subtask-list">
                         {task.subtasks.map(st => (
                             <button key={st.id} className={`tracked-subtask-item ${st.completed ? 'done' : ''}`}
-                                onClick={e => { e.stopPropagation(); onToggleSubtask(st.id, st.parentTaskId, st.completed, st.isRecurring); }}>
+                                onClick={e => { e.stopPropagation(); onToggleSubtask(st.parentTaskId, st.id); }}>
                                 <CheckCircleIcon className={`tracked-sub-check ${st.completed ? 'checked' : ''}`} checked={st.completed} />
                                 <span className={`tracked-sub-text ${st.completed ? 'done' : ''}`}>{st.text}</span>
                             </button>
