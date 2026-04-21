@@ -3,25 +3,34 @@
 @tailwind utilities;
 
 :root {
-    --bg-primary: #52525b;
-    --bg-card: #606067;
-    --bg-input: #484850;
+    --bg-primary: #0f0e17;
+    --bg-surface: #1a1830;
+    --bg-raised: #231f40;
+    --bg-card: #1e1c35;
+    --bg-input: #12101f;
     --accent: #8b5cf6;
     --accent-hover: #7c3aed;
-    --accent-soft: rgba(139, 92, 246, 0.2);
+    --accent-soft: rgba(139, 92, 246, 0.15);
+    --accent-glow: rgba(139, 92, 246, 0.35);
     --text-primary: #ffffff;
     --text-secondary: #d4d4d8;
     --text-muted: #a1a1aa;
-    --border: #52525b;
+    --text-faint: rgba(255,255,255,0.45);
+    --border: rgba(255,255,255,0.08);
+    --border-soft: rgba(139,92,246,0.2);
     --radius-lg: 16px;
     --radius-xl: 24px;
 }
 
 body {
     background-color: var(--bg-primary);
+    background-image:
+        radial-gradient(ellipse at 0% 0%, rgba(139, 92, 246, 0.18) 0%, transparent 55%),
+        radial-gradient(ellipse at 100% 100%, rgba(99, 102, 241, 0.10) 0%, transparent 50%);
     color: var(--text-primary);
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
 }
 
 .app-container {
@@ -30,6 +39,204 @@ body {
     padding: 2rem;
     min-height: 100vh;
 }
+
+/* ═══════════════════════════════════════════════
+   TRACKER DETAIL PAGE (full-screen subpage)
+═══════════════════════════════════════════════ */
+.tracker-detail-page {
+    min-height: 100vh;
+    background: var(--bg-primary);
+    background-image:
+        radial-gradient(ellipse at 0% 0%, rgba(139, 92, 246, 0.18) 0%, transparent 55%),
+        radial-gradient(ellipse at 100% 100%, rgba(99, 102, 241, 0.10) 0%, transparent 50%);
+    padding: 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+    animation: pageSlideIn 0.25s ease-out;
+}
+@keyframes pageSlideIn {
+    from { opacity: 0; transform: translateX(24px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Detail Header ── */
+.td-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 2rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.td-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    color: #a1a1aa;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.18s;
+    flex-shrink: 0;
+}
+.td-back-btn:hover { background: rgba(255,255,255,0.12); color: white; }
+
+.td-ring-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.td-title-block {
+    flex: 1;
+    min-width: 0;
+}
+.td-title-block h2 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: white;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+}
+.td-title-block p {
+    font-size: 0.8rem;
+    color: #71717a;
+    margin-top: 4px;
+    font-variant-numeric: tabular-nums;
+}
+
+.td-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* ── Add Progress Bar Button (prominent) ── */
+.td-add-pb-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 18px;
+    border-radius: 10px;
+    background: var(--accent);
+    color: white;
+    font-size: 0.82rem;
+    font-weight: 700;
+    transition: all 0.18s;
+    box-shadow: 0 2px 12px var(--accent-glow);
+    letter-spacing: 0.01em;
+}
+.td-add-pb-btn:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 18px var(--accent-glow); }
+
+/* ── Sections ── */
+.td-section {
+    margin-bottom: 1.75rem;
+}
+
+.td-section-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #71717a;
+    margin-bottom: 10px;
+}
+
+/* ── Progress Bars Section (big, prominent) ── */
+.td-pb-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.td-pb-bar-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    padding: 16px 18px;
+    transition: border-color 0.2s;
+}
+.td-pb-bar-card:hover { border-color: rgba(139,92,246,0.35); }
+
+.td-pb-bar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.td-pb-bar-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.td-pb-bar-label span:first-child {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-block;
+}
+.td-pb-bar-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #e4e4e7;
+}
+
+.td-pb-bar-stat {
+    font-size: 0.8rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.td-pb-track {
+    height: 10px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 6px;
+    overflow: hidden;
+}
+.td-pb-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Add bar form ── */
+.td-add-pb-form {
+    background: var(--bg-surface);
+    border: 1px solid rgba(139,92,246,0.3);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 10px;
+    animation: tileSlideIn 0.15s ease;
+}
+
+/* ── Edit gear toggle ── */
+.td-gear-btn {
+    width: 36px; height: 36px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    color: #71717a;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    transition: all 0.18s;
+}
+.td-gear-btn:hover { color: white; background: rgba(255,255,255,0.12); }
+.td-gear-btn.active { color: var(--accent); background: rgba(139,92,246,0.15); border-color: rgba(139,92,246,0.4); }
+
+/* ── Delete btn ── */
+.td-delete-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 9px;
+    font-size: 0.78rem; font-weight: 600;
+    color: #f87171; background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.2);
+    transition: all 0.15s;
+}
+.td-delete-btn:hover { background: rgba(239,68,68,0.18); }
 
 .toggle-pill-container {
     background-color: rgba(0, 0, 0, 0.2);
