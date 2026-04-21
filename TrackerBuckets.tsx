@@ -158,6 +158,8 @@ function TrackerDetailPage({
     const [newPBColor, setNewPBColor] = useState(PALETTE[4]);
     const [activeLinkPBId, setActiveLinkPBId] = useState<string | null>(null);
     const [editingPBId, setEditingPBId] = useState<string | null>(null);
+    const [openMenuPBId, setOpenMenuPBId] = useState<string | null>(null);
+    const [compactView, setCompactView] = useState(false);
     const [expandedTasks, setExpandedTasks] = useState<string[]>([]);
 
     const { done, total, pct } = calcPctFromTasks(
@@ -259,6 +261,13 @@ function TrackerDetailPage({
                         <PlusIcon className="w-4 h-4" />
                         Add Progress Bar
                     </button>
+                    <button 
+                        className={`td-gear-btn ${compactView ? 'active' : ''}`} 
+                        onClick={() => setCompactView(v => !v)} 
+                        title={compactView ? "Normal View" : "Compact View"}
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg>
+                    </button>
                     <button className={`td-gear-btn ${editMode ? 'active' : ''}`} onClick={() => setEditMode(v => !v)} title="Settings">
                         <GearIcon className="w-4 h-4" />
                     </button>
@@ -316,53 +325,71 @@ function TrackerDetailPage({
             {/* ══════════ PROGRESS BARS ══════════ */}
             {progressBars.length > 0 && (
                 <div className="td-section">
-                    <p className="td-section-title">Progress Bars</p>
-                    <div className="td-pb-bars">
+                    <p className="td-section-title" style={{ marginBottom: 12 }}>Progress Bars</p>
+                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
                         {progressBars.map(pb => {
                             const prog = calcPctFromTasks(pb.categoryIds, pb.taskTexts, pb.subtaskTexts, categories, tasks, pb.color);
                             const isLinking = activeLinkPBId === pb.id;
                             const isEditingThis = editingPBId === pb.id;
+                            const isOpenMenu = openMenuPBId === pb.id;
+
                             return (
-                                <div key={pb.id} className="td-pb-bar-card" style={isLinking ? { borderColor: pb.color, boxShadow: `0 0 16px ${pb.color}30` } : {}}>
-                                    {/* Bar row */}
-                                    <div className="td-pb-bar-header">
-                                        <div className="td-pb-bar-label">
-                                            <span style={{ background: pb.color, boxShadow: `0 0 6px ${pb.color}` }} />
-                                            {isEditingThis
-                                                ? <PBLabelEdit pb={pb} onSave={label => { onUpdateProgressBar(bucket.id, pb.id, { label }); setEditingPBId(null); }} onCancel={() => setEditingPBId(null)} />
-                                                : <span className="td-pb-bar-name" style={{ cursor: 'pointer' }} onDoubleClick={() => setEditingPBId(pb.id)}>{pb.label}</span>
-                                            }
-                                        </div>
-                                        <span className="td-pb-bar-stat" style={{ color: pb.color }}>{prog.done}/{prog.total} · {prog.pct}%</span>
+                                <div key={pb.id} className="td-pb-mini-widget" style={{ 
+                                    display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(255,255,255,0.02)', 
+                                    padding: '8px 12px 8px 8px', borderRadius: 30, border: isLinking ? `1px solid ${pb.color}` : '1px solid rgba(255,255,255,0.05)',
+                                    boxShadow: isLinking ? `0 0 12px ${pb.color}40` : 'none', transition: 'all 0.2s', minWidth: 160
+                                }}>
+                                    <div style={{ position: 'relative', width: 34, height: 34, flexShrink: 0 }}>
+                                        <ProgressRing pct={prog.pct} color={pb.color} size={34} stroke={3.5} />
                                     </div>
-                                    <div className="td-pb-track" style={{ marginBottom: 10 }}>
-                                        <div className="td-pb-fill" style={{ width: `${prog.pct}%`, background: `linear-gradient(90deg, ${pb.color}99, ${pb.color})`, boxShadow: `0 0 10px ${pb.color}60` }} />
+                                    
+                                    <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                                        {isEditingThis ? (
+                                            <PBLabelEdit pb={pb} onSave={label => { onUpdateProgressBar(bucket.id, pb.id, { label }); setEditingPBId(null); }} onCancel={() => setEditingPBId(null)} />
+                                        ) : (
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#e4e4e7', cursor: 'pointer', whiteSpace: 'nowrap' }} onDoubleClick={() => setEditingPBId(pb.id)}>{pb.label}</span>
+                                        )}
+                                        <span style={{ fontSize: '0.65rem', color: '#a1a1aa', fontWeight: 600 }}>{prog.done}/{prog.total} items</span>
                                     </div>
-                                    {/* Bar actions */}
-                                    <div style={{ display: 'flex', gap: 8 }}>
-                                        <button
-                                            onClick={() => setActiveLinkPBId(isLinking ? null : pb.id)}
-                                            style={{
-                                                display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px',
-                                                borderRadius: 8, fontSize: '0.75rem', fontWeight: 700,
-                                                background: isLinking ? pb.color : 'rgba(255,255,255,0.06)',
-                                                color: isLinking ? 'white' : '#a1a1aa',
-                                                border: `1px solid ${isLinking ? pb.color : 'rgba(255,255,255,0.1)'}`,
-                                                transition: 'all 0.18s',
-                                            }}
+                                    
+                                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                        <button 
+                                            onClick={() => setOpenMenuPBId(isOpenMenu ? null : pb.id)}
+                                            style={{ background: 'transparent', color: '#71717a', padding: 4, transition: 'color 0.2s' }}
                                         >
-                                            <LinkIcon className="w-3.5 h-3.5" />
-                                            {isLinking ? 'Done Linking' : 'Link Items'}
+                                            <GearIcon className="w-5 h-5" />
                                         </button>
-                                        <button
-                                            onClick={() => { if (confirm(`Delete "${pb.label}"?`)) { onDeleteProgressBar(bucket.id, pb.id); if (activeLinkPBId === pb.id) setActiveLinkPBId(null); } }}
-                                            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8, fontSize: '0.75rem', color: '#71717a', border: '1px solid rgba(255,255,255,0.06)', background: 'transparent', transition: 'all 0.15s' }}
-                                            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#f87171'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(239,68,68,0.3)'; }}
-                                            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#71717a'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.06)'; }}
-                                        >
-                                            <TrashIcon className="w-3 h-3" />
-                                            Delete
-                                        </button>
+                                        
+                                        {isOpenMenu && (
+                                            <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 8, background: '#1f1f23', padding: 8, borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.1)', zIndex: 100, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 140 }}>
+                                                <button 
+                                                    onClick={() => { setActiveLinkPBId(isLinking ? null : pb.id); setOpenMenuPBId(null); }}
+                                                    style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', fontWeight: 600, color: isLinking ? pb.color : '#e4e4e7', padding: '8px 10px', borderRadius: 8, background: isLinking ? `${pb.color}20` : 'transparent', textAlign: 'left', width: '100%', transition: 'background 0.15s' }}
+                                                    onMouseEnter={e => { if(!isLinking) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+                                                    onMouseLeave={e => { if(!isLinking) e.currentTarget.style.background = 'transparent' }}
+                                                >
+                                                    <LinkIcon className="w-4 h-4" /> {isLinking ? 'Done Linking' : 'Link Tracker Items'}
+                                                </button>
+                                                <button 
+                                                    onClick={() => { setEditingPBId(pb.id); setOpenMenuPBId(null); }}
+                                                    style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', fontWeight: 600, color: '#e4e4e7', padding: '8px 10px', borderRadius: 8, background: 'transparent', textAlign: 'left', width: '100%', transition: 'background 0.15s' }}
+                                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
+                                                    Rename Bar
+                                                </button>
+                                                <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
+                                                <button 
+                                                    onClick={() => { if (confirm(`Delete "${pb.label}"?`)) { onDeleteProgressBar(bucket.id, pb.id); if (activeLinkPBId === pb.id) setActiveLinkPBId(null); } setOpenMenuPBId(null); }}
+                                                    style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', fontWeight: 600, color: '#ef4444', padding: '8px 10px', borderRadius: 8, background: 'transparent', textAlign: 'left', width: '100%', transition: 'background 0.15s' }}
+                                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
+                                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                                >
+                                                    <TrashIcon className="w-4 h-4" /> Delete Bar
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             );
@@ -417,7 +444,7 @@ function TrackerDetailPage({
                 {effectiveCatGroups.length === 0 ? (
                     <div className="tile-empty">No items tracked yet. Tap the Gear icon or "Add Progress Bar" to link tasks.</div>
                 ) : (
-                    <div className="td-categories-grid">
+                    <div className={`td-categories-grid ${compactView ? 'compact' : ''}`}>
                         {effectiveCatGroups.map(({ cat, catTasks }) => {
                             const allTasksInCat = catTasks;
                             const catLinkedToBucket = (bucket.categoryIds || []).includes(cat.id);

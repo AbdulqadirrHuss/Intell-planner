@@ -248,6 +248,36 @@ body {
     align-items: start;
     gap: 20px;
 }
+.td-categories-grid.compact {
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 12px;
+}
+.td-categories-grid.compact .td-cat-card {
+    padding: 12px 14px;
+}
+.td-categories-grid.compact .td-cat-title-new {
+    font-size: 0.65rem;
+}
+.td-categories-grid.compact .td-cat-stats-pct {
+    font-size: 1.6rem;
+}
+.td-categories-grid.compact .td-task-pill {
+    padding: 8px 10px;
+    margin-bottom: 6px;
+}
+.td-categories-grid.compact .td-task-pill-text {
+    font-size: 0.75rem;
+}
+.td-categories-grid.compact .td-subtasks-container {
+    padding: 4px 0;
+    margin-bottom: 6px;
+}
+.td-categories-grid.compact .td-subtask-item {
+    padding: 6px 10px;
+}
+.td-categories-grid.compact .td-subtask-item-text {
+    font-size: 0.7rem;
+}
 
 .td-cat-card {
     background: #2a2640; /* Matching matte purple */
