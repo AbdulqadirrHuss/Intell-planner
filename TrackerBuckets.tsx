@@ -76,21 +76,24 @@ interface Props {
 const PALETTE = ['#8b5cf6', '#6366f1', '#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#84cc16', '#f97316'];
 
 /** Count completed/total atomic units (subtasks are atoms; tasks without subtasks are atoms) */
-function calcPctFromTasks(
+export function calcPctFromTasks(
     categoryIds: string[], taskTexts: string[], subtaskTexts: string[],
     categories: Category[], tasks: Task[], fallbackColor: string
 ): { done: number; total: number; pct: number } {
     let done = 0, total = 0;
     tasks.forEach(t => {
         const isCatLinked = categoryIds.includes(t.categoryId);
-        const isTaskLinked = taskTexts.includes(t.text);
+        const isTaskLinked = taskTexts.some(x => x === t.text || x === `${t.categoryId}::${t.text}`);
+        
         if (isCatLinked || isTaskLinked) {
             if (t.subtasks && t.subtasks.length > 0) {
                 t.subtasks.forEach(st => { total++; if (st.completed) done++; });
             } else { total++; if (t.completed) done++; }
         } else if (t.subtasks) {
             t.subtasks.forEach(st => {
-                if (subtaskTexts.includes(st.text)) { total++; if (st.completed) done++; }
+                if (subtaskTexts.some(x => x === st.text || x === `${t.categoryId}::${t.text}::${st.text}`)) {
+                    total++; if (st.completed) done++;
+                }
             });
         }
     });
@@ -183,21 +186,24 @@ function TrackerDetailPage({
 
     // Helper: is a task/subtask tracked by bucket
     const isTaskTrackedByBucket = (t: Task) =>
-        (bucket.categoryIds || []).includes(t.categoryId) || (bucket.taskTexts || []).includes(t.text);
+        (bucket.categoryIds || []).includes(t.categoryId) || (bucket.taskTexts || []).some(x => x === t.text || x === `${t.categoryId}::${t.text}`);
     const isSubtaskTrackedByBucket = (t: Task, st: Subtask) =>
-        isTaskTrackedByBucket(t) || (bucket.subtaskTexts || []).includes(st.text);
+        isTaskTrackedByBucket(t) || (bucket.subtaskTexts || []).some(x => x === st.text || x === `${t.categoryId}::${t.text}::${st.text}`);
 
     // Helper: is a task/subtask linked to a specific progress bar
     const isTaskLinkedToPB = (pb: TrackerProgressBar, t: Task) =>
-        pb.categoryIds.includes(t.categoryId) || pb.taskTexts.includes(t.text);
+        pb.categoryIds.includes(t.categoryId) || pb.taskTexts.some(x => x === t.text || x === `${t.categoryId}::${t.text}`);
     const isSubtaskLinkedToPB = (pb: TrackerProgressBar, t: Task, st: Subtask) =>
-        isTaskLinkedToPB(pb, t) || pb.subtaskTexts.includes(st.text);
+        isTaskLinkedToPB(pb, t) || pb.subtaskTexts.some(x => x === st.text || x === `${t.categoryId}::${t.text}::${st.text}`);
 
     // Toggle link of a task to the active progress bar
     const toggleTaskInPB = (pb: TrackerProgressBar, t: Task, e: React.MouseEvent) => {
         e.stopPropagation();
-        if (pb.taskTexts.includes(t.text)) onRemovePBTask(bucket.id, pb.id, t.text);
-        else onAddPBTask(bucket.id, pb.id, t.text);
+        const key = `${t.categoryId}::${t.text}`;
+        const oldKey = t.text;
+        if (pb.taskTexts.includes(key)) onRemovePBTask(bucket.id, pb.id, key);
+        else if (pb.taskTexts.includes(oldKey)) onRemovePBTask(bucket.id, pb.id, oldKey);
+        else onAddPBTask(bucket.id, pb.id, key);
     };
     const toggleCatInPB = (pb: TrackerProgressBar, catId: string) => {
         if (pb.categoryIds.includes(catId)) onRemovePBCategory(bucket.id, pb.id, catId);
@@ -205,8 +211,11 @@ function TrackerDetailPage({
     };
     const toggleSubtaskInPB = (pb: TrackerProgressBar, t: Task, st: Subtask, e: React.MouseEvent) => {
         e.stopPropagation();
-        if (pb.subtaskTexts.includes(st.text)) onRemovePBSubtask(bucket.id, pb.id, st.text);
-        else onAddPBSubtask(bucket.id, pb.id, st.text);
+        const key = `${t.categoryId}::${t.text}::${st.text}`;
+        const oldKey = st.text;
+        if (pb.subtaskTexts.includes(key)) onRemovePBSubtask(bucket.id, pb.id, key);
+        else if (pb.subtaskTexts.includes(oldKey)) onRemovePBSubtask(bucket.id, pb.id, oldKey);
+        else onAddPBSubtask(bucket.id, pb.id, key);
     };
 
     const isAnyTracked = (t: Task) => isTaskTrackedByBucket(t) || progressBars.some(pb => isTaskLinkedToPB(pb, t));
