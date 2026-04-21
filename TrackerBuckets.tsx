@@ -140,7 +140,7 @@ function TrackerDetailPage({
     onAddBucketTask: (bId: string, t: string) => void; onRemoveBucketTask: (bId: string, t: string) => void;
     onAddBucketSubtask: (bId: string, t: string) => void; onRemoveBucketSubtask: (bId: string, t: string) => void;
     onToggleTask: (id: string, s: boolean, r: boolean) => void;
-    onToggleSubtask: (id: string, pId: string, s: boolean, r: boolean) => void;
+    onToggleSubtask: (pId: string, id: string, s: boolean, r: boolean) => void;
     onAddProgressBar: (bId: string, label: string, color: string) => void;
     onUpdateProgressBar: (bId: string, pbId: string, u: Partial<TrackerProgressBar>) => void;
     onDeleteProgressBar: (bId: string, pbId: string) => void;
@@ -480,7 +480,13 @@ function TrackerDetailPage({
                                                 <div key={t.id}>
                                                     <div 
                                                         className={`td-task-pill ${hasSubtasks && isExpanded ? 'expanded' : ''}`} 
-                                                        onClick={() => hasSubtasks && setExpandedTasks(prev => isExpanded ? prev.filter(id => id !== t.id) : [...prev, t.id])}
+                                                        onClick={() => {
+                                                            if (hasSubtasks) {
+                                                                setExpandedTasks(prev => isExpanded ? prev.filter(id => id !== t.id) : [...prev, t.id]);
+                                                            } else {
+                                                                onToggleTask(t.id, t.completed, t.isRecurring);
+                                                            }
+                                                        }}
                                                     >
                                                         <button
                                                             className="td-task-toggle"
@@ -528,11 +534,16 @@ function TrackerDetailPage({
                                                                 if (!activeLinkPBId && !editMode && !isSubAnyTracked(t, st) && !isAnyTracked(t)) return null;
 
                                                                 return (
-                                                                    <div key={st.id} className="td-subtask-item">
+                                                                    <div 
+                                                                        key={st.id} 
+                                                                        className="td-subtask-item"
+                                                                        style={{ cursor: 'pointer' }}
+                                                                        onClick={() => onToggleSubtask(t.id, st.id, st.completed, st.isRecurring)}
+                                                                    >
                                                                         <button
                                                                             className="td-task-toggle"
                                                                             style={{ opacity: 0.7 }}
-                                                                            onClick={(e) => { e.stopPropagation(); onToggleSubtask(st.id, t.id, st.completed, st.isRecurring); }}
+                                                                            onClick={(e) => { e.stopPropagation(); onToggleSubtask(t.id, st.id, st.completed, st.isRecurring); }}
                                                                         >
                                                                             <CheckCircleIcon className="w-4 h-4" checked={st.completed} style={{ color: st.completed ? cat.color : 'rgba(255,255,255,0.15)' } as any} />
                                                                         </button>
