@@ -153,9 +153,9 @@ function TrackerDetailPage({
     const [addingPB, setAddingPB] = useState(false);
     const [newPBLabel, setNewPBLabel] = useState('');
     const [newPBColor, setNewPBColor] = useState(PALETTE[4]);
-    // activeLinkPBId: when set, the category cards show "link to bar" toggles
     const [activeLinkPBId, setActiveLinkPBId] = useState<string | null>(null);
     const [editingPBId, setEditingPBId] = useState<string | null>(null);
+    const [expandedTasks, setExpandedTasks] = useState<string[]>([]);
 
     const { done, total, pct } = calcPctFromTasks(
         bucket.categoryIds || [], bucket.taskTexts || [], bucket.subtaskTexts || [],
@@ -194,28 +194,30 @@ function TrackerDetailPage({
         isTaskLinkedToPB(pb, t) || pb.subtaskTexts.includes(st.text);
 
     // Toggle link of a task to the active progress bar
-    const toggleTaskInPB = (pb: TrackerProgressBar, t: Task) => {
-        if (pb.taskTexts.includes(t.text)) {
-            onRemovePBTask(bucket.id, pb.id, t.text);
-        } else {
-            // Remove from category link if individually adding
-            onAddPBTask(bucket.id, pb.id, t.text);
-        }
+    const toggleTaskInPB = (pb: TrackerProgressBar, t: Task, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (pb.taskTexts.includes(t.text)) onRemovePBTask(bucket.id, pb.id, t.text);
+        else onAddPBTask(bucket.id, pb.id, t.text);
     };
     const toggleCatInPB = (pb: TrackerProgressBar, catId: string) => {
-        if (pb.categoryIds.includes(catId)) {
-            onRemovePBCategory(bucket.id, pb.id, catId);
-        } else {
-            onAddPBCategory(bucket.id, pb.id, catId);
-        }
+        if (pb.categoryIds.includes(catId)) onRemovePBCategory(bucket.id, pb.id, catId);
+        else onAddPBCategory(bucket.id, pb.id, catId);
     };
-    const toggleSubtaskInPB = (pb: TrackerProgressBar, t: Task, st: Subtask) => {
-        if (pb.subtaskTexts.includes(st.text)) {
-            onRemovePBSubtask(bucket.id, pb.id, st.text);
-        } else {
-            onAddPBSubtask(bucket.id, pb.id, st.text);
-        }
+    const toggleSubtaskInPB = (pb: TrackerProgressBar, t: Task, st: Subtask, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (pb.subtaskTexts.includes(st.text)) onRemovePBSubtask(bucket.id, pb.id, st.text);
+        else onAddPBSubtask(bucket.id, pb.id, st.text);
     };
+
+    const isAnyTracked = (t: Task) => isTaskTrackedByBucket(t) || progressBars.some(pb => isTaskLinkedToPB(pb, t));
+    const isSubAnyTracked = (t: Task, st: Subtask) => isSubtaskTrackedByBucket(t, st) || progressBars.some(pb => isSubtaskLinkedToPB(pb, t, st));
+
+    // Filter categories to only show tracked items (unless we're linking or configuring)
+    const effectiveCatGroups = catGroups.map(g => {
+        if (activeLinkPBId || editMode) return g;
+        const ft = g.catTasks.filter(t => isAnyTracked(t) || (t.subtasks && t.subtasks.some(st => isSubAnyTracked(t, st))));
+        return { ...g, catTasks: ft };
+    }).filter(g => g.catTasks.length > 0);
 
     return (
         <div className="tracker-detail-page">
@@ -403,18 +405,17 @@ function TrackerDetailPage({
                     {activeLinkPB ? `Tap tasks to link → ${activeLinkPB.label}` : 'Tasks by Category'}
                 </p>
 
-                {catGroups.length === 0 ? (
-                    <div className="tile-empty">No tasks today. Apply a day scaffold to populate your schedule.</div>
+                {effectiveCatGroups.length === 0 ? (
+                    <div className="tile-empty">No items tracked yet. Tap the Gear icon or "Add Progress Bar" to link tasks.</div>
                 ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {catGroups.map(({ cat, catTasks }) => {
+                    <div className="td-categories-grid">
+                        {effectiveCatGroups.map(({ cat, catTasks }) => {
                             const allTasksInCat = catTasks;
                             const catLinkedToBucket = (bucket.categoryIds || []).includes(cat.id);
                             const catLinkedToPB = activeLinkPB ? activeLinkPB.categoryIds.includes(cat.id) : false;
 
                             return (
                                 <div key={cat.id} className="td-cat-card" style={{ '--cat-color': cat.color } as any}>
-                                    {/* Category header */}
                                     <div className="td-cat-header">
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                             <span style={{ width: 12, height: 12, borderRadius: '50%', background: cat.color, display: 'inline-block', boxShadow: `0 0 8px ${cat.color}80`, flexShrink: 0 }} />
@@ -423,7 +424,6 @@ function TrackerDetailPage({
                                                 <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: `${cat.color}22`, color: cat.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tracked</span>
                                             )}
                                         </div>
-                                        {/* Link whole category to active bar */}
                                         {activeLinkPB && (
                                             <button
                                                 onClick={() => toggleCatInPB(activeLinkPB, cat.id)}
@@ -441,33 +441,32 @@ function TrackerDetailPage({
                                         )}
                                     </div>
 
-                                    {/* Task rows */}
                                     <div className="td-task-list">
                                         {allTasksInCat.map(t => {
                                             const taskLinkedToPB = activeLinkPB ? isTaskLinkedToPB(activeLinkPB, t) : false;
                                             const catLinkedToPBForTask = activeLinkPB ? activeLinkPB.categoryIds.includes(t.categoryId) : false;
                                             const hasSubtasks = t.subtasks && t.subtasks.length > 0;
+                                            const isExpanded = expandedTasks.includes(t.id);
 
                                             return (
                                                 <div key={t.id}>
-                                                    {/* Task row */}
-                                                    <div className="td-task-row">
+                                                    <div className="td-task-row clickable" onClick={() => hasSubtasks && setExpandedTasks(prev => isExpanded ? prev.filter(id => id !== t.id) : [...prev, t.id])}>
                                                         <button
                                                             className="td-task-toggle"
-                                                            onClick={() => onToggleTask(t.id, t.completed, t.isRecurring)}
+                                                            onClick={(e) => { e.stopPropagation(); onToggleTask(t.id, t.completed, t.isRecurring); }}
                                                             title={t.completed ? 'Mark incomplete' : 'Mark complete'}
                                                         >
-                                                            <CheckCircleIcon
-                                                                className="w-5 h-5"
-                                                                checked={t.completed}
-                                                                style={{ color: t.completed ? cat.color : 'rgba(255,255,255,0.2)' } as any}
-                                                            />
+                                                            <CheckCircleIcon className="w-5 h-5" checked={t.completed} style={{ color: t.completed ? cat.color : 'rgba(255,255,255,0.2)' } as any} />
                                                         </button>
                                                         <span className={`td-task-text ${t.completed ? 'done' : ''}`}>{t.text}</span>
-                                                        {/* Link to bar button */}
+                                                        
+                                                        {hasSubtasks && (
+                                                            <span style={{ fontSize: '0.7rem', color: '#a1a1aa', paddingRight: 4 }}>{t.subtasks.filter(st => st.completed).length}/{t.subtasks.length}</span>
+                                                        )}
+                                                        
                                                         {activeLinkPB && !catLinkedToPBForTask && (
                                                             <button
-                                                                onClick={() => toggleTaskInPB(activeLinkPB, t)}
+                                                                onClick={(e) => toggleTaskInPB(activeLinkPB, t, e)}
                                                                 style={{
                                                                     display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px',
                                                                     borderRadius: 6, fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
@@ -485,29 +484,26 @@ function TrackerDetailPage({
                                                         )}
                                                     </div>
 
-                                                    {/* Subtask rows */}
-                                                    {hasSubtasks && t.subtasks.map(st => {
+                                                    {/* Subtasks */}
+                                                    {hasSubtasks && isExpanded && t.subtasks.map(st => {
                                                         const stLinkedToPB = activeLinkPB ? isSubtaskLinkedToPB(activeLinkPB, t, st) : false;
-                                                        const stViaCategory = activeLinkPB ? catLinkedToPBForTask : false;
-                                                        const stViaTask = activeLinkPB ? taskLinkedToPB : false;
-                                                        const stViaParentPB = stViaCategory || stViaTask;
+                                                        const stViaParentPB = activeLinkPB ? (catLinkedToPBForTask || taskLinkedToPB) : false;
+                                                        
+                                                        if (!activeLinkPBId && !editMode && !isSubAnyTracked(t, st) && !isAnyTracked(t)) return null;
+
                                                         return (
                                                             <div key={st.id} className="td-subtask-row">
                                                                 <button
                                                                     className="td-task-toggle"
                                                                     style={{ opacity: 0.7 }}
-                                                                    onClick={() => onToggleSubtask(st.id, t.id, st.completed, st.isRecurring)}
+                                                                    onClick={(e) => { e.stopPropagation(); onToggleSubtask(st.id, t.id, st.completed, st.isRecurring); }}
                                                                 >
-                                                                    <CheckCircleIcon
-                                                                        className="w-4 h-4"
-                                                                        checked={st.completed}
-                                                                        style={{ color: st.completed ? cat.color : 'rgba(255,255,255,0.15)' } as any}
-                                                                    />
+                                                                    <CheckCircleIcon className="w-4 h-4" checked={st.completed} style={{ color: st.completed ? cat.color : 'rgba(255,255,255,0.15)' } as any} />
                                                                 </button>
                                                                 <span className={`td-task-text subtask ${st.completed ? 'done' : ''}`}>{st.text}</span>
                                                                 {activeLinkPB && !stViaParentPB && (
                                                                     <button
-                                                                        onClick={() => toggleSubtaskInPB(activeLinkPB, t, st)}
+                                                                        onClick={(e) => toggleSubtaskInPB(activeLinkPB, t, st, e)}
                                                                         style={{
                                                                             display: 'flex', alignItems: 'center', gap: 4, padding: '2px 8px',
                                                                             borderRadius: 5, fontSize: '0.65rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,

@@ -241,7 +241,15 @@ body {
 /* ═══════════════════════════════════════════════
    CATEGORY CARDS (inside detail page)
 ═══════════════════════════════════════════════ */
+.td-categories-grid {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 16px;
+}
+
 .td-cat-card {
+    flex: 1 1 320px;
     background: var(--bg-surface, rgba(255,255,255,0.04));
     border: 1px solid rgba(255,255,255,0.07);
     border-left: 3px solid var(--cat-color, #8b5cf6);
@@ -279,8 +287,9 @@ body {
     transition: background 0.15s;
     border-bottom: 1px solid rgba(255,255,255,0.03);
 }
+.td-task-row.clickable { cursor: pointer; }
 .td-task-row:last-child { border-bottom: none; }
-.td-task-row:hover { background: rgba(255,255,255,0.03); }
+.td-task-row:hover { background: rgba(255,255,255,0.05); }
 
 .td-subtask-row {
     display: flex;

@@ -661,7 +661,7 @@ function App() {
     const handleAddPBCategory = async (bucketId: string, pbId: string, categoryId: string) => {
         if (!supabase) return;
         await supabase.from('tracker_pb_categories').insert({ pb_id: pbId, category_id: categoryId });
-        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, progressBars: b.progressBars.map(pb => pb.id === pbId ? { ...pb, categoryIds: [...pb.categoryIds, categoryId] } : pb) } : b));
+        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, progressBars: b.progressBars.map(pb => pb.id === pbId ? { ...pb, categoryIds: Array.from(new Set([...pb.categoryIds, categoryId])) } : pb) } : b));
     };
     const handleRemovePBCategory = async (bucketId: string, pbId: string, categoryId: string) => {
         if (!supabase) return;
@@ -671,7 +671,7 @@ function App() {
     const handleAddPBTask = async (bucketId: string, pbId: string, taskText: string) => {
         if (!supabase) return;
         await supabase.from('tracker_pb_tasks').insert({ pb_id: pbId, task_text: taskText });
-        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, progressBars: b.progressBars.map(pb => pb.id === pbId ? { ...pb, taskTexts: [...pb.taskTexts, taskText] } : pb) } : b));
+        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, progressBars: b.progressBars.map(pb => pb.id === pbId ? { ...pb, taskTexts: Array.from(new Set([...pb.taskTexts, taskText])) } : pb) } : b));
     };
     const handleRemovePBTask = async (bucketId: string, pbId: string, taskText: string) => {
         if (!supabase) return;
@@ -681,7 +681,7 @@ function App() {
     const handleAddPBSubtask = async (bucketId: string, pbId: string, subtaskText: string) => {
         if (!supabase) return;
         await supabase.from('tracker_pb_subtasks').insert({ pb_id: pbId, subtask_text: subtaskText });
-        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, progressBars: b.progressBars.map(pb => pb.id === pbId ? { ...pb, subtaskTexts: [...pb.subtaskTexts, subtaskText] } : pb) } : b));
+        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, progressBars: b.progressBars.map(pb => pb.id === pbId ? { ...pb, subtaskTexts: Array.from(new Set([...pb.subtaskTexts, subtaskText])) } : pb) } : b));
     };
     const handleRemovePBSubtask = async (bucketId: string, pbId: string, subtaskText: string) => {
         if (!supabase) return;
