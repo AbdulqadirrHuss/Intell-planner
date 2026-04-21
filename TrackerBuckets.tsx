@@ -577,7 +577,7 @@ function TrackerDetailPage({
             {progressBars.length > 0 && (
                 <div className="td-section">
                     <p className="td-section-title" style={{ marginBottom: 12 }}>Progress Bars</p>
-                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
                         {progressBars.map(pb => {
                             const prog = calcPctFromTasks(pb.categoryIds, pb.taskTexts, pb.subtaskTexts, categories, tasks, pb.color);
                             const isLinking = activeLinkPBId === pb.id;
@@ -586,9 +586,9 @@ function TrackerDetailPage({
 
                             return (
                                 <div key={pb.id} className="td-pb-mini-widget" style={{ 
-                                    display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(255,255,255,0.02)', 
-                                    padding: '8px 12px 8px 8px', borderRadius: 30, border: isLinking ? `1px solid ${pb.color}` : '1px solid rgba(255,255,255,0.05)',
-                                    boxShadow: isLinking ? `0 0 12px ${pb.color}40` : 'none', transition: 'all 0.2s', minWidth: 160
+                                    display: 'flex', alignItems: 'center', gap: 16, background: 'rgba(255,255,255,0.02)', 
+                                    padding: '12px 18px 12px 12px', borderRadius: 30, border: isLinking ? `1px solid ${pb.color}` : '1px solid rgba(255,255,255,0.05)',
+                                    boxShadow: isLinking ? `0 0 12px ${pb.color}40` : 'none', transition: 'all 0.2s', minWidth: 200
                                 }}>
                                     <div style={{ position: 'relative', width: 34, height: 34, flexShrink: 0 }}>
                                         <ProgressRing pct={prog.pct} color={pb.color} size={34} stroke={3.5} />
@@ -748,7 +748,7 @@ function TrackerDetailPage({
                                 }}>
                                      {row.slots.map((slottedCatId, slotIdx) => {
                                           if (!slottedCatId) {
-                                              return (
+                                              return layoutEditMode ? (
                                                   <div key={`empty-${slotIdx}`} 
                                                        className={`td-empty-slot ${dragOverTarget?.rowId === row.id && dragOverTarget?.slotIdx === slotIdx ? 'drag-over' : ''}`}
                                                        style={{ border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 12, minHeight: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', background: 'rgba(0,0,0,0.1)' }}
@@ -758,7 +758,9 @@ function TrackerDetailPage({
                                                   >
                                                       <span style={{ fontSize: '0.7rem', color: '#a1a1aa' }}>Empty Slot</span>
                                                   </div>
-                                              )
+                                              ) : (
+                                                  <div key={`empty-${slotIdx}`} style={{ visibility: 'hidden' }} />
+                                              );
                                           }
                                           return renderCategoryCard(slottedCatId, row.id, slotIdx);
                                      })}

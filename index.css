@@ -3,11 +3,11 @@
 @tailwind utilities;
 
 :root {
-    --bg-primary: #0f0e17;
-    --bg-surface: #1a1830;
-    --bg-raised: #231f40;
-    --bg-card: #1e1c35;
-    --bg-input: #12101f;
+    --bg-primary: #0b1120;
+    --bg-surface: #111827;
+    --bg-raised: #1f2937;
+    --bg-card: #1e293b;
+    --bg-input: #0f172a;
     --accent: #8b5cf6;
     --accent-hover: #7c3aed;
     --accent-soft: rgba(139, 92, 246, 0.15);
