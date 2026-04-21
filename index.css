@@ -374,7 +374,7 @@ h1 { letter-spacing: -0.02em; }
     display: flex; align-items: center; justify-content: center;
     color: #71717a; transition: all 0.15s;
 }
-.pb-config-delete:hover { color: #f87171; background: rgba(239,68,68,0.12); }
+.pb-config-delete:hover { color: #f87171; background: rgba(239, 68, 68, 0.12); }
 .pb-config-body { padding: 12px; border-top: 1px solid rgba(255,255,255,0.05); animation: tileSlideIn 0.15s ease; }
 
 .pb-add-form {
