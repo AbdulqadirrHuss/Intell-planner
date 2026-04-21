@@ -1,22 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
-import { TrackerBucket, TrackerProgressBar, Category, Task } from './types';
+import { TrackerBucket, TrackerProgressBar, Category, Task, Subtask } from './types';
 
-// ═══════════════════════════════════════════════════════════
-// Icons
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════ Icons ══
 const GearIcon = ({ className = '' }: { className?: string }) => (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
 );
 const PlusIcon = ({ className = '' }: { className?: string }) => (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
     </svg>
 );
 const TrashIcon = ({ className = '' }: { className?: string }) => (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
     </svg>
 );
@@ -26,19 +24,27 @@ const CheckCircleIcon = ({ className = '', checked }: { className?: string; chec
     </svg>
 );
 const ChevronDownIcon = ({ className = '' }: { className?: string }) => (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
     </svg>
 );
 const ArrowLeftIcon = ({ className = '' }: { className?: string }) => (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
     </svg>
 );
+const LinkIcon = ({ className = '' }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+    </svg>
+);
+const XIcon = ({ className = '' }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+    </svg>
+);
 
-// ═══════════════════════════════════════════════════════════
-// Types & Helpers
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════ Props ══
 interface Props {
     buckets: TrackerBucket[];
     categories: Category[];
@@ -66,53 +72,32 @@ interface Props {
     onRemovePBSubtask: (bucketId: string, pbId: string, subtaskText: string) => void;
 }
 
-interface TrackedItem {
-    id: string;
-    text: string;
-    completed: boolean;
-    type: 'task' | 'subtask';
-    color: string;
-    parentTaskId?: string;
-    isRecurring: boolean;
-}
+// ═══════════════════════════════════════════════ Helpers ══
+const PALETTE = ['#8b5cf6', '#6366f1', '#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#84cc16', '#f97316'];
 
-function resolveTrackedItems(
+/** Count completed/total atomic units (subtasks are atoms; tasks without subtasks are atoms) */
+function calcPctFromTasks(
     categoryIds: string[], taskTexts: string[], subtaskTexts: string[],
-    categories: Category[], todayTasks: Task[], fallbackColor: string
-): TrackedItem[] {
-    const items: TrackedItem[] = [];
-    todayTasks.forEach(t => {
-        const cat = categories.find(c => c.id === t.categoryId);
-        const color = cat?.color || fallbackColor;
-        const isCatTracked = categoryIds.includes(t.categoryId);
-        const isTaskTracked = taskTexts.includes(t.text);
-        if (isCatTracked || isTaskTracked) {
+    categories: Category[], tasks: Task[], fallbackColor: string
+): { done: number; total: number; pct: number } {
+    let done = 0, total = 0;
+    tasks.forEach(t => {
+        const isCatLinked = categoryIds.includes(t.categoryId);
+        const isTaskLinked = taskTexts.includes(t.text);
+        if (isCatLinked || isTaskLinked) {
             if (t.subtasks && t.subtasks.length > 0) {
-                t.subtasks.forEach(st => items.push({ id: st.id, text: st.text, completed: st.completed, type: 'subtask', color, parentTaskId: t.id, isRecurring: st.isRecurring }));
-            } else {
-                items.push({ id: t.id, text: t.text, completed: t.completed, type: 'task', color, isRecurring: t.isRecurring });
-            }
-        } else if (t.subtasks && t.subtasks.length > 0) {
+                t.subtasks.forEach(st => { total++; if (st.completed) done++; });
+            } else { total++; if (t.completed) done++; }
+        } else if (t.subtasks) {
             t.subtasks.forEach(st => {
-                if (subtaskTexts.includes(st.text))
-                    items.push({ id: st.id, text: st.text, completed: st.completed, type: 'subtask', color, parentTaskId: t.id, isRecurring: st.isRecurring });
+                if (subtaskTexts.includes(st.text)) { total++; if (st.completed) done++; }
             });
         }
     });
-    return items;
-}
-
-function calcPct(items: TrackedItem[]) {
-    const total = items.length;
-    const done = items.filter(i => i.completed).length;
     return { done, total, pct: total === 0 ? 0 : Math.round((done / total) * 100) };
 }
 
-const PALETTE = ['#8b5cf6', '#6366f1', '#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#84cc16', '#f97316'];
-
-// ═══════════════════════════════════════════════════════════
-// Progress Ring (futuristic, glowing)
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════ Circular Ring ══
 function ProgressRing({ pct, color, size = 90, stroke = 7 }: { pct: number; color: string; size?: number; stroke?: number }) {
     const r = (size - stroke) / 2;
     const circ = 2 * Math.PI * r;
@@ -132,196 +117,134 @@ function ProgressRing({ pct, color, size = 90, stroke = 7 }: { pct: number; colo
     );
 }
 
-// ═══════════════════════════════════════════════════════════
-// Granular Item Tree
-// ═══════════════════════════════════════════════════════════
-function GranularTree({ categories, trackedCatIds, trackedTaskTexts, trackedSubtaskTexts, onAddCat, onRemoveCat, onAddTask, onRemoveTask, onAddSubtask, onRemoveSubtask }: {
-    categories: Category[];
-    trackedCatIds: string[]; trackedTaskTexts: string[]; trackedSubtaskTexts: string[];
-    onAddCat: (id: string) => void; onRemoveCat: (id: string) => void;
-    onAddTask: (t: string) => void; onRemoveTask: (t: string) => void;
-    onAddSubtask: (t: string) => void; onRemoveSubtask: (t: string) => void;
-}) {
-    return (
-        <div className="tile-granular-tree custom-scrollbar">
-            {categories.map(cat => {
-                const isCatLinked = trackedCatIds.includes(cat.id);
-                return (
-                    <div key={cat.id} className="mb-2 rounded-md overflow-hidden" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                        <div className="flex items-center justify-between p-2">
-                            <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: cat.color }} />
-                                <span className="text-sm font-semibold text-white">{cat.name}</span>
-                            </div>
-                            <button
-                                className={`text-xs px-2 py-1 rounded font-semibold transition-colors ${isCatLinked ? 'bg-violet-500 text-white' : 'bg-white/10 text-gray-400 hover:text-white'}`}
-                                onClick={() => isCatLinked ? onRemoveCat(cat.id) : onAddCat(cat.id)}
-                            >
-                                {isCatLinked ? '✓ Linked' : 'Link All'}
-                            </button>
-                        </div>
-                        {!isCatLinked && (cat.recurringTasks || []).length > 0 && (
-                            <div className="pl-5 pr-2 pb-2" style={{ background: 'rgba(0,0,0,0.2)' }}>
-                                {cat.recurringTasks.map(rt => {
-                                    const isTaskLinked = trackedTaskTexts.includes(rt.text);
-                                    return (
-                                        <div key={rt.id} className="mt-1">
-                                            <div className="flex items-center justify-between py-1" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                                <span className="text-xs text-gray-300 truncate pr-2">↳ {rt.text}</span>
-                                                <button
-                                                    className={`text-[10px] px-2 py-0.5 rounded font-semibold transition-colors ${isTaskLinked ? 'bg-violet-500 text-white' : 'bg-white/5 text-gray-500 hover:text-white'}`}
-                                                    onClick={() => isTaskLinked ? onRemoveTask(rt.text) : onAddTask(rt.text)}
-                                                >
-                                                    {isTaskLinked ? '✓' : 'Link'}
-                                                </button>
-                                            </div>
-                                            {!isTaskLinked && (rt.subtaskTemplates || []).length > 0 && (
-                                                <div className="pl-3 pb-1">
-                                                    {rt.subtaskTemplates.map(st => {
-                                                        const isLinked = trackedSubtaskTexts.includes(st.text);
-                                                        return (
-                                                            <div key={st.id} className="flex items-center justify-between py-0.5">
-                                                                <span className="text-[11px] text-gray-500 truncate pr-2">• {st.text}</span>
-                                                                <button
-                                                                    className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${isLinked ? 'bg-violet-500 text-white' : 'border border-gray-600 text-gray-600 hover:text-gray-300'}`}
-                                                                    onClick={() => isLinked ? onRemoveSubtask(st.text) : onAddSubtask(st.text)}
-                                                                >
-                                                                    {isLinked ? '✓' : 'Link'}
-                                                                </button>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-                );
-            })}
-        </div>
-    );
-}
-
-// ═══════════════════════════════════════════════════════════
-// Individual Progress Bar Config Card
-// ═══════════════════════════════════════════════════════════
-function PBConfigCard({ pb, categories, onUpdate, onDelete, onAddCat, onRemoveCat, onAddTask, onRemoveTask, onAddSubtask, onRemoveSubtask }: {
-    pb: TrackerProgressBar; categories: Category[];
-    onUpdate: (u: Partial<TrackerProgressBar>) => void; onDelete: () => void;
-    onAddCat: (id: string) => void; onRemoveCat: (id: string) => void;
-    onAddTask: (t: string) => void; onRemoveTask: (t: string) => void;
-    onAddSubtask: (t: string) => void; onRemoveSubtask: (t: string) => void;
-}) {
-    const [open, setOpen] = useState(false);
-    const [label, setLabel] = useState(pb.label);
-    const save = () => { if (label.trim() && label !== pb.label) onUpdate({ label: label.trim() }); };
-    return (
-        <div className="pb-config-card">
-            <div className="pb-config-header" onClick={() => setOpen(v => !v)}>
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className="pb-config-dot" style={{ background: pb.color }} />
-                    <span className="pb-config-label truncate">{pb.label}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button className="pb-config-delete" onClick={e => { e.stopPropagation(); if (confirm(`Delete "${pb.label}"?`)) onDelete(); }}>
-                        <TrashIcon className="w-3 h-3" />
-                    </button>
-                    <ChevronDownIcon className={`w-4 h-4 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
-                </div>
-            </div>
-            {open && (
-                <div className="pb-config-body">
-                    <input className="tile-edit-input mb-3" value={label} onChange={e => setLabel(e.target.value)} onBlur={save} onKeyDown={e => { if (e.key === 'Enter') save(); }} placeholder="Bar label…" />
-                    <p className="tile-edit-label mb-1">Color</p>
-                    <div className="tile-palette mb-3">
-                        {PALETTE.map(c => <button key={c} className={`tile-swatch ${pb.color === c ? 'sel' : ''}`} style={{ background: c }} onClick={() => onUpdate({ color: c })} />)}
-                    </div>
-                    <p className="tile-edit-label mb-1">Linked Items</p>
-                    <GranularTree categories={categories} trackedCatIds={pb.categoryIds} trackedTaskTexts={pb.taskTexts} trackedSubtaskTexts={pb.subtaskTexts}
-                        onAddCat={onAddCat} onRemoveCat={onRemoveCat} onAddTask={onAddTask} onRemoveTask={onRemoveTask} onAddSubtask={onAddSubtask} onRemoveSubtask={onRemoveSubtask} />
-                </div>
-            )}
-        </div>
-    );
-}
-
-// ═══════════════════════════════════════════════════════════
-// TRACKER DETAIL PAGE — shown when you click a tile
-// ═══════════════════════════════════════════════════════════
-function TrackerDetailPage({ bucket, categories, tasks, onBack, onUpdate, onDelete,
-    onAddCategory, onRemoveCategory, onAddBucketTask, onRemoveBucketTask, onAddBucketSubtask, onRemoveBucketSubtask,
+// ═══════════════════════════════════════════════ Tracker Detail Page ══
+function TrackerDetailPage({
+    bucket, categories, tasks,
+    onBack, onUpdate, onDelete,
+    onAddCategoryToBucket, onRemoveCategoryFromBucket,
+    onAddBucketTask, onRemoveBucketTask,
+    onAddBucketSubtask, onRemoveBucketSubtask,
     onToggleTask, onToggleSubtask,
     onAddProgressBar, onUpdateProgressBar, onDeleteProgressBar,
-    onAddPBCategory, onRemovePBCategory, onAddPBTask, onRemovePBTask, onAddPBSubtask, onRemovePBSubtask,
+    onAddPBCategory, onRemovePBCategory,
+    onAddPBTask, onRemovePBTask,
+    onAddPBSubtask, onRemovePBSubtask,
 }: {
     bucket: TrackerBucket; categories: Category[]; tasks: Task[];
     onBack: () => void;
     onUpdate: (u: Partial<TrackerBucket>) => void; onDelete: () => void;
-    onAddCategory: (id: string) => void; onRemoveCategory: (id: string) => void;
-    onAddBucketTask: (bucketId: string, t: string) => void; onRemoveBucketTask: (bucketId: string, t: string) => void;
-    onAddBucketSubtask: (bucketId: string, t: string) => void; onRemoveBucketSubtask: (bucketId: string, t: string) => void;
-    onToggleTask: (id: string, status: boolean, rec: boolean) => void;
-    onToggleSubtask: (id: string, parentId: string, status: boolean, rec: boolean) => void;
-    onAddProgressBar: (bucketId: string, label: string, color: string) => void;
-    onUpdateProgressBar: (bucketId: string, pbId: string, u: Partial<TrackerProgressBar>) => void;
-    onDeleteProgressBar: (bucketId: string, pbId: string) => void;
-    onAddPBCategory: (bucketId: string, pbId: string, catId: string) => void;
-    onRemovePBCategory: (bucketId: string, pbId: string, catId: string) => void;
-    onAddPBTask: (bucketId: string, pbId: string, t: string) => void;
-    onRemovePBTask: (bucketId: string, pbId: string, t: string) => void;
-    onAddPBSubtask: (bucketId: string, pbId: string, t: string) => void;
-    onRemovePBSubtask: (bucketId: string, pbId: string, t: string) => void;
+    onAddCategoryToBucket: (id: string) => void; onRemoveCategoryFromBucket: (id: string) => void;
+    onAddBucketTask: (bId: string, t: string) => void; onRemoveBucketTask: (bId: string, t: string) => void;
+    onAddBucketSubtask: (bId: string, t: string) => void; onRemoveBucketSubtask: (bId: string, t: string) => void;
+    onToggleTask: (id: string, s: boolean, r: boolean) => void;
+    onToggleSubtask: (id: string, pId: string, s: boolean, r: boolean) => void;
+    onAddProgressBar: (bId: string, label: string, color: string) => void;
+    onUpdateProgressBar: (bId: string, pbId: string, u: Partial<TrackerProgressBar>) => void;
+    onDeleteProgressBar: (bId: string, pbId: string) => void;
+    onAddPBCategory: (bId: string, pbId: string, cId: string) => void; onRemovePBCategory: (bId: string, pbId: string, cId: string) => void;
+    onAddPBTask: (bId: string, pbId: string, t: string) => void; onRemovePBTask: (bId: string, pbId: string, t: string) => void;
+    onAddPBSubtask: (bId: string, pbId: string, t: string) => void; onRemovePBSubtask: (bId: string, pbId: string, t: string) => void;
 }) {
+    const progressBars = bucket.progressBars || [];
+
+    // ── local state ──
     const [editMode, setEditMode] = useState(false);
     const [editName, setEditName] = useState(bucket.name);
     const [addingPB, setAddingPB] = useState(false);
     const [newPBLabel, setNewPBLabel] = useState('');
     const [newPBColor, setNewPBColor] = useState(PALETTE[4]);
+    // activeLinkPBId: when set, the category cards show "link to bar" toggles
+    const [activeLinkPBId, setActiveLinkPBId] = useState<string | null>(null);
+    const [editingPBId, setEditingPBId] = useState<string | null>(null);
 
-    const trackedItems = resolveTrackedItems(bucket.categoryIds || [], bucket.taskTexts || [], bucket.subtaskTexts || [], categories, tasks, bucket.color);
-    const { done, total, pct } = calcPct(trackedItems);
-
-    const pbProgresses = (bucket.progressBars || []).map(pb => {
-        const items = resolveTrackedItems(pb.categoryIds, pb.taskTexts, pb.subtaskTexts, categories, tasks, pb.color);
-        return { pb, ...calcPct(items) };
-    });
+    const { done, total, pct } = calcPctFromTasks(
+        bucket.categoryIds || [], bucket.taskTexts || [], bucket.subtaskTexts || [],
+        categories, tasks, bucket.color
+    );
 
     const saveName = () => { if (editName.trim() && editName !== bucket.name) onUpdate({ name: editName.trim() }); };
 
     const submitPB = () => {
         if (newPBLabel.trim()) {
             onAddProgressBar(bucket.id, newPBLabel.trim(), newPBColor);
-            setNewPBLabel('');
-            setAddingPB(false);
+            setNewPBLabel(''); setAddingPB(false);
+        }
+    };
+
+    // Active linking bar
+    const activeLinkPB = progressBars.find(pb => pb.id === activeLinkPBId) ?? null;
+
+    // Build category buckets for the card display
+    // Show all categories that have tasks today, whether tracked or not
+    const catGroups = categories.map(cat => {
+        const catTasks = tasks.filter(t => t.categoryId === cat.id);
+        return { cat, catTasks };
+    }).filter(g => g.catTasks.length > 0);
+
+    // Helper: is a task/subtask tracked by bucket
+    const isTaskTrackedByBucket = (t: Task) =>
+        (bucket.categoryIds || []).includes(t.categoryId) || (bucket.taskTexts || []).includes(t.text);
+    const isSubtaskTrackedByBucket = (t: Task, st: Subtask) =>
+        isTaskTrackedByBucket(t) || (bucket.subtaskTexts || []).includes(st.text);
+
+    // Helper: is a task/subtask linked to a specific progress bar
+    const isTaskLinkedToPB = (pb: TrackerProgressBar, t: Task) =>
+        pb.categoryIds.includes(t.categoryId) || pb.taskTexts.includes(t.text);
+    const isSubtaskLinkedToPB = (pb: TrackerProgressBar, t: Task, st: Subtask) =>
+        isTaskLinkedToPB(pb, t) || pb.subtaskTexts.includes(st.text);
+
+    // Toggle link of a task to the active progress bar
+    const toggleTaskInPB = (pb: TrackerProgressBar, t: Task) => {
+        if (pb.taskTexts.includes(t.text)) {
+            onRemovePBTask(bucket.id, pb.id, t.text);
+        } else {
+            // Remove from category link if individually adding
+            onAddPBTask(bucket.id, pb.id, t.text);
+        }
+    };
+    const toggleCatInPB = (pb: TrackerProgressBar, catId: string) => {
+        if (pb.categoryIds.includes(catId)) {
+            onRemovePBCategory(bucket.id, pb.id, catId);
+        } else {
+            onAddPBCategory(bucket.id, pb.id, catId);
+        }
+    };
+    const toggleSubtaskInPB = (pb: TrackerProgressBar, t: Task, st: Subtask) => {
+        if (pb.subtaskTexts.includes(st.text)) {
+            onRemovePBSubtask(bucket.id, pb.id, st.text);
+        } else {
+            onAddPBSubtask(bucket.id, pb.id, st.text);
         }
     };
 
     return (
         <div className="tracker-detail-page">
-            {/* ── Header ── */}
+
+            {/* ══════════ HEADER ══════════ */}
             <div className="td-header">
-                <button className="td-back-btn" onClick={onBack}>
-                    <ArrowLeftIcon className="w-4 h-4" /> Trackers
+                <button className="td-back-btn" onClick={onBack} title="Back to trackers">
+                    <ArrowLeftIcon className="w-4 h-4" />
+                    <span className="hidden sm:inline">Trackers</span>
                 </button>
 
-                <div className="td-ring-wrap" style={{ '--ring-color': bucket.color } as any}>
+                <div style={{ '--ring-color': bucket.color } as any}>
                     <ProgressRing pct={pct} color={bucket.color} size={72} stroke={6} />
                 </div>
 
                 <div className="td-title-block">
                     {editMode
-                        ? <input className="tile-edit-input text-xl font-bold" value={editName} onChange={e => setEditName(e.target.value)} onBlur={saveName} onKeyDown={e => { if (e.key === 'Enter') saveName(); }} autoFocus />
-                        : <h2 style={{ color: 'white' }}>{bucket.name}</h2>
+                        ? <input className="tile-edit-input text-xl font-bold mb-1" value={editName}
+                            onChange={e => setEditName(e.target.value)} onBlur={saveName}
+                            onKeyDown={e => { if (e.key === 'Enter') saveName(); }} autoFocus />
+                        : <h2 style={{ color: 'white', fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em' }}>{bucket.name}</h2>
                     }
-                    <p>{done} of {total} items complete · {pct}%</p>
+                    <p style={{ fontSize: '0.8rem', color: '#71717a', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+                        {done} / {total} items complete · {pct}%
+                    </p>
                 </div>
 
                 <div className="td-header-actions">
-                    {/* Prominent "+ Add Progress Bar" button */}
-                    <button className="td-add-pb-btn" onClick={() => setAddingPB(v => !v)}>
+                    <button className="td-add-pb-btn" onClick={() => { setAddingPB(v => !v); setActiveLinkPBId(null); }}>
                         <PlusIcon className="w-4 h-4" />
                         Add Progress Bar
                     </button>
@@ -331,23 +254,47 @@ function TrackerDetailPage({ bucket, categories, tasks, onBack, onUpdate, onDele
                 </div>
             </div>
 
-            {/* ── Add PB form ── */}
+            {/* ══ Linking mode banner ══ */}
+            {activeLinkPB && (
+                <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '10px 16px', borderRadius: 12, marginBottom: 16,
+                    background: `linear-gradient(90deg, ${activeLinkPB.color}22, ${activeLinkPB.color}10)`,
+                    border: `1px solid ${activeLinkPB.color}55`,
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: activeLinkPB.color, display: 'inline-block', boxShadow: `0 0 8px ${activeLinkPB.color}` }} />
+                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'white' }}>
+                            Linking to: <span style={{ color: activeLinkPB.color }}>{activeLinkPB.label}</span>
+                        </span>
+                        <span style={{ fontSize: '0.72rem', color: '#71717a' }}>
+                            — tap tasks or categories below to link them
+                        </span>
+                    </div>
+                    <button onClick={() => setActiveLinkPBId(null)} style={{ color: '#71717a', padding: 4 }}>
+                        <XIcon className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
+
+            {/* ══ Add bar form ══ */}
             {addingPB && (
-                <div className="td-add-pb-form mb-6">
-                    <p className="tile-edit-label mb-2">New Progress Bar</p>
+                <div className="td-add-pb-form" style={{ marginBottom: 20 }}>
+                    <p className="tile-edit-label" style={{ marginBottom: 8 }}>New Progress Bar</p>
                     <input
-                        className="tile-edit-input mb-3"
+                        className="tile-edit-input"
                         placeholder="Bar label (e.g. Morning Routine, Deep Work…)"
                         value={newPBLabel}
                         onChange={e => setNewPBLabel(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') submitPB(); if (e.key === 'Escape') setAddingPB(false); }}
                         autoFocus
+                        style={{ marginBottom: 10, width: '100%' }}
                     />
-                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                         <div className="tile-palette">
                             {PALETTE.map(c => <button key={c} className={`tile-swatch ${newPBColor === c ? 'sel' : ''}`} style={{ background: c }} onClick={() => setNewPBColor(c)} />)}
                         </div>
-                        <div className="flex gap-2">
+                        <div style={{ display: 'flex', gap: 8 }}>
                             <button className="tile-btn-cancel" onClick={() => setAddingPB(false)}>Cancel</button>
                             <button className="tile-btn-create" disabled={!newPBLabel.trim()} onClick={submitPB}>Create Bar</button>
                         </div>
@@ -355,105 +302,237 @@ function TrackerDetailPage({ bucket, categories, tasks, onBack, onUpdate, onDele
                 </div>
             )}
 
-            {/* ── Custom Progress Bars ── */}
-            {pbProgresses.length > 0 && (
+            {/* ══════════ PROGRESS BARS ══════════ */}
+            {progressBars.length > 0 && (
                 <div className="td-section">
-                    <p className="td-section-title">Custom Progress Bars</p>
+                    <p className="td-section-title">Progress Bars</p>
                     <div className="td-pb-bars">
-                        {pbProgresses.map(({ pb, done: d, total: t, pct: p }) => (
-                            <div key={pb.id} className="td-pb-bar-card">
-                                <div className="td-pb-bar-header">
-                                    <div className="td-pb-bar-label">
-                                        <span style={{ background: pb.color }} />
-                                        <span className="td-pb-bar-name">{pb.label}</span>
+                        {progressBars.map(pb => {
+                            const prog = calcPctFromTasks(pb.categoryIds, pb.taskTexts, pb.subtaskTexts, categories, tasks, pb.color);
+                            const isLinking = activeLinkPBId === pb.id;
+                            const isEditingThis = editingPBId === pb.id;
+                            return (
+                                <div key={pb.id} className="td-pb-bar-card" style={isLinking ? { borderColor: pb.color, boxShadow: `0 0 16px ${pb.color}30` } : {}}>
+                                    {/* Bar row */}
+                                    <div className="td-pb-bar-header">
+                                        <div className="td-pb-bar-label">
+                                            <span style={{ background: pb.color, boxShadow: `0 0 6px ${pb.color}` }} />
+                                            {isEditingThis
+                                                ? <PBLabelEdit pb={pb} onSave={label => { onUpdateProgressBar(bucket.id, pb.id, { label }); setEditingPBId(null); }} onCancel={() => setEditingPBId(null)} />
+                                                : <span className="td-pb-bar-name" style={{ cursor: 'pointer' }} onDoubleClick={() => setEditingPBId(pb.id)}>{pb.label}</span>
+                                            }
+                                        </div>
+                                        <span className="td-pb-bar-stat" style={{ color: pb.color }}>{prog.done}/{prog.total} · {prog.pct}%</span>
                                     </div>
-                                    <span className="td-pb-bar-stat" style={{ color: pb.color }}>{d}/{t} — {p}%</span>
+                                    <div className="td-pb-track" style={{ marginBottom: 10 }}>
+                                        <div className="td-pb-fill" style={{ width: `${prog.pct}%`, background: `linear-gradient(90deg, ${pb.color}99, ${pb.color})`, boxShadow: `0 0 10px ${pb.color}60` }} />
+                                    </div>
+                                    {/* Bar actions */}
+                                    <div style={{ display: 'flex', gap: 8 }}>
+                                        <button
+                                            onClick={() => setActiveLinkPBId(isLinking ? null : pb.id)}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px',
+                                                borderRadius: 8, fontSize: '0.75rem', fontWeight: 700,
+                                                background: isLinking ? pb.color : 'rgba(255,255,255,0.06)',
+                                                color: isLinking ? 'white' : '#a1a1aa',
+                                                border: `1px solid ${isLinking ? pb.color : 'rgba(255,255,255,0.1)'}`,
+                                                transition: 'all 0.18s',
+                                            }}
+                                        >
+                                            <LinkIcon className="w-3.5 h-3.5" />
+                                            {isLinking ? 'Done Linking' : 'Link Items'}
+                                        </button>
+                                        <button
+                                            onClick={() => { if (confirm(`Delete "${pb.label}"?`)) { onDeleteProgressBar(bucket.id, pb.id); if (activeLinkPBId === pb.id) setActiveLinkPBId(null); } }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8, fontSize: '0.75rem', color: '#71717a', border: '1px solid rgba(255,255,255,0.06)', background: 'transparent', transition: 'all 0.15s' }}
+                                            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#f87171'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(239,68,68,0.3)'; }}
+                                            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#71717a'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.06)'; }}
+                                        >
+                                            <TrashIcon className="w-3 h-3" />
+                                            Delete
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="td-pb-track">
-                                    <div className="td-pb-fill" style={{ width: `${p}%`, background: `linear-gradient(90deg, ${pb.color}99, ${pb.color})`, boxShadow: `0 0 10px ${pb.color}60` }} />
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             )}
 
-            {/* ── Edit / Config Panel ── */}
+            {/* ══════════ EDIT PANEL (bucket config) ══════════ */}
             {editMode && (
-                <div className="tile-edit-panel mb-6">
+                <div className="tile-edit-panel" style={{ marginBottom: 24 }}>
                     <div className="tile-edit-section">
-                        <label className="tile-edit-label">Bucket Color</label>
+                        <label className="tile-edit-label">Color</label>
                         <div className="tile-palette">
                             {PALETTE.map(c => <button key={c} className={`tile-swatch ${bucket.color === c ? 'sel' : ''}`} style={{ background: c }} onClick={() => onUpdate({ color: c })} />)}
                         </div>
                     </div>
-
                     <div className="tile-edit-section">
-                        <label className="tile-edit-label mb-2 block">Overall Tracked Items</label>
-                        <GranularTree
-                            categories={categories}
-                            trackedCatIds={bucket.categoryIds || []}
-                            trackedTaskTexts={bucket.taskTexts || []}
-                            trackedSubtaskTexts={bucket.subtaskTexts || []}
-                            onAddCat={onAddCategory}
-                            onRemoveCat={onRemoveCategory}
-                            onAddTask={t => onAddBucketTask(bucket.id, t)}
-                            onRemoveTask={t => onRemoveBucketTask(bucket.id, t)}
-                            onAddSubtask={t => onAddBucketSubtask(bucket.id, t)}
-                            onRemoveSubtask={t => onRemoveBucketSubtask(bucket.id, t)}
-                        />
-                    </div>
-
-                    {(bucket.progressBars || []).length > 0 && (
-                        <div className="tile-edit-section">
-                            <label className="tile-edit-label mb-2 block">Configure Progress Bars</label>
-                            <div className="flex flex-col gap-2">
-                                {bucket.progressBars.map(pb => (
-                                    <PBConfigCard
-                                        key={pb.id} pb={pb} categories={categories}
-                                        onUpdate={u => onUpdateProgressBar(bucket.id, pb.id, u)}
-                                        onDelete={() => onDeleteProgressBar(bucket.id, pb.id)}
-                                        onAddCat={id => onAddPBCategory(bucket.id, pb.id, id)}
-                                        onRemoveCat={id => onRemovePBCategory(bucket.id, pb.id, id)}
-                                        onAddTask={t => onAddPBTask(bucket.id, pb.id, t)}
-                                        onRemoveTask={t => onRemovePBTask(bucket.id, pb.id, t)}
-                                        onAddSubtask={t => onAddPBSubtask(bucket.id, pb.id, t)}
-                                        onRemoveSubtask={t => onRemovePBSubtask(bucket.id, pb.id, t)}
-                                    />
-                                ))}
-                            </div>
+                        <label className="tile-edit-label">Overall Tracked Categories</label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+                            {categories.map(cat => {
+                                const linked = (bucket.categoryIds || []).includes(cat.id);
+                                return (
+                                    <div key={cat.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', borderRadius: 8, background: 'rgba(0,0,0,0.2)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <span style={{ width: 10, height: 10, borderRadius: '50%', background: cat.color, display: 'inline-block' }} />
+                                            <span style={{ fontSize: '0.85rem', color: 'white' }}>{cat.name}</span>
+                                        </div>
+                                        <button
+                                            onClick={() => linked ? onRemoveCategoryFromBucket(cat.id) : onAddCategoryToBucket(cat.id)}
+                                            style={{ fontSize: '0.72rem', fontWeight: 700, padding: '3px 10px', borderRadius: 6, background: linked ? cat.color : 'rgba(255,255,255,0.08)', color: linked ? 'white' : '#a1a1aa', transition: 'all 0.15s', border: 'none' }}
+                                        >
+                                            {linked ? '✓ Linked' : 'Link All'}
+                                        </button>
+                                    </div>
+                                );
+                            })}
                         </div>
-                    )}
-
+                    </div>
                     <button className="td-delete-btn" onClick={() => { if (confirm(`Delete "${bucket.name}"?`)) { onDelete(); onBack(); } }}>
                         <TrashIcon className="w-3.5 h-3.5" /> Delete Tracker
                     </button>
                 </div>
             )}
 
-            {/* ── Overall tracked items list ── */}
+            {/* ══════════ CATEGORY TASK CARDS ══════════ */}
             <div className="td-section">
-                <p className="td-section-title">Tracked Today</p>
-                {trackedItems.length === 0 ? (
-                    <div className="tile-empty">
-                        No items linked yet. Tap <GearIcon className="w-3.5 h-3.5 inline text-gray-400" /> to link categories or tasks.
-                    </div>
+                <p className="td-section-title">
+                    {activeLinkPB ? `Tap tasks to link → ${activeLinkPB.label}` : 'Tasks by Category'}
+                </p>
+
+                {catGroups.length === 0 ? (
+                    <div className="tile-empty">No tasks today. Apply a day scaffold to populate your schedule.</div>
                 ) : (
-                    <div className="tile-items-list">
-                        {trackedItems.map(item => (
-                            <button key={item.id}
-                                className={`tile-tracked-item list ${item.completed ? 'completed' : ''}`}
-                                onClick={() => {
-                                    if (item.type === 'task') onToggleTask(item.id, item.completed, item.isRecurring);
-                                    else if (item.parentTaskId) onToggleSubtask(item.id, item.parentTaskId, item.completed, item.isRecurring);
-                                }}>
-                                <div className="flex items-center gap-3">
-                                    <CheckCircleIcon className={`w-5 h-5 flex-shrink-0 transition-all ${item.completed ? 'text-violet-400' : 'text-white/20'}`} checked={item.completed} />
-                                    <span className={`text-sm text-left ${item.completed ? 'opacity-40 line-through' : 'text-gray-200'}`}>{item.text}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {catGroups.map(({ cat, catTasks }) => {
+                            const allTasksInCat = catTasks;
+                            const catLinkedToBucket = (bucket.categoryIds || []).includes(cat.id);
+                            const catLinkedToPB = activeLinkPB ? activeLinkPB.categoryIds.includes(cat.id) : false;
+
+                            return (
+                                <div key={cat.id} className="td-cat-card" style={{ '--cat-color': cat.color } as any}>
+                                    {/* Category header */}
+                                    <div className="td-cat-header">
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                            <span style={{ width: 12, height: 12, borderRadius: '50%', background: cat.color, display: 'inline-block', boxShadow: `0 0 8px ${cat.color}80`, flexShrink: 0 }} />
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white', letterSpacing: '0.01em' }}>{cat.name}</span>
+                                            {catLinkedToBucket && (
+                                                <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: `${cat.color}22`, color: cat.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tracked</span>
+                                            )}
+                                        </div>
+                                        {/* Link whole category to active bar */}
+                                        {activeLinkPB && (
+                                            <button
+                                                onClick={() => toggleCatInPB(activeLinkPB, cat.id)}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', gap: 5, padding: '4px 12px', borderRadius: 7,
+                                                    fontSize: '0.72rem', fontWeight: 700,
+                                                    background: catLinkedToPB ? activeLinkPB.color : 'rgba(255,255,255,0.06)',
+                                                    color: catLinkedToPB ? 'white' : '#a1a1aa',
+                                                    border: `1px solid ${catLinkedToPB ? activeLinkPB.color : 'rgba(255,255,255,0.1)'}`,
+                                                    transition: 'all 0.15s',
+                                                }}
+                                            >
+                                                {catLinkedToPB ? '✓ All Linked' : '+ Link All'}
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Task rows */}
+                                    <div className="td-task-list">
+                                        {allTasksInCat.map(t => {
+                                            const taskLinkedToPB = activeLinkPB ? isTaskLinkedToPB(activeLinkPB, t) : false;
+                                            const catLinkedToPBForTask = activeLinkPB ? activeLinkPB.categoryIds.includes(t.categoryId) : false;
+                                            const hasSubtasks = t.subtasks && t.subtasks.length > 0;
+
+                                            return (
+                                                <div key={t.id}>
+                                                    {/* Task row */}
+                                                    <div className="td-task-row">
+                                                        <button
+                                                            className="td-task-toggle"
+                                                            onClick={() => onToggleTask(t.id, t.completed, t.isRecurring)}
+                                                            title={t.completed ? 'Mark incomplete' : 'Mark complete'}
+                                                        >
+                                                            <CheckCircleIcon
+                                                                className="w-5 h-5"
+                                                                checked={t.completed}
+                                                                style={{ color: t.completed ? cat.color : 'rgba(255,255,255,0.2)' } as any}
+                                                            />
+                                                        </button>
+                                                        <span className={`td-task-text ${t.completed ? 'done' : ''}`}>{t.text}</span>
+                                                        {/* Link to bar button */}
+                                                        {activeLinkPB && !catLinkedToPBForTask && (
+                                                            <button
+                                                                onClick={() => toggleTaskInPB(activeLinkPB, t)}
+                                                                style={{
+                                                                    display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px',
+                                                                    borderRadius: 6, fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
+                                                                    background: taskLinkedToPB ? activeLinkPB.color : 'rgba(255,255,255,0.05)',
+                                                                    color: taskLinkedToPB ? 'white' : '#71717a',
+                                                                    border: `1px solid ${taskLinkedToPB ? activeLinkPB.color : 'rgba(255,255,255,0.08)'}`,
+                                                                    transition: 'all 0.15s',
+                                                                }}
+                                                            >
+                                                                {taskLinkedToPB ? '✓' : '+'}
+                                                            </button>
+                                                        )}
+                                                        {activeLinkPB && catLinkedToPBForTask && (
+                                                            <span style={{ fontSize: '0.68rem', color: activeLinkPB.color, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>via category</span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Subtask rows */}
+                                                    {hasSubtasks && t.subtasks.map(st => {
+                                                        const stLinkedToPB = activeLinkPB ? isSubtaskLinkedToPB(activeLinkPB, t, st) : false;
+                                                        const stViaCategory = activeLinkPB ? catLinkedToPBForTask : false;
+                                                        const stViaTask = activeLinkPB ? taskLinkedToPB : false;
+                                                        const stViaParentPB = stViaCategory || stViaTask;
+                                                        return (
+                                                            <div key={st.id} className="td-subtask-row">
+                                                                <button
+                                                                    className="td-task-toggle"
+                                                                    style={{ opacity: 0.7 }}
+                                                                    onClick={() => onToggleSubtask(st.id, t.id, st.completed, st.isRecurring)}
+                                                                >
+                                                                    <CheckCircleIcon
+                                                                        className="w-4 h-4"
+                                                                        checked={st.completed}
+                                                                        style={{ color: st.completed ? cat.color : 'rgba(255,255,255,0.15)' } as any}
+                                                                    />
+                                                                </button>
+                                                                <span className={`td-task-text subtask ${st.completed ? 'done' : ''}`}>{st.text}</span>
+                                                                {activeLinkPB && !stViaParentPB && (
+                                                                    <button
+                                                                        onClick={() => toggleSubtaskInPB(activeLinkPB, t, st)}
+                                                                        style={{
+                                                                            display: 'flex', alignItems: 'center', gap: 4, padding: '2px 8px',
+                                                                            borderRadius: 5, fontSize: '0.65rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
+                                                                            background: activeLinkPB.subtaskTexts.includes(st.text) ? activeLinkPB.color : 'rgba(255,255,255,0.04)',
+                                                                            color: activeLinkPB.subtaskTexts.includes(st.text) ? 'white' : '#71717a',
+                                                                            border: `1px solid ${activeLinkPB.subtaskTexts.includes(st.text) ? activeLinkPB.color : 'rgba(255,255,255,0.06)'}`,
+                                                                            transition: 'all 0.15s',
+                                                                        }}
+                                                                    >
+                                                                        {activeLinkPB.subtaskTexts.includes(st.text) ? '✓' : '+'}
+                                                                    </button>
+                                                                )}
+                                                                {activeLinkPB && stViaParentPB && (
+                                                                    <span style={{ fontSize: '0.65rem', color: activeLinkPB.color, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>inherited</span>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: item.color }} />
-                            </button>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>
@@ -461,24 +540,35 @@ function TrackerDetailPage({ bucket, categories, tasks, onBack, onUpdate, onDele
     );
 }
 
-// ═══════════════════════════════════════════════════════════
-// New Bucket Form
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════ Inline label editor for PB ══
+function PBLabelEdit({ pb, onSave, onCancel }: { pb: TrackerProgressBar; onSave: (l: string) => void; onCancel: () => void }) {
+    const [v, setV] = useState(pb.label);
+    return (
+        <input
+            className="tile-edit-input"
+            style={{ padding: '3px 8px', fontSize: '0.85rem', fontWeight: 700 }}
+            value={v} onChange={e => setV(e.target.value)} autoFocus
+            onBlur={() => { if (v.trim()) onSave(v.trim()); else onCancel(); }}
+            onKeyDown={e => { if (e.key === 'Enter' && v.trim()) onSave(v.trim()); if (e.key === 'Escape') onCancel(); }}
+            onClick={e => e.stopPropagation()}
+        />
+    );
+}
+
+// ═══════════════════════════════════════════════ New Bucket Form ══
 function NewBucketForm({ onAdd, onCancel }: { onAdd: (name: string, color: string) => void; onCancel: () => void }) {
     const [name, setName] = useState('');
     const [color, setColor] = useState(PALETTE[0]);
-    const inputRef = useRef<HTMLInputElement>(null);
-    useEffect(() => { inputRef.current?.focus(); }, []);
+    const ref = useRef<HTMLInputElement>(null);
+    useEffect(() => { ref.current?.focus(); }, []);
     const submit = () => { if (name.trim()) onAdd(name.trim(), color); };
     return (
         <div className="tile-new-form">
-            <input ref={inputRef} className="tile-new-input" placeholder="Tracker name…" value={name}
+            <input ref={ref} className="tile-new-input" placeholder="Tracker name…" value={name}
                 onChange={e => setName(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onCancel(); }} />
             <div className="tile-new-row">
-                <div className="tile-palette">
-                    {PALETTE.map(c => <button key={c} className={`tile-swatch ${color === c ? 'sel' : ''}`} style={{ background: c }} onClick={() => setColor(c)} />)}
-                </div>
+                <div className="tile-palette">{PALETTE.map(c => <button key={c} className={`tile-swatch ${color === c ? 'sel' : ''}`} style={{ background: c }} onClick={() => setColor(c)} />)}</div>
                 <div className="tile-new-actions">
                     <button className="tile-btn-cancel" onClick={onCancel}>Cancel</button>
                     <button className="tile-btn-create" disabled={!name.trim()} onClick={submit}>Create</button>
@@ -488,9 +578,7 @@ function NewBucketForm({ onAdd, onCancel }: { onAdd: (name: string, color: strin
     );
 }
 
-// ═══════════════════════════════════════════════════════════
-// TRACKER GRID (the tile overview)
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════ Main export ══
 export default function TrackerBuckets(props: Props) {
     const {
         buckets, categories, tasks,
@@ -502,23 +590,22 @@ export default function TrackerBuckets(props: Props) {
         onAddPBCategory, onRemovePBCategory, onAddPBTask, onRemovePBTask, onAddPBSubtask, onRemovePBSubtask,
     } = props;
 
-    const [selectedBucketId, setSelectedBucketId] = useState<string | null>(null);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
     const [isCreating, setIsCreating] = useState(false);
 
-    const selectedBucket = buckets.find(b => b.id === selectedBucketId);
+    const selectedBucket = buckets.find(b => b.id === selectedId);
 
-    // If a bucket is selected, show the full detail page
     if (selectedBucket) {
         return (
             <TrackerDetailPage
                 bucket={selectedBucket}
                 categories={categories}
                 tasks={tasks}
-                onBack={() => setSelectedBucketId(null)}
+                onBack={() => setSelectedId(null)}
                 onUpdate={u => onUpdateBucket(selectedBucket.id, u)}
-                onDelete={() => { onDeleteBucket(selectedBucket.id); setSelectedBucketId(null); }}
-                onAddCategory={id => onAddCategoryToBucket(selectedBucket.id, id)}
-                onRemoveCategory={id => onRemoveCategoryFromBucket(selectedBucket.id, id)}
+                onDelete={() => { onDeleteBucket(selectedBucket.id); setSelectedId(null); }}
+                onAddCategoryToBucket={id => onAddCategoryToBucket(selectedBucket.id, id)}
+                onRemoveCategoryFromBucket={id => onRemoveCategoryFromBucket(selectedBucket.id, id)}
                 onAddBucketTask={onAddBucketTask}
                 onRemoveBucketTask={onRemoveBucketTask}
                 onAddBucketSubtask={onAddBucketSubtask}
@@ -538,24 +625,18 @@ export default function TrackerBuckets(props: Props) {
         );
     }
 
-    // Otherwise show the grid of tiles
+    // ══ Grid overview ══
     return (
         <div className="tracker-buckets-root">
             <div className="tracker-buckets-header">
                 <h3 className="tracker-buckets-title">Trackers</h3>
             </div>
-
             <div className="tile-grid">
                 {buckets.map(b => {
-                    const items = resolveTrackedItems(b.categoryIds || [], b.taskTexts || [], b.subtaskTexts || [], categories, tasks, b.color);
-                    const { done, total, pct } = calcPct(items);
+                    const { done, total, pct } = calcPctFromTasks(b.categoryIds || [], b.taskTexts || [], b.subtaskTexts || [], categories, tasks, b.color);
+                    const bars = b.progressBars || [];
                     return (
-                        <button
-                            key={b.id}
-                            className="tile futuristic-tile"
-                            style={{ '--tile-color': b.color } as any}
-                            onClick={() => setSelectedBucketId(b.id)}
-                        >
+                        <button key={b.id} className="tile futuristic-tile" style={{ '--tile-color': b.color } as any} onClick={() => setSelectedId(b.id)}>
                             <div className="tile-shimmer" />
                             <div className="tile-top">
                                 <div className="tile-ring-container" style={{ '--ring-color': b.color } as any}>
@@ -564,24 +645,20 @@ export default function TrackerBuckets(props: Props) {
                                 <div className="tile-info">
                                     <span className="tile-name">{b.name}</span>
                                     <span className="tile-count">{done}/{total} items</span>
-                                    {(b.progressBars || []).length > 0 && (
-                                        <span className="tile-pb-hint">{b.progressBars.length} bar{b.progressBars.length !== 1 ? 's' : ''}</span>
-                                    )}
+                                    {bars.length > 0 && <span className="tile-pb-hint">{bars.length} bar{bars.length !== 1 ? 's' : ''}</span>}
                                 </div>
                             </div>
-                            {/* Mini preview bars */}
-                            {(b.progressBars || []).length > 0 && (
+                            {bars.length > 0 && (
                                 <div className="tile-mini-bars">
-                                    {b.progressBars.map(pb => {
-                                        const pbItems = resolveTrackedItems(pb.categoryIds, pb.taskTexts, pb.subtaskTexts, categories, tasks, pb.color);
-                                        const { pct: pp } = calcPct(pbItems);
+                                    {bars.map(pb => {
+                                        const pp = calcPctFromTasks(pb.categoryIds, pb.taskTexts, pb.subtaskTexts, categories, tasks, pb.color);
                                         return (
                                             <div key={pb.id} className="tile-mini-bar-row">
                                                 <span className="tile-mini-bar-label">{pb.label}</span>
                                                 <div className="tile-mini-bar-track">
-                                                    <div className="tile-mini-bar-fill" style={{ width: `${pp}%`, background: pb.color, boxShadow: `0 0 6px ${pb.color}80` }} />
+                                                    <div className="tile-mini-bar-fill" style={{ width: `${pp.pct}%`, background: pb.color, boxShadow: `0 0 6px ${pb.color}80` }} />
                                                 </div>
-                                                <span className="tile-mini-bar-pct" style={{ color: pb.color }}>{pp}%</span>
+                                                <span className="tile-mini-bar-pct" style={{ color: pb.color }}>{pp.pct}%</span>
                                             </div>
                                         );
                                     })}
@@ -590,15 +667,10 @@ export default function TrackerBuckets(props: Props) {
                         </button>
                     );
                 })}
-
-                {/* Create new tile */}
                 {isCreating ? (
                     <div className="tile-wrapper">
                         <div className="tile-create-panel">
-                            <NewBucketForm
-                                onAdd={(name, color) => { onAddBucket(name, 'independent', color); setIsCreating(false); }}
-                                onCancel={() => setIsCreating(false)}
-                            />
+                            <NewBucketForm onAdd={(name, color) => { onAddBucket(name, 'independent', color); setIsCreating(false); }} onCancel={() => setIsCreating(false)} />
                         </div>
                     </div>
                 ) : (

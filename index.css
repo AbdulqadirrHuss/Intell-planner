@@ -238,6 +238,90 @@ body {
 }
 .td-delete-btn:hover { background: rgba(239,68,68,0.18); }
 
+/* ═══════════════════════════════════════════════
+   CATEGORY CARDS (inside detail page)
+═══════════════════════════════════════════════ */
+.td-cat-card {
+    background: var(--bg-surface, rgba(255,255,255,0.04));
+    border: 1px solid rgba(255,255,255,0.07);
+    border-left: 3px solid var(--cat-color, #8b5cf6);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.td-cat-card:hover {
+    border-color: rgba(255,255,255,0.12);
+    border-left-color: var(--cat-color, #8b5cf6);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.td-cat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: rgba(0,0,0,0.2);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+/* ── Task list inside a category card ── */
+.td-task-list {
+    display: flex;
+    flex-direction: column;
+    padding: 4px 0;
+}
+
+.td-task-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    transition: background 0.15s;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.td-task-row:last-child { border-bottom: none; }
+.td-task-row:hover { background: rgba(255,255,255,0.03); }
+
+.td-subtask-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 14px 6px 38px;
+    transition: background 0.15s;
+    border-bottom: 1px solid rgba(255,255,255,0.02);
+    background: rgba(0,0,0,0.1);
+}
+.td-subtask-row:last-child { border-bottom: none; }
+.td-subtask-row:hover { background: rgba(255,255,255,0.02); }
+
+.td-task-toggle {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding: 1px;
+    transition: transform 0.15s;
+}
+.td-task-toggle:hover { transform: scale(1.15); }
+
+.td-task-text {
+    flex: 1;
+    font-size: 0.875rem;
+    color: #d4d4d8;
+    text-align: left;
+    line-height: 1.35;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.td-task-text.subtask {
+    font-size: 0.8rem;
+    color: #a1a1aa;
+}
+.td-task-text.done {
+    text-decoration: line-through;
+    opacity: 0.4;
+}
+
 .toggle-pill-container {
     background-color: rgba(0, 0, 0, 0.2);
     border-radius: 9999px;

@@ -624,13 +624,22 @@ function App() {
 
     // ── Progress Bar Handlers ──
     const handleAddProgressBar = async (bucketId: string, label: string, color: string) => {
-        if (!supabase) return;
         const bucket = trackerBuckets.find(b => b.id === bucketId);
-        const sortOrder = bucket ? bucket.progressBars.length : 0;
+        const sortOrder = bucket ? (bucket.progressBars || []).length : 0;
+
+        // Optimistic update — show bar immediately in UI with a temp ID
+        const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const tempBar: TrackerProgressBar = { id: tempId, bucket_id: bucketId, label, color, sort_order: sortOrder, categoryIds: [], taskTexts: [], subtaskTexts: [] };
+        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, progressBars: [...(b.progressBars || []), tempBar] } : b));
+
+        // Persist to DB and swap temp ID for real ID when ready
+        if (!supabase) return;
         const { data } = await supabase.from('tracker_progress_bars').insert({ bucket_id: bucketId, label, color, sort_order: sortOrder }).select().single();
         if (data) {
-            const newBar: TrackerProgressBar = { id: data.id, bucket_id: bucketId, label, color, sort_order: sortOrder, categoryIds: [], taskTexts: [], subtaskTexts: [] };
-            setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, progressBars: [...b.progressBars, newBar] } : b));
+            setTrackerBuckets(prev => prev.map(b => b.id === bucketId
+                ? { ...b, progressBars: b.progressBars.map(pb => pb.id === tempId ? { ...pb, id: data.id } : pb) }
+                : b
+            ));
         }
     };
 
