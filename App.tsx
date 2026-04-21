@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Task, Category, DayType, RecurringTaskTemplate, DailyLog, Subtask, RecurringSubtaskTemplate, TrackerBucket } from './types';
+import { Task, Category, DayType, RecurringTaskTemplate, DailyLog, Subtask, RecurringSubtaskTemplate, TrackerBucket, TrackerProgressBar } from './types';
 import TaskList from './TaskList';
 import DayTypeManager from './DayTypeManager';
 import CategoryManager from './CategoryManager';
@@ -101,18 +101,41 @@ function App() {
                 const { data: bucketCatsData } = await supabase.from('tracker_bucket_categories').select('*');
                 const { data: bucketTasksData } = await supabase.from('tracker_bucket_tasks').select('*');
                 const { data: bucketSubtasksData } = await supabase.from('tracker_bucket_subtasks').select('*');
+
+                // Load progress bars and their junction data
+                const { data: pbData } = await supabase.from('tracker_progress_bars').select('*').order('sort_order');
+                const { data: pbCatsData } = await supabase.from('tracker_pb_categories').select('*');
+                const { data: pbTasksData } = await supabase.from('tracker_pb_tasks').select('*');
+                const { data: pbSubtasksData } = await supabase.from('tracker_pb_subtasks').select('*');
+
                 if (bucketsData) {
-                    const formattedBuckets: TrackerBucket[] = bucketsData.map((b: any) => ({
-                        id: b.id,
-                        name: b.name,
-                        mode: b.mode,
-                        color: b.color || '#8b5cf6',
-                        sort_order: b.sort_order || 0,
-                        collapsed: b.collapsed || false,
-                        categoryIds: (bucketCatsData || []).filter((bc: any) => bc.bucket_id === b.id).map((bc: any) => bc.category_id),
-                        taskTexts: (bucketTasksData || []).filter((bt: any) => bt.bucket_id === b.id).map((bt: any) => bt.task_text),
-                        subtaskTexts: (bucketSubtasksData || []).filter((bst: any) => bst.bucket_id === b.id).map((bst: any) => bst.subtask_text),
-                    }));
+                    const formattedBuckets: TrackerBucket[] = bucketsData.map((b: any) => {
+                        const bars: TrackerProgressBar[] = (pbData || [])
+                            .filter((pb: any) => pb.bucket_id === b.id)
+                            .sort((a: any, z: any) => a.sort_order - z.sort_order)
+                            .map((pb: any) => ({
+                                id: pb.id,
+                                bucket_id: pb.bucket_id,
+                                label: pb.label,
+                                color: pb.color || '#8b5cf6',
+                                sort_order: pb.sort_order || 0,
+                                categoryIds: (pbCatsData || []).filter((r: any) => r.pb_id === pb.id).map((r: any) => r.category_id),
+                                taskTexts: (pbTasksData || []).filter((r: any) => r.pb_id === pb.id).map((r: any) => r.task_text),
+                                subtaskTexts: (pbSubtasksData || []).filter((r: any) => r.pb_id === pb.id).map((r: any) => r.subtask_text),
+                            }));
+                        return {
+                            id: b.id,
+                            name: b.name,
+                            mode: b.mode,
+                            color: b.color || '#8b5cf6',
+                            sort_order: b.sort_order || 0,
+                            collapsed: b.collapsed || false,
+                            categoryIds: (bucketCatsData || []).filter((bc: any) => bc.bucket_id === b.id).map((bc: any) => bc.category_id),
+                            taskTexts: (bucketTasksData || []).filter((bt: any) => bt.bucket_id === b.id).map((bt: any) => bt.task_text),
+                            subtaskTexts: (bucketSubtasksData || []).filter((bst: any) => bst.bucket_id === b.id).map((bst: any) => bst.subtask_text),
+                            progressBars: bars,
+                        };
+                    });
                     setTrackerBuckets(formattedBuckets);
                 }
 
@@ -595,8 +618,66 @@ function App() {
         if (!supabase) return;
         const { data } = await supabase.from('tracker_buckets').insert({ name, mode, color, sort_order: trackerBuckets.length, collapsed: false }).select().single();
         if (data) {
-            setTrackerBuckets(prev => [...prev, { id: data.id, name: data.name, mode: data.mode, color: data.color, sort_order: data.sort_order, collapsed: data.collapsed, categoryIds: [], taskTexts: [], subtaskTexts: [] }]);
+            setTrackerBuckets(prev => [...prev, { id: data.id, name: data.name, mode: data.mode, color: data.color, sort_order: data.sort_order, collapsed: data.collapsed, categoryIds: [], taskTexts: [], subtaskTexts: [], progressBars: [] }]);
         }
+    };
+
+    // ── Progress Bar Handlers ──
+    const handleAddProgressBar = async (bucketId: string, label: string, color: string) => {
+        if (!supabase) return;
+        const bucket = trackerBuckets.find(b => b.id === bucketId);
+        const sortOrder = bucket ? bucket.progressBars.length : 0;
+        const { data } = await supabase.from('tracker_progress_bars').insert({ bucket_id: bucketId, label, color, sort_order: sortOrder }).select().single();
+        if (data) {
+            const newBar: TrackerProgressBar = { id: data.id, bucket_id: bucketId, label, color, sort_order: sortOrder, categoryIds: [], taskTexts: [], subtaskTexts: [] };
+            setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, progressBars: [...b.progressBars, newBar] } : b));
+        }
+    };
+
+    const handleUpdateProgressBar = async (bucketId: string, pbId: string, updates: Partial<TrackerProgressBar>) => {
+        if (!supabase) return;
+        const dbUpdates: any = {};
+        if (updates.label !== undefined) dbUpdates.label = updates.label;
+        if (updates.color !== undefined) dbUpdates.color = updates.color;
+        await supabase.from('tracker_progress_bars').update(dbUpdates).eq('id', pbId);
+        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, progressBars: b.progressBars.map(pb => pb.id === pbId ? { ...pb, ...updates } : pb) } : b));
+    };
+
+    const handleDeleteProgressBar = async (bucketId: string, pbId: string) => {
+        if (!supabase) return;
+        await supabase.from('tracker_progress_bars').delete().eq('id', pbId);
+        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, progressBars: b.progressBars.filter(pb => pb.id !== pbId) } : b));
+    };
+
+    const handleAddPBCategory = async (bucketId: string, pbId: string, categoryId: string) => {
+        if (!supabase) return;
+        await supabase.from('tracker_pb_categories').insert({ pb_id: pbId, category_id: categoryId });
+        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, progressBars: b.progressBars.map(pb => pb.id === pbId ? { ...pb, categoryIds: [...pb.categoryIds, categoryId] } : pb) } : b));
+    };
+    const handleRemovePBCategory = async (bucketId: string, pbId: string, categoryId: string) => {
+        if (!supabase) return;
+        await supabase.from('tracker_pb_categories').delete().eq('pb_id', pbId).eq('category_id', categoryId);
+        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, progressBars: b.progressBars.map(pb => pb.id === pbId ? { ...pb, categoryIds: pb.categoryIds.filter(id => id !== categoryId) } : pb) } : b));
+    };
+    const handleAddPBTask = async (bucketId: string, pbId: string, taskText: string) => {
+        if (!supabase) return;
+        await supabase.from('tracker_pb_tasks').insert({ pb_id: pbId, task_text: taskText });
+        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, progressBars: b.progressBars.map(pb => pb.id === pbId ? { ...pb, taskTexts: [...pb.taskTexts, taskText] } : pb) } : b));
+    };
+    const handleRemovePBTask = async (bucketId: string, pbId: string, taskText: string) => {
+        if (!supabase) return;
+        await supabase.from('tracker_pb_tasks').delete().eq('pb_id', pbId).eq('task_text', taskText);
+        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, progressBars: b.progressBars.map(pb => pb.id === pbId ? { ...pb, taskTexts: pb.taskTexts.filter(t => t !== taskText) } : pb) } : b));
+    };
+    const handleAddPBSubtask = async (bucketId: string, pbId: string, subtaskText: string) => {
+        if (!supabase) return;
+        await supabase.from('tracker_pb_subtasks').insert({ pb_id: pbId, subtask_text: subtaskText });
+        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, progressBars: b.progressBars.map(pb => pb.id === pbId ? { ...pb, subtaskTexts: [...pb.subtaskTexts, subtaskText] } : pb) } : b));
+    };
+    const handleRemovePBSubtask = async (bucketId: string, pbId: string, subtaskText: string) => {
+        if (!supabase) return;
+        await supabase.from('tracker_pb_subtasks').delete().eq('pb_id', pbId).eq('subtask_text', subtaskText);
+        setTrackerBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, progressBars: b.progressBars.map(pb => pb.id === pbId ? { ...pb, subtaskTexts: pb.subtaskTexts.filter(t => t !== subtaskText) } : pb) } : b));
     };
 
     const handleUpdateBucket = async (id: string, updates: Partial<TrackerBucket>) => {
@@ -743,6 +824,15 @@ function App() {
                     onRemoveBucketSubtask={handleRemoveBucketSubtask}
                     onToggleTask={handleToggleTask}
                     onToggleSubtask={handleToggleSubtask}
+                    onAddProgressBar={handleAddProgressBar}
+                    onUpdateProgressBar={handleUpdateProgressBar}
+                    onDeleteProgressBar={handleDeleteProgressBar}
+                    onAddPBCategory={handleAddPBCategory}
+                    onRemovePBCategory={handleRemovePBCategory}
+                    onAddPBTask={handleAddPBTask}
+                    onRemovePBTask={handleRemovePBTask}
+                    onAddPBSubtask={handleAddPBSubtask}
+                    onRemovePBSubtask={handleRemovePBSubtask}
                 />
 
                 {/* Toggle Master Task List */}

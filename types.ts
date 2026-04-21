@@ -74,6 +74,17 @@ export interface StatValue {
   is_manual: boolean;
 }
 
+export interface TrackerProgressBar {
+  id: string;
+  bucket_id: string;
+  label: string;
+  color: string;
+  sort_order: number;
+  categoryIds: string[];
+  taskTexts: string[];
+  subtaskTexts: string[];
+}
+
 export interface TrackerBucket {
   id: string;
   name: string;
@@ -84,6 +95,7 @@ export interface TrackerBucket {
   categoryIds: string[];
   taskTexts: string[];
   subtaskTexts: string[];
+  progressBars: TrackerProgressBar[];
 }
 
 export interface DriveItem {

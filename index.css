@@ -3,22 +3,15 @@
 @tailwind utilities;
 
 :root {
-    /* Matte Dark Theme */
     --bg-primary: #52525b;
     --bg-card: #606067;
     --bg-input: #484850;
-
     --accent: #8b5cf6;
-    /* Violet-500 - The purple accent */
     --accent-hover: #7c3aed;
     --accent-soft: rgba(139, 92, 246, 0.2);
-
     --text-primary: #ffffff;
     --text-secondary: #d4d4d8;
-    /* Zinc-300 */
     --text-muted: #a1a1aa;
-    /* Zinc-400 */
-
     --border: #52525b;
     --radius-lg: 16px;
     --radius-xl: 24px;
@@ -30,8 +23,6 @@ body {
     font-family: 'Inter', sans-serif;
     overflow-x: hidden;
 }
-
-/* Custom Components based on Screenshot */
 
 .app-container {
     max-width: 1000px;
@@ -47,7 +38,6 @@ body {
     display: inline-flex;
     gap: 4px;
 }
-
 .toggle-pill {
     padding: 8px 24px;
     border-radius: 9999px;
@@ -56,7 +46,6 @@ body {
     color: var(--text-muted);
     transition: all 0.2s;
 }
-
 .toggle-pill.active {
     background-color: var(--accent);
     color: white;
@@ -82,209 +71,234 @@ body {
 }
 
 .icon-btn {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
     border-radius: 8px;
     background-color: rgba(255, 255, 255, 0.1);
     color: var(--text-secondary);
     transition: all 0.2s;
 }
-
-.icon-btn:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-    color: white;
-}
+.icon-btn:hover { background-color: rgba(255, 255, 255, 0.2); color: white; }
 
 .date-display {
     background-color: rgba(255, 255, 255, 0.1);
-    padding: 8px 16px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-family: monospace;
-    font-size: 0.9rem;
+    padding: 8px 16px; border-radius: 8px;
+    display: flex; align-items: center; gap: 8px;
+    font-family: monospace; font-size: 0.9rem;
 }
 
-/* Input Area */
 .task-input-wrapper {
     background-color: rgba(0, 0, 0, 0.2);
     border-radius: var(--radius-lg);
     padding: 8px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    display: flex; align-items: center; gap: 12px;
     border: 1px solid transparent;
     transition: all 0.2s;
 }
-
-.task-input-wrapper:focus-within {
-    border-color: var(--accent);
-    background-color: rgba(0, 0, 0, 0.3);
-}
-
-.task-input {
-    background: transparent;
-    border: none;
-    color: white;
-    flex: 1;
-    padding: 12px;
-    outline: none;
-    font-size: 1rem;
-}
+.task-input-wrapper:focus-within { border-color: var(--accent); background-color: rgba(0, 0, 0, 0.3); }
+.task-input { background: transparent; border: none; color: white; flex: 1; padding: 12px; outline: none; font-size: 1rem; }
 
 .fab-btn {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    background-color: var(--accent);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 48px; height: 48px; border-radius: 12px;
+    background-color: var(--accent); color: white;
+    display: flex; align-items: center; justify-content: center;
     transition: all 0.2s;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
+.fab-btn:hover { background-color: var(--accent-hover); transform: scale(1.05); }
 
-.fab-btn:hover {
-    background-color: var(--accent-hover);
-    transform: scale(1.05);
-}
+h1 { letter-spacing: -0.02em; }
 
-/* Typography Overrides */
-h1 {
-    letter-spacing: -0.02em;
-}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-    width: 6px;
-}
-
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
+.app-header { margin-bottom: 1.5rem; padding-bottom: 0; }
 
 /* ═══════════════════════════════════════════════
-   APP HEADER — refined
+   TRACKER TILES
 ═══════════════════════════════════════════════ */
-.app-header {
-    margin-bottom: 1.5rem;
-    padding-bottom: 0;
-}
-
-/* ═══════════════════════════════════════════════
-   TRACKER TILES — New Grid System
-═══════════════════════════════════════════════ */
-.tile-root {
-    margin-bottom: 1.75rem;
+.tracker-buckets-root { margin-bottom: 1.75rem; }
+.tracker-buckets-header { margin-bottom: 12px; }
+.tracker-buckets-title {
+    font-size: 0.75rem; font-weight: 700;
+    color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.08em;
 }
 
 /* ── Tile Grid ── */
 .tile-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px;
 }
 
+/* ── Tile Wrapper ── */
+.tile-wrapper { display: flex; flex-direction: column; }
+
+/* ── Base Tile button ── */
 .tile {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 18px 10px 14px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 10px;
+    padding: 20px 14px 16px;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 16px;
+    border-radius: 20px;
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    position: relative;
-    overflow: hidden;
+    transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    position: relative; overflow: hidden;
+    width: 100%;
 }
-.tile::before {
+
+/* ── Futuristic Tile ── */
+.futuristic-tile {
+    background: linear-gradient(145deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.02) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.07);
+}
+.futuristic-tile::before {
     content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse at 50% 0%, var(--tile-color, #8b5cf6) 0%, transparent 70%);
-    opacity: 0.06;
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, var(--tile-color, #8b5cf6) 0%, transparent 65%);
+    opacity: 0.08;
     transition: opacity 0.3s;
     pointer-events: none;
 }
-.tile:hover {
-    border-color: rgba(255, 255, 255, 0.14);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+.futuristic-tile:hover {
+    border-color: rgba(255, 255, 255, 0.18);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.1);
 }
-.tile:hover::before { opacity: 0.12; }
-
-.tile.expanded {
+.futuristic-tile:hover::before { opacity: 0.15; }
+.futuristic-tile.expanded {
     border-color: var(--tile-color, #8b5cf6);
-    box-shadow: 0 0 0 1px var(--tile-color, #8b5cf6), 0 8px 30px rgba(0, 0, 0, 0.3);
+    box-shadow:
+        0 0 0 1px var(--tile-color, #8b5cf6),
+        0 0 20px -4px var(--tile-color, #8b5cf6),
+        0 12px 40px rgba(0, 0, 0, 0.35);
 }
-.tile.expanded::before { opacity: 0.15; }
+.futuristic-tile.expanded::before { opacity: 0.18; }
 
-.tile-name {
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: #e4e4e7;
-    text-align: center;
-    line-height: 1.2;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+/* Shimmer sweep */
+.tile-shimmer {
+    position: absolute; top: 0; left: -100%;
+    width: 60%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+    animation: tileShimmer 4s ease-in-out infinite;
+    pointer-events: none;
 }
-.tile-fraction {
-    font-size: 0.65rem;
-    color: #71717a;
-    font-weight: 500;
-}
-
-/* ── Add Tile ── */
-.tile.tile-add {
-    border-style: dashed;
-    border-color: rgba(255, 255, 255, 0.1);
-    color: #71717a;
-    gap: 4px;
-}
-.tile.tile-add::before { display: none; }
-.tile.tile-add:hover {
-    border-color: rgba(139, 92, 246, 0.4);
-    color: #c4b5fd;
-    background: rgba(139, 92, 246, 0.06);
+@keyframes tileShimmer {
+    0% { left: -100%; }
+    40% { left: 120%; }
+    100% { left: 120%; }
 }
 
-/* ── Ring ── */
+/* ── Ring aura ── */
+.tile-top {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 10px; width: 100%;
+}
+.tile-ring-container {
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+}
+.ring-aura-wrapper {
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+}
+.ring-aura-wrapper::before {
+    content: '';
+    position: absolute;
+    width: 110px; height: 110px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--ring-color, #8b5cf6) 0%, transparent 70%);
+    opacity: 0.12;
+    animation: ringPulse 3s ease-in-out infinite;
+    pointer-events: none;
+}
+@keyframes ringPulse {
+    0%, 100% { transform: scale(0.9); opacity: 0.12; }
+    50% { transform: scale(1.1); opacity: 0.22; }
+}
 .tile-ring text { font-family: 'Inter', system-ui, sans-serif; }
 
-.drop-shadow-glow {
-    filter: drop-shadow(0 0 6px currentColor);
+/* ── Tile text info ── */
+.tile-info {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 3px; width: 100%;
+}
+.tile-name {
+    font-size: 0.82rem; font-weight: 700;
+    color: #e4e4e7; text-align: center;
+    line-height: 1.2; max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    letter-spacing: 0.01em;
+}
+.tile-count { font-size: 0.68rem; color: #71717a; font-weight: 500; font-variant-numeric: tabular-nums; }
+.tile-pb-hint {
+    font-size: 0.62rem; color: #52525b; font-weight: 500;
+    letter-spacing: 0.04em; text-transform: uppercase; margin-top: 1px;
 }
 
+/* ── Mini progress bars on tile (compact preview) ── */
+.tile-mini-bars {
+    width: 100%;
+    display: flex; flex-direction: column; gap: 5px;
+    padding: 8px 4px 0;
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+.tile-mini-bar-row { display: flex; align-items: center; gap: 6px; }
+.tile-mini-bar-label {
+    font-size: 0.6rem; color: #71717a;
+    min-width: 48px; max-width: 60px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-weight: 500;
+}
+.tile-mini-bar-track {
+    flex: 1; height: 3px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 2px; overflow: hidden;
+}
+.tile-mini-bar-fill {
+    height: 100%; border-radius: 2px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.tile-mini-bar-pct {
+    font-size: 0.6rem; font-weight: 700;
+    min-width: 22px; text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Add New tile button ── */
+.tile-add-btn {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 24px 14px;
+    border: 1.5px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    background: transparent; cursor: pointer;
+    transition: all 0.2s; gap: 4px;
+    width: 100%; min-height: 140px;
+}
+.tile-add-btn:hover { border-color: rgba(139, 92, 246, 0.4); background: rgba(139, 92, 246, 0.05); }
+.tile-add-btn:hover span, .tile-add-btn:hover svg { color: #c4b5fd !important; }
+
+/* ── Panel wrapper (accordion) ── */
+.tile-panel-wrapper { max-height: 0; overflow: hidden; transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
+.tile-panel-wrapper.open { max-height: 2400px; }
+.tile-create-panel { padding: 4px; }
+
 /* ═══════════════════════════════════════════════
-   EXPANDED PANEL (Accordion)
+   EXPANDED PANEL
 ═══════════════════════════════════════════════ */
 .tile-panel {
-    margin-top: 12px;
+    margin-top: 10px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 16px;
-    padding: 16px;
+    border-radius: 16px; padding: 16px;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     animation: tileSlideIn 0.2s ease-out;
@@ -294,362 +308,153 @@ h1 {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Toolbar (view toggle + gear) ── */
 .tile-panel-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 14px;
 }
 .tile-view-tabs {
-    display: flex;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 8px;
-    padding: 3px;
-    gap: 2px;
+    display: flex; background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px; padding: 3px; gap: 2px;
 }
 .tile-view-tab {
-    padding: 5px 10px;
-    border-radius: 6px;
-    color: #71717a;
-    transition: all 0.15s;
-    display: flex;
-    align-items: center;
+    padding: 5px 10px; border-radius: 6px;
+    color: #71717a; transition: all 0.15s;
+    display: flex; align-items: center;
 }
-.tile-view-tab.active {
-    background: var(--accent);
-    color: white;
-    box-shadow: 0 2px 6px rgba(139, 92, 246, 0.3);
-}
+.tile-view-tab.active { background: var(--accent); color: white; box-shadow: 0 2px 6px rgba(139, 92, 246, 0.3); }
 .tile-view-tab:not(.active):hover { color: #d4d4d8; }
 
 .tile-gear-btn {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #71717a;
-    background: rgba(255, 255, 255, 0.05);
+    width: 30px; height: 30px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: #71717a; background: rgba(255, 255, 255, 0.05);
     transition: all 0.2s;
 }
 .tile-gear-btn:hover { color: white; background: rgba(255, 255, 255, 0.1); }
-.tile-gear-btn.active {
-    color: var(--accent);
-    background: rgba(139, 92, 246, 0.15);
-    animation: gearSpin 0.3s ease;
-}
+.tile-gear-btn.active { color: var(--accent); background: rgba(139, 92, 246, 0.15); animation: gearSpin 0.3s ease; }
 @keyframes gearSpin { from { transform: rotate(0); } to { transform: rotate(90deg); } }
 
 /* ═══════════════════════════════════════════════
-   EDIT PANEL (inside expanded)
+   CUSTOM PROGRESS BARS — expanded panel display
+═══════════════════════════════════════════════ */
+.pb-bars-section {
+    display: flex; flex-direction: column; gap: 10px;
+    margin-bottom: 14px; padding: 14px;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);
+}
+.pb-row { display: flex; flex-direction: column; gap: 5px; }
+.pb-row-header { display: flex; align-items: center; justify-content: space-between; }
+.pb-row-label { font-size: 0.76rem; font-weight: 600; color: #d4d4d8; letter-spacing: 0.01em; }
+.pb-row-stat { font-size: 0.7rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pb-row-pct { font-weight: 800; font-size: 0.8rem; }
+.pb-track { height: 7px; background: rgba(255,255,255,0.07); border-radius: 4px; overflow: hidden; }
+.pb-fill { height: 100%; border-radius: 4px; transition: width 0.55s cubic-bezier(0.4, 0, 0.2, 1); }
+
+/* ═══════════════════════════════════════════════
+   PROGRESS BAR CONFIG CARDS (inside gear panel)
+═══════════════════════════════════════════════ */
+.pb-config-card {
+    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px; overflow: hidden;
+    transition: border-color 0.2s;
+}
+.pb-config-card:hover { border-color: rgba(255,255,255,0.12); }
+.pb-config-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px; cursor: pointer; user-select: none;
+    transition: background 0.15s;
+}
+.pb-config-header:hover { background: rgba(255,255,255,0.04); }
+.pb-config-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.pb-config-label { font-size: 0.8rem; font-weight: 600; color: #d4d4d8; flex: 1; }
+.pb-config-delete {
+    width: 22px; height: 22px; border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    color: #71717a; transition: all 0.15s;
+}
+.pb-config-delete:hover { color: #f87171; background: rgba(239,68,68,0.12); }
+.pb-config-body { padding: 12px; border-top: 1px solid rgba(255,255,255,0.05); animation: tileSlideIn 0.15s ease; }
+
+.pb-add-form {
+    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(139,92,246,0.2);
+    border-radius: 10px; padding: 12px;
+    margin-bottom: 10px; animation: tileSlideIn 0.15s ease;
+}
+
+/* ═══════════════════════════════════════════════
+   EDIT PANEL
 ═══════════════════════════════════════════════ */
 .tile-edit-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+    display: flex; flex-direction: column; gap: 14px;
     padding: 14px;
     background: rgba(0, 0, 0, 0.15);
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.06);
     animation: tileSlideIn 0.15s ease;
 }
-.tile-edit-section {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-.tracker-buckets-title {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #a1a1aa;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-}
-
-/* ── Interactive Tracked Items ── */
-.tile-items-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.tile-tracked-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    padding: 10px 12px;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.tile-tracked-item:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.15);
-    transform: scale(1.01) translateX(2px);
-}
-
-.tile-tracked-item:active {
-    transform: scale(0.98);
-}
-
-.tile-tracked-item.completed {
-    background: rgba(139, 92, 246, 0.05);
-    border-color: rgba(139, 92, 246, 0.1);
-}
-
-.tile-tracked-item.grid {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 14px;
-    gap: 12px;
-}
-.tile-edit-label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #71717a;
-}
+.tile-edit-section { display: flex; flex-direction: column; gap: 6px; }
+.tile-edit-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #71717a; }
 .tile-edit-input {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    color: white;
-    font-size: 0.88rem;
-    font-weight: 600;
-    padding: 8px 12px;
-    outline: none;
-    transition: border-color 0.15s;
+    background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px; color: white; font-size: 0.88rem; font-weight: 600;
+    padding: 8px 12px; outline: none; transition: border-color 0.15s; width: 100%;
 }
 .tile-edit-input:focus { border-color: rgba(139, 92, 246, 0.5); }
-
-.tile-edit-cat-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
 .tile-edit-add-btn {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    padding: 3px 10px;
-    border-radius: 6px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    background: rgba(255, 255, 255, 0.07);
-    color: #d4d4d8;
+    display: flex; align-items: center; gap: 3px;
+    padding: 3px 10px; border-radius: 6px;
+    font-size: 0.72rem; font-weight: 600;
+    background: rgba(255, 255, 255, 0.07); color: #d4d4d8;
     border: 1px solid rgba(255, 255, 255, 0.1);
     transition: all 0.15s;
 }
 .tile-edit-add-btn:hover { background: rgba(255, 255, 255, 0.12); color: white; }
 
-.tile-edit-cat-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 8px;
-    font-size: 0.82rem;
-    color: #d4d4d8;
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 6px;
-}
-.tile-cat-remove-btn {
-    margin-left: auto;
-    width: 22px;
-    height: 22px;
-    border-radius: 5px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #71717a;
-    transition: all 0.15s;
-}
-.tile-cat-remove-btn:hover { color: #f87171; background: rgba(239, 68, 68, 0.12); }
+.tile-granular-tree { max-height: 260px; overflow-y: auto; }
 
 .tile-delete-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    border-radius: 8px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: #f87171;
-    background: rgba(239, 68, 68, 0.08);
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 8px;
+    font-size: 0.78rem; font-weight: 600;
+    color: #f87171; background: rgba(239, 68, 68, 0.08);
     border: 1px solid rgba(239, 68, 68, 0.15);
-    transition: all 0.15s;
-    align-self: flex-start;
+    transition: all 0.15s; align-self: flex-start;
 }
 .tile-delete-btn:hover { background: rgba(239, 68, 68, 0.18); }
 
 /* ── Color palette ── */
-.tile-palette {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-}
+.tile-palette { display: flex; gap: 6px; flex-wrap: wrap; }
 .tile-swatch {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
+    width: 18px; height: 18px; border-radius: 50%;
     border: 2px solid transparent;
-    transition: transform 0.15s;
-    cursor: pointer;
+    transition: transform 0.15s; cursor: pointer;
 }
 .tile-swatch:hover { transform: scale(1.2); }
 .tile-swatch.sel { border-color: white; transform: scale(1.25); }
 
-/* ── Category picker dropdown ── */
-.tile-cat-picker {
+/* ── Grid / list views ── */
+.tile-cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.tile-items-list { display: flex; flex-direction: column; gap: 6px; }
+
+.tile-tracked-item {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; padding: 10px 12px;
     background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
-    overflow: hidden;
-    margin-bottom: 4px;
-}
-.tile-cat-pick-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    width: 100%;
-    font-size: 0.82rem;
-    color: #d4d4d8;
-    text-align: left;
-    transition: background 0.15s;
-}
-.tile-cat-pick-item:hover { background: rgba(255, 255, 255, 0.07); color: white; }
-
-.tile-cat-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-.tile-cat-dot-lg {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-/* ═══════════════════════════════════════════════
-   CATEGORY VIEWS — Grid & List
-═══════════════════════════════════════════════ */
-
-/* ── Grid View ── */
-.tile-cat-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 10px;
-}
-.tile-cat-card {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 12px;
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    transition: all 0.2s;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.tile-cat-card:hover {
-    border-color: rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.06);
-}
-.tile-cat-card-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.tile-cat-card-name {
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: #e4e4e7;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.tile-cat-card-bar-track {
-    height: 4px;
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 2px;
-    overflow: hidden;
-}
-.tile-cat-card-bar-fill {
-    height: 100%;
-    border-radius: 2px;
-    transition: width 0.35s ease;
-}
-.tile-cat-card-stats {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.7rem;
-    color: #71717a;
-}
-.tile-cat-card-pct {
-    font-weight: 700;
-}
-
-/* ── List View ── */
-.tile-cat-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-.tile-cat-list-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    background: rgba(0, 0, 0, 0.12);
-    border-radius: 8px;
-    transition: background 0.15s;
-}
-.tile-cat-list-row:hover { background: rgba(0, 0, 0, 0.2); }
-.tile-cat-list-name {
-    font-size: 0.82rem;
-    font-weight: 500;
-    color: #d4d4d8;
-    min-width: 80px;
-    flex-shrink: 0;
-}
-.tile-cat-list-bar-track {
-    flex: 1;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 2px;
-    overflow: hidden;
-}
-.tile-cat-list-bar-fill {
-    height: 100%;
-    border-radius: 2px;
-    transition: width 0.3s ease;
-}
-.tile-cat-list-stat {
-    font-size: 0.72rem;
-    color: #71717a;
-    min-width: 30px;
-    text-align: right;
-}
-.tile-cat-list-pct {
-    font-size: 0.72rem;
-    font-weight: 700;
-    min-width: 30px;
-    text-align: right;
-}
+.tile-tracked-item:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.15); transform: scale(1.01) translateX(2px); }
+.tile-tracked-item:active { transform: scale(0.98); }
+.tile-tracked-item.completed { background: rgba(139, 92, 246, 0.05); border-color: rgba(139, 92, 246, 0.1); }
+.tile-tracked-item.grid { flex-direction: column; align-items: flex-start; padding: 14px; gap: 12px; }
 
 /* ── Empty state ── */
 .tile-empty {
-    padding: 20px;
-    text-align: center;
-    color: #71717a;
-    font-size: 0.82rem;
+    padding: 20px; text-align: center;
+    color: #71717a; font-size: 0.82rem;
     border: 1px dashed rgba(255, 255, 255, 0.1);
     border-radius: 10px;
 }
@@ -661,59 +466,39 @@ h1 {
     margin-top: 12px;
     background: rgba(0, 0, 0, 0.2);
     border: 1px solid rgba(139, 92, 246, 0.25);
-    border-radius: 14px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    border-radius: 14px; padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
     animation: tileSlideIn 0.15s ease;
 }
 .tile-new-input {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    color: white;
-    font-size: 0.92rem;
-    font-weight: 600;
-    padding: 10px 14px;
-    outline: none;
-    width: 100%;
+    background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px; color: white;
+    font-size: 0.92rem; font-weight: 600;
+    padding: 10px 14px; outline: none; width: 100%;
     transition: border-color 0.15s;
 }
 .tile-new-input::placeholder { color: #71717a; }
 .tile-new-input:focus { border-color: rgba(139, 92, 246, 0.5); }
-
-.tile-new-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-.tile-new-actions {
-    display: flex;
-    gap: 8px;
-}
+.tile-new-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.tile-new-actions { display: flex; gap: 8px; }
 .tile-btn-cancel {
-    padding: 7px 14px;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: #a1a1aa;
-    background: rgba(255, 255, 255, 0.05);
+    padding: 7px 14px; border-radius: 8px;
+    font-size: 0.8rem; font-weight: 500;
+    color: #a1a1aa; background: rgba(255, 255, 255, 0.05);
     transition: all 0.15s;
 }
 .tile-btn-cancel:hover { color: white; background: rgba(255, 255, 255, 0.1); }
 .tile-btn-create {
-    padding: 7px 16px;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    background: var(--accent);
-    color: white;
+    padding: 7px 16px; border-radius: 8px;
+    font-size: 0.8rem; font-weight: 600;
+    background: var(--accent); color: white;
     transition: all 0.15s;
     box-shadow: 0 2px 8px rgba(139, 92, 246, 0.35);
 }
 .tile-btn-create:hover { background: var(--accent-hover); }
 .tile-btn-create:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* ── custom scrollbar ── */
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
