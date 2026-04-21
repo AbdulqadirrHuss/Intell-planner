@@ -421,7 +421,7 @@ function TrackerDetailPage({
                                             <span style={{ width: 12, height: 12, borderRadius: '50%', background: cat.color, display: 'inline-block', boxShadow: `0 0 8px ${cat.color}80`, flexShrink: 0 }} />
                                             <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white', letterSpacing: '0.01em' }}>{cat.name}</span>
                                             {catLinkedToBucket && (
-                                                <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: `${cat.color}22`, color: cat.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tracked</span>
+                                                <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '3px 8px', borderRadius: '12px', background: `linear-gradient(135deg, ${cat.color}20, ${cat.color}05)`, border: `1px solid ${cat.color}40`, color: cat.color, textTransform: 'uppercase', letterSpacing: '0.06em', boxShadow: `inset 0 1px 0 ${cat.color}30` }}>Tracked</span>
                                             )}
                                         </div>
                                         {activeLinkPB && (

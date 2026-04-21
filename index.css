@@ -146,27 +146,26 @@ body {
     margin-bottom: 10px;
 }
 
-/* ── Progress Bars Section (big, prominent) ── */
+/* ── Progress Bars Section (minimalist thin lines) ── */
 .td-pb-bars {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 16px;
 }
 
 .td-pb-bar-card {
-    background: var(--bg-surface);
-    border: 1px solid var(--border-soft);
-    border-radius: 14px;
-    padding: 16px 18px;
-    transition: border-color 0.2s;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
 }
-.td-pb-bar-card:hover { border-color: rgba(139,92,246,0.35); }
+.td-pb-bar-card:last-child {
+    border-bottom: none;
+}
 
 .td-pb-bar-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 10px;
+    margin-bottom: 8px; /* tighter spacing for minimalist look */
 }
 
 .td-pb-bar-label {
@@ -175,32 +174,34 @@ body {
     gap: 8px;
 }
 .td-pb-bar-label span:first-child {
-    width: 10px; height: 10px;
+    width: 6px; height: 6px;
     border-radius: 50%;
     flex-shrink: 0;
     display: inline-block;
 }
 .td-pb-bar-name {
-    font-size: 0.9rem;
-    font-weight: 700;
+    font-size: 0.85rem;
+    font-weight: 600;
     color: #e4e4e7;
+    letter-spacing: 0.01em;
 }
 
 .td-pb-bar-stat {
-    font-size: 0.8rem;
-    font-weight: 700;
+    font-size: 0.75rem;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
+    color: #a1a1aa; /* softer color for the numbers */
 }
 
 .td-pb-track {
-    height: 10px;
-    background: rgba(255,255,255,0.07);
-    border-radius: 6px;
+    height: 3px; /* ultra-thin line */
+    background: rgba(255,255,255,0.06);
+    border-radius: 999px;
     overflow: hidden;
 }
 .td-pb-fill {
     height: 100%;
-    border-radius: 6px;
+    border-radius: 999px;
     transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -245,31 +246,34 @@ body {
     display: flex;
     flex-wrap: wrap;
     align-items: flex-start;
-    gap: 16px;
+    gap: 20px;
 }
 
 .td-cat-card {
-    flex: 1 1 320px;
-    background: var(--bg-surface, rgba(255,255,255,0.04));
-    border: 1px solid rgba(255,255,255,0.07);
-    border-left: 3px solid var(--cat-color, #8b5cf6);
-    border-radius: 14px;
+    flex: 1 1 260px; /* narrower cards */
+    max-width: 420px; /* prevent infinite stretching */
+    background: linear-gradient(180deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.01) 100%);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-top: 1px solid var(--cat-color, #8b5cf6); /* refined top glow instead of chunky left bar */
+    border-radius: 16px;
     overflow: hidden;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.03);
+    transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
 }
 .td-cat-card:hover {
-    border-color: rgba(255,255,255,0.12);
-    border-left-color: var(--cat-color, #8b5cf6);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.1);
+    transform: translateY(-1px);
 }
 
 .td-cat-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 16px;
-    background: rgba(0,0,0,0.2);
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding: 16px 18px; /* taller header */
+    background: transparent; /* clean glassmorphism */
+    border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 
 /* ── Task list inside a category card ── */
