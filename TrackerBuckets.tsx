@@ -162,6 +162,12 @@ function TrackerDetailPage({
     const [compactView, setCompactView] = useState(false);
     const [expandedTasks, setExpandedTasks] = useState<string[]>([]);
 
+    const [cardOrder, setCardOrder] = useState<string[]>(() => {
+        try { return JSON.parse(localStorage.getItem(`td_order_${bucket.id}`) || '[]'); } catch { return []; }
+    });
+    const [draggedCatId, setDraggedCatId] = useState<string | null>(null);
+    const [dragOverCatId, setDragOverCatId] = useState<string | null>(null);
+
     const { done, total, pct } = calcPctFromTasks(
         bucket.categoryIds || [], bucket.taskTexts || [], bucket.subtaskTexts || [],
         categories, tasks, bucket.color
@@ -228,7 +234,43 @@ function TrackerDetailPage({
         if (activeLinkPBId || editMode) return g;
         const ft = g.catTasks.filter(t => isAnyTracked(t) || (t.subtasks && t.subtasks.some(st => isSubAnyTracked(t, st))));
         return { ...g, catTasks: ft };
-    }).filter(g => g.catTasks.length > 0);
+    }).filter(g => g.catTasks.length > 0)
+      .sort((a, b) => {
+          const ia = cardOrder.indexOf(a.cat.id);
+          const ib = cardOrder.indexOf(b.cat.id);
+          if (ia === -1 && ib === -1) return 0;
+          if (ia === -1) return 1;
+          if (ib === -1) return -1;
+          return ia - ib;
+      });
+
+    const handleDragStart = (e: React.DragEvent, id: string) => {
+        setDraggedCatId(id);
+        if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); }
+    };
+    const handleDragOver = (e: React.DragEvent, id: string) => {
+        e.preventDefault();
+        if (draggedCatId && draggedCatId !== id) setDragOverCatId(id);
+    };
+    const handleDrop = (e: React.DragEvent, targetId: string) => {
+        e.preventDefault();
+        setDragOverCatId(null);
+        if (!draggedCatId || draggedCatId === targetId) { setDraggedCatId(null); return; }
+
+        const activeIds = [...cardOrder];
+        effectiveCatGroups.forEach(g => { if (!activeIds.includes(g.cat.id)) activeIds.push(g.cat.id); });
+
+        const draggedIndex = activeIds.indexOf(draggedCatId);
+        const targetIndex = activeIds.indexOf(targetId);
+        if (draggedIndex === -1 || targetIndex === -1) { setDraggedCatId(null); return; }
+
+        activeIds.splice(draggedIndex, 1);
+        activeIds.splice(targetIndex, 0, draggedCatId);
+
+        setCardOrder(activeIds);
+        localStorage.setItem(`td_order_${bucket.id}`, JSON.stringify(activeIds));
+        setDraggedCatId(null);
+    };
 
     return (
         <div className="tracker-detail-page">
@@ -469,7 +511,16 @@ function TrackerDetailPage({
                             const catPct = totalCatAtoms === 0 ? 0 : Math.round((doneCatAtoms / totalCatAtoms) * 100);
 
                             return (
-                                <div key={cat.id} className="td-cat-card" style={{ '--cat-color': cat.color } as any}>
+                                <div key={cat.id} 
+                                     className={`td-cat-card ${draggedCatId === cat.id ? 'dragging' : ''} ${dragOverCatId === cat.id ? 'drag-over' : ''}`}
+                                     style={{ '--cat-color': cat.color } as any}
+                                     draggable={!activeLinkPBId && !editMode}
+                                     onDragStart={e => handleDragStart(e, cat.id)}
+                                     onDragOver={e => handleDragOver(e, cat.id)}
+                                     onDragLeave={() => setDragOverCatId(null)}
+                                     onDrop={e => handleDrop(e, cat.id)}
+                                     onDragEnd={() => { setDraggedCatId(null); setDragOverCatId(null); }}
+                                >
                                     <div className="td-cat-header-new">
                                         <div className="td-cat-title-new">{cat.name}</div>
                                         <div className="td-cat-stats-new">
