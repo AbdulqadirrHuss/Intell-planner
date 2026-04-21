@@ -120,8 +120,10 @@ function ProgressRing({ pct, color, size = 90, stroke = 7 }: { pct: number; colo
                 <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke}
                     strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
                     style={{ filter: `drop-shadow(0 0 8px ${color}) drop-shadow(0 0 16px ${color}80)`, transition: 'stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1)', transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }} />
-                <text x="50%" y="44%" textAnchor="middle" dy="0.35em" fill="white" fontSize={size > 70 ? '18' : '13'} fontWeight="800" fontFamily="Inter, sans-serif">{pct}%</text>
-                <text x="50%" y="64%" textAnchor="middle" fill={color} fontSize="9" fontWeight="600" fontFamily="Inter, sans-serif" opacity={0.85}>DONE</text>
+                <text x="50%" y={size > 40 ? "44%" : "50%"} textAnchor="middle" dy="0.35em" fill="white" fontSize={size > 70 ? '18' : '12'} fontWeight="800" fontFamily="Inter, sans-serif">{pct}%</text>
+                {size > 40 && (
+                    <text x="50%" y="64%" textAnchor="middle" fill={color} fontSize="9" fontWeight="600" fontFamily="Inter, sans-serif" opacity={0.85}>DONE</text>
+                )}
             </svg>
         </div>
     );
@@ -397,10 +399,10 @@ function TrackerDetailPage({
                                     >
                                         <CheckCircleIcon className="w-5 h-5" checked={t.completed} style={{ color: t.completed ? cat.color : 'rgba(255,255,255,0.2)' } as any} />
                                     </button>
-                                    <span className={`td-task-pill-text ${t.completed ? 'done' : ''}`}>{t.text}</span>
+                                    <span className={`td-task-pill-text ${t.completed ? 'done' : ''}`} style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.text}</span>
                                     
                                     {hasSubtasks && (
-                                        <span style={{ fontSize: '0.75rem', color: '#a1a1aa', fontWeight: 600, paddingRight: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <span style={{ fontSize: '0.75rem', color: '#a1a1aa', fontWeight: 600, paddingRight: 4, display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
                                             {t.subtasks.filter(st => st.completed).length}/{t.subtasks.length}
                                             <span style={{ transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', fontSize: '0.65rem' }}>▶</span>
                                         </span>
@@ -448,7 +450,7 @@ function TrackerDetailPage({
                                                     >
                                                         <CheckCircleIcon className="w-4 h-4" checked={st.completed} style={{ color: st.completed ? cat.color : 'rgba(255,255,255,0.15)' } as any} />
                                                     </button>
-                                                    <span className={`td-subtask-item-text ${st.completed ? 'done' : ''}`}>{st.text}</span>
+                                                    <span className={`td-subtask-item-text ${st.completed ? 'done' : ''}`} style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{st.text}</span>
                                                     
                                                     {activeLinkPB && !stViaParentPB && (
                                                         <button
