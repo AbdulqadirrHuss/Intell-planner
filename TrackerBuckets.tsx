@@ -423,32 +423,51 @@ function TrackerDetailPage({
                             const catLinkedToBucket = (bucket.categoryIds || []).includes(cat.id);
                             const catLinkedToPB = activeLinkPB ? activeLinkPB.categoryIds.includes(cat.id) : false;
 
+                            let totalCatAtoms = 0;
+                            let doneCatAtoms = 0;
+                            allTasksInCat.forEach(t => {
+                                const hasSubtasks = t.subtasks && t.subtasks.length > 0;
+                                if (hasSubtasks) {
+                                    t.subtasks.forEach(st => {
+                                        if (activeLinkPBId || editMode || isSubAnyTracked(t, st) || isAnyTracked(t)) {
+                                            totalCatAtoms++;
+                                            if (st.completed) doneCatAtoms++;
+                                        }
+                                    });
+                                } else {
+                                    totalCatAtoms++;
+                                    if (t.completed) doneCatAtoms++;
+                                }
+                            });
+                            const catPct = totalCatAtoms === 0 ? 0 : Math.round((doneCatAtoms / totalCatAtoms) * 100);
+
                             return (
                                 <div key={cat.id} className="td-cat-card" style={{ '--cat-color': cat.color } as any}>
-                                    <div className="td-cat-header">
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                            <span style={{ width: 12, height: 12, borderRadius: '50%', background: cat.color, display: 'inline-block', boxShadow: `0 0 8px ${cat.color}80`, flexShrink: 0 }} />
-                                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white', letterSpacing: '0.01em' }}>{cat.name}</span>
-                                            {catLinkedToBucket && (
-                                                <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '3px 8px', borderRadius: '12px', background: `linear-gradient(135deg, ${cat.color}20, ${cat.color}05)`, border: `1px solid ${cat.color}40`, color: cat.color, textTransform: 'uppercase', letterSpacing: '0.06em', boxShadow: `inset 0 1px 0 ${cat.color}30` }}>Tracked</span>
-                                            )}
+                                    <div className="td-cat-header-new">
+                                        <div className="td-cat-title-new">{cat.name}</div>
+                                        <div className="td-cat-stats-new">
+                                            <div className="td-cat-stats-pct" style={{ color: cat.color }}>{catPct}%</div>
+                                            <div className="td-cat-stats-frac">{doneCatAtoms}/{totalCatAtoms}</div>
                                         </div>
-                                        {activeLinkPB && (
-                                            <button
-                                                onClick={() => toggleCatInPB(activeLinkPB, cat.id)}
-                                                style={{
-                                                    display: 'flex', alignItems: 'center', gap: 5, padding: '4px 12px', borderRadius: 7,
-                                                    fontSize: '0.72rem', fontWeight: 700,
-                                                    background: catLinkedToPB ? activeLinkPB.color : 'rgba(255,255,255,0.06)',
-                                                    color: catLinkedToPB ? 'white' : '#a1a1aa',
-                                                    border: `1px solid ${catLinkedToPB ? activeLinkPB.color : 'rgba(255,255,255,0.1)'}`,
-                                                    transition: 'all 0.15s',
-                                                }}
-                                            >
-                                                {catLinkedToPB ? '✓ All Linked' : '+ Link All'}
-                                            </button>
-                                        )}
                                     </div>
+                                    
+                                    {activeLinkPB && (
+                                        <button
+                                            onClick={() => toggleCatInPB(activeLinkPB, cat.id)}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', gap: 5, padding: '6px 12px', borderRadius: 8,
+                                                fontSize: '0.72rem', fontWeight: 700, marginBottom: 12,
+                                                background: catLinkedToPB ? activeLinkPB.color : 'rgba(255,255,255,0.06)',
+                                                color: catLinkedToPB ? 'white' : '#a1a1aa',
+                                                border: `1px solid ${catLinkedToPB ? activeLinkPB.color : 'rgba(255,255,255,0.1)'}`,
+                                                transition: 'all 0.15s',
+                                            }}
+                                        >
+                                            {catLinkedToPB ? '✓ Entire Category Linked' : '+ Link Entire Category'}
+                                        </button>
+                                    )}
+
+                                    <div className="td-cat-divider" />
 
                                     <div className="td-task-list">
                                         {allTasksInCat.map(t => {
@@ -459,7 +478,10 @@ function TrackerDetailPage({
 
                                             return (
                                                 <div key={t.id}>
-                                                    <div className="td-task-row clickable" onClick={() => hasSubtasks && setExpandedTasks(prev => isExpanded ? prev.filter(id => id !== t.id) : [...prev, t.id])}>
+                                                    <div 
+                                                        className={`td-task-pill ${hasSubtasks && isExpanded ? 'expanded' : ''}`} 
+                                                        onClick={() => hasSubtasks && setExpandedTasks(prev => isExpanded ? prev.filter(id => id !== t.id) : [...prev, t.id])}
+                                                    >
                                                         <button
                                                             className="td-task-toggle"
                                                             onClick={(e) => { e.stopPropagation(); onToggleTask(t.id, t.completed, t.isRecurring); }}
@@ -467,18 +489,21 @@ function TrackerDetailPage({
                                                         >
                                                             <CheckCircleIcon className="w-5 h-5" checked={t.completed} style={{ color: t.completed ? cat.color : 'rgba(255,255,255,0.2)' } as any} />
                                                         </button>
-                                                        <span className={`td-task-text ${t.completed ? 'done' : ''}`}>{t.text}</span>
+                                                        <span className={`td-task-pill-text ${t.completed ? 'done' : ''}`}>{t.text}</span>
                                                         
                                                         {hasSubtasks && (
-                                                            <span style={{ fontSize: '0.7rem', color: '#a1a1aa', paddingRight: 4 }}>{t.subtasks.filter(st => st.completed).length}/{t.subtasks.length}</span>
+                                                            <span style={{ fontSize: '0.75rem', color: '#a1a1aa', fontWeight: 600, paddingRight: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                                {t.subtasks.filter(st => st.completed).length}/{t.subtasks.length}
+                                                                <span style={{ transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', fontSize: '0.65rem' }}>▶</span>
+                                                            </span>
                                                         )}
                                                         
                                                         {activeLinkPB && !catLinkedToPBForTask && (
                                                             <button
                                                                 onClick={(e) => toggleTaskInPB(activeLinkPB, t, e)}
                                                                 style={{
-                                                                    display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px',
-                                                                    borderRadius: 6, fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
+                                                                    display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px',
+                                                                    borderRadius: 8, fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0, marginLeft: 8,
                                                                     background: taskLinkedToPB ? activeLinkPB.color : 'rgba(255,255,255,0.05)',
                                                                     color: taskLinkedToPB ? 'white' : '#71717a',
                                                                     border: `1px solid ${taskLinkedToPB ? activeLinkPB.color : 'rgba(255,255,255,0.08)'}`,
@@ -489,48 +514,53 @@ function TrackerDetailPage({
                                                             </button>
                                                         )}
                                                         {activeLinkPB && catLinkedToPBForTask && (
-                                                            <span style={{ fontSize: '0.68rem', color: activeLinkPB.color, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>via category</span>
+                                                            <span style={{ fontSize: '0.68rem', color: activeLinkPB.color, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0, marginLeft: 8 }}>via category</span>
                                                         )}
                                                     </div>
 
                                                     {/* Subtasks */}
-                                                    {hasSubtasks && isExpanded && t.subtasks.map(st => {
-                                                        const stLinkedToPB = activeLinkPB ? isSubtaskLinkedToPB(activeLinkPB, t, st) : false;
-                                                        const stViaParentPB = activeLinkPB ? (catLinkedToPBForTask || taskLinkedToPB) : false;
-                                                        
-                                                        if (!activeLinkPBId && !editMode && !isSubAnyTracked(t, st) && !isAnyTracked(t)) return null;
+                                                    {hasSubtasks && isExpanded && (
+                                                        <div className="td-subtasks-container">
+                                                            {t.subtasks.map(st => {
+                                                                const stLinkedToPB = activeLinkPB ? isSubtaskLinkedToPB(activeLinkPB, t, st) : false;
+                                                                const stViaParentPB = activeLinkPB ? (catLinkedToPBForTask || taskLinkedToPB) : false;
+                                                                
+                                                                if (!activeLinkPBId && !editMode && !isSubAnyTracked(t, st) && !isAnyTracked(t)) return null;
 
-                                                        return (
-                                                            <div key={st.id} className="td-subtask-row">
-                                                                <button
-                                                                    className="td-task-toggle"
-                                                                    style={{ opacity: 0.7 }}
-                                                                    onClick={(e) => { e.stopPropagation(); onToggleSubtask(st.id, t.id, st.completed, st.isRecurring); }}
-                                                                >
-                                                                    <CheckCircleIcon className="w-4 h-4" checked={st.completed} style={{ color: st.completed ? cat.color : 'rgba(255,255,255,0.15)' } as any} />
-                                                                </button>
-                                                                <span className={`td-task-text subtask ${st.completed ? 'done' : ''}`}>{st.text}</span>
-                                                                {activeLinkPB && !stViaParentPB && (
-                                                                    <button
-                                                                        onClick={(e) => toggleSubtaskInPB(activeLinkPB, t, st, e)}
-                                                                        style={{
-                                                                            display: 'flex', alignItems: 'center', gap: 4, padding: '2px 8px',
-                                                                            borderRadius: 5, fontSize: '0.65rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
-                                                                            background: activeLinkPB.subtaskTexts.includes(st.text) ? activeLinkPB.color : 'rgba(255,255,255,0.04)',
-                                                                            color: activeLinkPB.subtaskTexts.includes(st.text) ? 'white' : '#71717a',
-                                                                            border: `1px solid ${activeLinkPB.subtaskTexts.includes(st.text) ? activeLinkPB.color : 'rgba(255,255,255,0.06)'}`,
-                                                                            transition: 'all 0.15s',
-                                                                        }}
-                                                                    >
-                                                                        {activeLinkPB.subtaskTexts.includes(st.text) ? '✓' : '+'}
-                                                                    </button>
-                                                                )}
-                                                                {activeLinkPB && stViaParentPB && (
-                                                                    <span style={{ fontSize: '0.65rem', color: activeLinkPB.color, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>inherited</span>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })}
+                                                                return (
+                                                                    <div key={st.id} className="td-subtask-item">
+                                                                        <button
+                                                                            className="td-task-toggle"
+                                                                            style={{ opacity: 0.7 }}
+                                                                            onClick={(e) => { e.stopPropagation(); onToggleSubtask(st.id, t.id, st.completed, st.isRecurring); }}
+                                                                        >
+                                                                            <CheckCircleIcon className="w-4 h-4" checked={st.completed} style={{ color: st.completed ? cat.color : 'rgba(255,255,255,0.15)' } as any} />
+                                                                        </button>
+                                                                        <span className={`td-subtask-item-text ${st.completed ? 'done' : ''}`}>{st.text}</span>
+                                                                        
+                                                                        {activeLinkPB && !stViaParentPB && (
+                                                                            <button
+                                                                                onClick={(e) => toggleSubtaskInPB(activeLinkPB, t, st, e)}
+                                                                                style={{
+                                                                                    display: 'flex', alignItems: 'center', gap: 4, padding: '2px 8px',
+                                                                                    borderRadius: 6, fontSize: '0.65rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
+                                                                                    background: activeLinkPB.subtaskTexts.includes(`${t.categoryId}::${t.text}::${st.text}`) || activeLinkPB.subtaskTexts.includes(st.text) ? activeLinkPB.color : 'rgba(255,255,255,0.04)',
+                                                                                    color: activeLinkPB.subtaskTexts.includes(`${t.categoryId}::${t.text}::${st.text}`) || activeLinkPB.subtaskTexts.includes(st.text) ? 'white' : '#71717a',
+                                                                                    border: `1px solid ${activeLinkPB.subtaskTexts.includes(`${t.categoryId}::${t.text}::${st.text}`) || activeLinkPB.subtaskTexts.includes(st.text) ? activeLinkPB.color : 'rgba(255,255,255,0.06)'}`,
+                                                                                    transition: 'all 0.15s',
+                                                                                }}
+                                                                            >
+                                                                                {activeLinkPB.subtaskTexts.includes(`${t.categoryId}::${t.text}::${st.text}`) || activeLinkPB.subtaskTexts.includes(st.text) ? '✓' : '+'}
+                                                                            </button>
+                                                                        )}
+                                                                        {activeLinkPB && stViaParentPB && (
+                                                                            <span style={{ fontSize: '0.65rem', color: activeLinkPB.color, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>inherited</span>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             );
                                         })}
