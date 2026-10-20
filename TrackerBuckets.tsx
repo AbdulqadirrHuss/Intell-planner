@@ -538,7 +538,7 @@ function TrackerDetailPanel({
     };
 
     return (
-        <div className="tracker-detail-panel">
+        <div className="tracker-detail-panel" style={{ '--tracker-color': bucket.color } as any}>
 
             {/* ══════════ HEADER ══════════ */}
             <div className="td-header">
