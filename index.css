@@ -41,22 +41,23 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   TRACKER DETAIL PAGE (full-screen subpage)
+   TRACKER DETAIL PANELS (side-by-side on desktop, stacked on mobile)
 ═══════════════════════════════════════════════ */
+.tracker-detail-panel,
 .tracker-detail-page {
-    min-height: 100vh;
-    background: var(--bg-primary);
+    background: rgba(255, 255, 255, 0.03);
     background-image:
-        radial-gradient(ellipse at 0% 0%, rgba(139, 92, 246, 0.18) 0%, transparent 55%),
-        radial-gradient(ellipse at 100% 100%, rgba(99, 102, 241, 0.10) 0%, transparent 50%);
-    padding: 2rem;
-    max-width: 1000px;
-    margin: 0 auto;
-    animation: pageSlideIn 0.25s ease-out;
-}
-@keyframes pageSlideIn {
-    from { opacity: 0; transform: translateX(24px); }
-    to   { opacity: 1; transform: translateX(0); }
+        radial-gradient(ellipse at 0% 0%, rgba(139, 92, 246, 0.12) 0%, transparent 55%),
+        radial-gradient(ellipse at 100% 100%, rgba(99, 102, 241, 0.06) 0%, transparent 50%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-xl);
+    padding: 1.5rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 /* ── Detail Header ── */
@@ -68,22 +69,6 @@ body {
     padding-bottom: 1.25rem;
     border-bottom: 1px solid var(--border-soft);
 }
-
-.td-back-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    border-radius: 10px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid var(--border);
-    color: #a1a1aa;
-    font-size: 0.8rem;
-    font-weight: 600;
-    transition: all 0.18s;
-    flex-shrink: 0;
-}
-.td-back-btn:hover { background: rgba(255,255,255,0.12); color: white; }
 
 .td-ring-wrap {
     position: relative;
@@ -506,16 +491,85 @@ h1 { letter-spacing: -0.02em; }
 .app-header { margin-bottom: 1.5rem; padding-bottom: 0; }
 
 /* ═══════════════════════════════════════════════
-   TRACKER TILES
+   TRACKER PANELS LAYOUT & TILES
 ═══════════════════════════════════════════════ */
-.tracker-buckets-root { margin-bottom: 1.75rem; }
-.tracker-buckets-header { margin-bottom: 12px; }
+.tracker-buckets-root {
+    margin-bottom: 2rem;
+    width: 100%;
+}
+.tracker-buckets-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
 .tracker-buckets-title {
-    font-size: 0.75rem; font-weight: 700;
-    color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.08em;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #a1a1aa;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
 }
 
-/* ── Tile Grid ── */
+.td-add-tracker-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 9px;
+    background: var(--accent);
+    color: white;
+    font-size: 0.78rem;
+    font-weight: 700;
+    transition: all 0.18s;
+    box-shadow: 0 2px 10px var(--accent-glow);
+    border: none;
+    cursor: pointer;
+}
+.td-add-tracker-btn:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px var(--accent-glow);
+}
+
+.tracker-create-wrapper {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.tracker-panels-empty {
+    padding: 32px 20px;
+    border: 1px dashed rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-xl);
+    text-align: center;
+    color: #71717a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Side-by-side on desktop, stacked responsively on small screens */
+.tracker-detail-panels-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+    gap: 24px;
+    align-items: start;
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    .tracker-detail-panels-container {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    .tracker-detail-panel {
+        padding: 1rem;
+    }
+}
+
+/* ── Tile Grid (preserved for reuse) ── */
 .tile-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
