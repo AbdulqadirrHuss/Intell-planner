@@ -124,42 +124,74 @@ function ProgressRing({ pct, color, size = 90, stroke = 7 }: { pct: number; colo
     );
 }
 
-// ═══════════════════════════════════════════════ Tracker Detail Panel ══
-function TrackerDetailPanel({
-    bucket, categories, tasks,
-    onUpdate, onDelete,
+// ═══════════════════════════════════════════════ Unified Tracker Board ══
+// One seamless board for ALL trackers: a single header row with every tracker's
+// counter side by side, one shared set of actions (Add Progress Bar, compact
+// view, settings), one shared Progress Bars row and one shared Dashboard Layout.
+// Each tracker still counts its own progress independently.
+
+const UNIFIED_ROWS_KEY = 'td_rows_unified';
+
+/** Build the shared dashboard layout, migrating any old per-tracker layouts once. */
+function loadUnifiedRows(buckets: TrackerBucket[]): DashboardRowLayout[] {
+    try {
+        const saved = localStorage.getItem(UNIFIED_ROWS_KEY);
+        if (saved) return JSON.parse(saved);
+
+        const ids: string[] = [];
+        let maxCols = 0;
+        buckets.forEach(b => {
+            let rows: DashboardRowLayout[] = [];
+            const savedRows = localStorage.getItem(`td_rows_${b.id}`);
+            if (savedRows) rows = JSON.parse(savedRows);
+            else {
+                const savedOrder = localStorage.getItem(`td_order_${b.id}`);
+                if (savedOrder) {
+                    const order = JSON.parse(savedOrder);
+                    if (order.length > 0) rows = [{ id: '', columns: Math.max(3, Math.min(order.length, 5)), matchHeight: false, slots: order }];
+                }
+            }
+            rows.forEach(r => {
+                maxCols = Math.max(maxCols, r.columns || 0);
+                (r.slots || []).forEach(s => { if (s && !ids.includes(s)) ids.push(s); });
+            });
+        });
+        if (ids.length === 0) return [];
+
+        // Pack every tracker's boxes into shared rows so they sit side by side
+        const cols = ids.length <= 4 ? ids.length : Math.min(Math.max(maxCols, 3), 5);
+        const rows: DashboardRowLayout[] = [];
+        for (let i = 0; i < ids.length; i += cols) {
+            const slots: (string | null)[] = ids.slice(i, i + cols);
+            while (slots.length < cols) slots.push(null);
+            rows.push({ id: `r-${Date.now()}-${i}`, columns: cols, matchHeight: false, slots });
+        }
+        return rows;
+    } catch {
+        return [];
+    }
+}
+
+function TrackerBoard({
+    buckets, categories, tasks,
+    onAddBucket, onUpdateBucket, onDeleteBucket,
     onAddCategoryToBucket, onRemoveCategoryFromBucket,
     onAddBucketTask, onRemoveBucketTask,
-    onAddBucketSubtask, onRemoveBucketSubtask,
     onToggleTask, onToggleSubtask,
     onAddProgressBar, onUpdateProgressBar, onDeleteProgressBar,
     onAddPBCategory, onRemovePBCategory,
     onAddPBTask, onRemovePBTask,
     onAddPBSubtask, onRemovePBSubtask,
-}: {
-    bucket: TrackerBucket; categories: Category[]; tasks: Task[];
-    onUpdate: (u: Partial<TrackerBucket>) => void; onDelete: () => void;
-    onAddCategoryToBucket: (id: string) => void; onRemoveCategoryFromBucket: (id: string) => void;
-    onAddBucketTask: (bId: string, t: string) => void; onRemoveBucketTask: (bId: string, t: string) => void;
-    onAddBucketSubtask: (bId: string, t: string) => void; onRemoveBucketSubtask: (bId: string, t: string) => void;
-    onToggleTask: (id: string, s: boolean, r: boolean) => void;
-    onToggleSubtask: (pId: string, id: string, s: boolean, r: boolean) => void;
-    onAddProgressBar: (bId: string, label: string, color: string) => void;
-    onUpdateProgressBar: (bId: string, pbId: string, u: Partial<TrackerProgressBar>) => void;
-    onDeleteProgressBar: (bId: string, pbId: string) => void;
-    onAddPBCategory: (bId: string, pbId: string, cId: string) => void; onRemovePBCategory: (bId: string, pbId: string, cId: string) => void;
-    onAddPBTask: (bId: string, pbId: string, t: string) => void; onRemovePBTask: (bId: string, pbId: string, t: string) => void;
-    onAddPBSubtask: (bId: string, pbId: string, t: string) => void; onRemovePBSubtask: (bId: string, pbId: string, t: string) => void;
-}) {
-    const progressBars = bucket.progressBars || [];
-
+}: Props) {
     // ── local state ──
     const [editMode, setEditMode] = useState(false);
-    const [editName, setEditName] = useState(bucket.name);
+    const [settingsBucketId, setSettingsBucketId] = useState<string | null>(null);
+    const [isCreatingTracker, setIsCreatingTracker] = useState(false);
     const [addingPB, setAddingPB] = useState(false);
     const [newPBLabel, setNewPBLabel] = useState('');
     const [newPBColor, setNewPBColor] = useState(PALETTE[4]);
-    const [activeLinkPBId, setActiveLinkPBId] = useState<string | null>(null);
+    const [newPBBucketId, setNewPBBucketId] = useState<string | null>(null);
+    const [activeLink, setActiveLink] = useState<{ bucketId: string; pbId: string } | null>(null);
     const [editingPBId, setEditingPBId] = useState<string | null>(null);
     const [openMenuPBId, setOpenMenuPBId] = useState<string | null>(null);
     const [compactView, setCompactView] = useState(false);
@@ -171,51 +203,45 @@ function TrackerDetailPanel({
     // Feature 1 — edit panel per-cat task expansion
     const [expandedEditCats, setExpandedEditCats] = useState<string[]>([]);
 
-    const [dashboardRows, setDashboardRows] = useState<DashboardRowLayout[]>(() => {
-        try { 
-            const savedRows = localStorage.getItem(`td_rows_${bucket.id}`);
-            if (savedRows) return JSON.parse(savedRows);
-            const savedOrder = localStorage.getItem(`td_order_${bucket.id}`);
-            if (savedOrder) {
-                const order = JSON.parse(savedOrder);
-                if (order.length > 0) return [{ id: `r-${Date.now()}`, columns: Math.max(3, Math.min(order.length, 5)), matchHeight: false, slots: order }];
-            }
-        } catch {}
-        return [];
-    });
+    const [dashboardRows, setDashboardRows] = useState<DashboardRowLayout[]>(() => loadUnifiedRows(buckets));
 
     const saveDashboardRows = (rows: DashboardRowLayout[]) => {
         setDashboardRows(rows);
-        localStorage.setItem(`td_rows_${bucket.id}`, JSON.stringify(rows));
+        localStorage.setItem(UNIFIED_ROWS_KEY, JSON.stringify(rows));
     };
 
     const [layoutEditMode, setLayoutEditMode] = useState(false);
-    
-    // Style settings
-    const saveStyle = (key: string, val: string) => { localStorage.setItem(key, val); return val; };
-    const [cardPad, setCardPad] = useState(() => localStorage.getItem(`td_pad_${bucket.id}`) || '16px 20px');
-    const [titleSize, setTitleSize] = useState(() => localStorage.getItem(`td_tsz_${bucket.id}`) || '0.72rem');
-    const [pctSize, setPctSize] = useState(() => localStorage.getItem(`td_psz_${bucket.id}`) || '2.2rem');
+
+    // Style settings (shared; falls back to the first tracker's saved values)
+    const firstId = buckets[0]?.id;
+    const [cardPad] = useState(() => localStorage.getItem('td_pad_unified') || localStorage.getItem(`td_pad_${firstId}`) || '16px 20px');
+    const [titleSize] = useState(() => localStorage.getItem('td_tsz_unified') || localStorage.getItem(`td_tsz_${firstId}`) || '0.72rem');
+    const [pctSize] = useState(() => localStorage.getItem('td_psz_unified') || localStorage.getItem(`td_psz_${firstId}`) || '2.2rem');
 
     const [draggedItem, setDraggedItem] = useState<{ id: string, sourceRowId: string, sourceSlotIdx: number } | null>(null);
     const [dragOverTarget, setDragOverTarget] = useState<{ rowId: string, slotIdx: number } | null>(null);
 
-    const { done, total, pct } = calcPctFromTasks(
-        bucket.categoryIds || [], bucket.taskTexts || [], bucket.subtaskTexts || [],
-        categories, tasks, bucket.color
-    );
+    // ── derived ──
+    const settingsBucket = buckets.find(b => b.id === settingsBucketId) ?? buckets[0];
+    const pbTargetBucketId = (newPBBucketId && buckets.some(b => b.id === newPBBucketId)) ? newPBBucketId : (settingsBucket?.id ?? '');
+    const allPBs = buckets.flatMap(b => (b.progressBars || []).map(pb => ({ pb, bucket: b })));
+    const activeLinkPB = activeLink ? (allPBs.find(x => x.pb.id === activeLink.pbId)?.pb ?? null) : null;
+    const activeLinkPBId = activeLinkPB ? activeLinkPB.id : null;
+    const linkBucketId = activeLink?.bucketId ?? '';
 
-    const saveName = () => { if (editName.trim() && editName !== bucket.name) onUpdate({ name: editName.trim() }); };
+    const openSettingsFor = (bucketId: string) => {
+        if (editMode && settingsBucket?.id === bucketId) { setEditMode(false); return; }
+        setSettingsBucketId(bucketId);
+        setEditMode(true);
+        setActiveLink(null);
+    };
 
     const submitPB = () => {
-        if (newPBLabel.trim()) {
-            onAddProgressBar(bucket.id, newPBLabel.trim(), newPBColor);
+        if (newPBLabel.trim() && pbTargetBucketId) {
+            onAddProgressBar(pbTargetBucketId, newPBLabel.trim(), newPBColor);
             setNewPBLabel(''); setAddingPB(false);
         }
     };
-
-    // Active linking bar
-    const activeLinkPB = progressBars.find(pb => pb.id === activeLinkPBId) ?? null;
 
     // Build category buckets for the card display
     // Show all categories that have tasks today, whether tracked or not
@@ -224,11 +250,11 @@ function TrackerDetailPanel({
         return { cat, catTasks };
     }).filter(g => g.catTasks.length > 0);
 
-    // Helper: is a task/subtask tracked by bucket
-    const isTaskTrackedByBucket = (t: Task) =>
-        (bucket.categoryIds || []).includes(t.categoryId) || (bucket.taskTexts || []).some(x => x === t.text || x === `${t.categoryId}::${t.text}`);
-    const isSubtaskTrackedByBucket = (t: Task, st: Subtask) =>
-        isTaskTrackedByBucket(t) || (bucket.subtaskTexts || []).some(x => x === st.text || x === `${t.categoryId}::${t.text}::${st.text}`);
+    // Helper: is a task/subtask tracked by a given tracker
+    const isTaskTrackedByBucket = (b: TrackerBucket, t: Task) =>
+        (b.categoryIds || []).includes(t.categoryId) || (b.taskTexts || []).some(x => x === t.text || x === `${t.categoryId}::${t.text}`);
+    const isSubtaskTrackedByBucket = (b: TrackerBucket, t: Task, st: Subtask) =>
+        isTaskTrackedByBucket(b, t) || (b.subtaskTexts || []).some(x => x === st.text || x === `${t.categoryId}::${t.text}::${st.text}`);
 
     // Helper: is a task/subtask linked to a specific progress bar
     const isTaskLinkedToPB = (pb: TrackerProgressBar, t: Task) =>
@@ -241,25 +267,28 @@ function TrackerDetailPanel({
         e.stopPropagation();
         const key = `${t.categoryId}::${t.text}`;
         const oldKey = t.text;
-        if (pb.taskTexts.includes(key)) onRemovePBTask(bucket.id, pb.id, key);
-        else if (pb.taskTexts.includes(oldKey)) onRemovePBTask(bucket.id, pb.id, oldKey);
-        else onAddPBTask(bucket.id, pb.id, key);
+        if (pb.taskTexts.includes(key)) onRemovePBTask(linkBucketId, pb.id, key);
+        else if (pb.taskTexts.includes(oldKey)) onRemovePBTask(linkBucketId, pb.id, oldKey);
+        else onAddPBTask(linkBucketId, pb.id, key);
     };
     const toggleCatInPB = (pb: TrackerProgressBar, catId: string) => {
-        if (pb.categoryIds.includes(catId)) onRemovePBCategory(bucket.id, pb.id, catId);
-        else onAddPBCategory(bucket.id, pb.id, catId);
+        if (pb.categoryIds.includes(catId)) onRemovePBCategory(linkBucketId, pb.id, catId);
+        else onAddPBCategory(linkBucketId, pb.id, catId);
     };
     const toggleSubtaskInPB = (pb: TrackerProgressBar, t: Task, st: Subtask, e: React.MouseEvent) => {
         e.stopPropagation();
         const key = `${t.categoryId}::${t.text}::${st.text}`;
         const oldKey = st.text;
-        if (pb.subtaskTexts.includes(key)) onRemovePBSubtask(bucket.id, pb.id, key);
-        else if (pb.subtaskTexts.includes(oldKey)) onRemovePBSubtask(bucket.id, pb.id, oldKey);
-        else onAddPBSubtask(bucket.id, pb.id, key);
+        if (pb.subtaskTexts.includes(key)) onRemovePBSubtask(linkBucketId, pb.id, key);
+        else if (pb.subtaskTexts.includes(oldKey)) onRemovePBSubtask(linkBucketId, pb.id, oldKey);
+        else onAddPBSubtask(linkBucketId, pb.id, key);
     };
 
-    const isAnyTracked = (t: Task) => isTaskTrackedByBucket(t) || progressBars.some(pb => isTaskLinkedToPB(pb, t));
-    const isSubAnyTracked = (t: Task, st: Subtask) => isSubtaskTrackedByBucket(t, st) || progressBars.some(pb => isSubtaskLinkedToPB(pb, t, st));
+    // Tracked by ANY tracker or ANY progress bar
+    const isAnyTracked = (t: Task) =>
+        buckets.some(b => isTaskTrackedByBucket(b, t)) || allPBs.some(({ pb }) => isTaskLinkedToPB(pb, t));
+    const isSubAnyTracked = (t: Task, st: Subtask) =>
+        buckets.some(b => isSubtaskTrackedByBucket(b, t, st)) || allPBs.some(({ pb }) => isSubtaskLinkedToPB(pb, t, st));
 
     // Feature 3 — dopamine animation trigger
     const triggerComplete = (taskId: string, catId: string, wasCompleted: boolean) => {
@@ -307,7 +336,7 @@ function TrackerDetailPanel({
         }
 
         const newRows = JSON.parse(JSON.stringify(dashboardRows)) as DashboardRowLayout[];
-        
+
         // Remove from source
         if (draggedItem.sourceRowId !== 'unassigned') {
             const srcRow = newRows.find(r => r.id === draggedItem.sourceRowId);
@@ -331,7 +360,6 @@ function TrackerDetailPanel({
         if (!group) return null;
         const { cat, catTasks } = group;
         const allTasksInCat = catTasks;
-        const catLinkedToBucket = (bucket.categoryIds || []).includes(cat.id);
         const catLinkedToPB = activeLinkPB ? activeLinkPB.categoryIds.includes(cat.id) : false;
 
         let totalCatAtoms = 0;
@@ -421,10 +449,11 @@ function TrackerDetailPanel({
                     {hasSubtasks && isExpanded && (
                         <div className="td-subtasks-container">
                             {t.subtasks.map(st => {
-                                const stLinkedToPB = activeLinkPB ? isSubtaskLinkedToPB(activeLinkPB, t, st) : false;
                                 const stViaParentPB = activeLinkPB ? (catLinkedToPBForTask || taskLinkedToPB) : false;
 
                                 if (!activeLinkPBId && !editMode && !isSubAnyTracked(t, st) && !isAnyTracked(t)) return null;
+
+                                const stLinked = activeLinkPB ? (activeLinkPB.subtaskTexts.includes(`${t.categoryId}::${t.text}::${st.text}`) || activeLinkPB.subtaskTexts.includes(st.text)) : false;
 
                                 return (
                                     <div
@@ -448,13 +477,13 @@ function TrackerDetailPanel({
                                                 style={{
                                                     display: 'flex', alignItems: 'center', gap: 4, padding: '2px 8px',
                                                     borderRadius: 6, fontSize: '0.65rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
-                                                    background: activeLinkPB.subtaskTexts.includes(`${t.categoryId}::${t.text}::${st.text}`) || activeLinkPB.subtaskTexts.includes(st.text) ? activeLinkPB.color : 'rgba(255,255,255,0.04)',
-                                                    color: activeLinkPB.subtaskTexts.includes(`${t.categoryId}::${t.text}::${st.text}`) || activeLinkPB.subtaskTexts.includes(st.text) ? 'white' : '#71717a',
-                                                    border: `1px solid ${activeLinkPB.subtaskTexts.includes(`${t.categoryId}::${t.text}::${st.text}`) || activeLinkPB.subtaskTexts.includes(st.text) ? activeLinkPB.color : 'rgba(255,255,255,0.06)'}`,
+                                                    background: stLinked ? activeLinkPB.color : 'rgba(255,255,255,0.04)',
+                                                    color: stLinked ? 'white' : '#71717a',
+                                                    border: `1px solid ${stLinked ? activeLinkPB.color : 'rgba(255,255,255,0.06)'}`,
                                                     transition: 'all 0.15s',
                                                 }}
                                             >
-                                                {activeLinkPB.subtaskTexts.includes(`${t.categoryId}::${t.text}::${st.text}`) || activeLinkPB.subtaskTexts.includes(st.text) ? '✓' : '+'}
+                                                {stLinked ? '✓' : '+'}
                                             </button>
                                         )}
                                         {activeLinkPB && stViaParentPB && (
@@ -537,44 +566,70 @@ function TrackerDetailPanel({
         );
     };
 
+    const sb = settingsBucket; // tracker currently being configured in the settings panel
+
     return (
-        <div className="tracker-detail-panel" style={{ '--tracker-color': bucket.color } as any}>
+        <div className="tracker-detail-panel tracker-unified-board">
 
-            {/* ══════════ HEADER ══════════ */}
-            <div className="td-header">
-                <div style={{ '--ring-color': bucket.color } as any}>
-                    <ProgressRing pct={pct} color={bucket.color} size={72} stroke={6} />
-                </div>
-
-                <div className="td-title-block">
-                    {editMode
-                        ? <input className="tile-edit-input text-xl font-bold mb-1" value={editName}
-                            onChange={e => setEditName(e.target.value)} onBlur={saveName}
-                            onKeyDown={e => { if (e.key === 'Enter') saveName(); }} autoFocus />
-                        : <h2 style={{ color: 'white', fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em' }}>{bucket.name}</h2>
-                    }
-                    <p style={{ fontSize: '0.8rem', color: '#71717a', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
-                        {done} / {total} items complete · {pct}%
-                    </p>
+            {/* ══════════ HEADER — every tracker's counter side by side + shared actions ══════════ */}
+            <div className="td-header td-header-unified">
+                <div className="td-tracker-summaries">
+                    {buckets.map(b => {
+                        const s = calcPctFromTasks(b.categoryIds || [], b.taskTexts || [], b.subtaskTexts || [], categories, tasks, b.color);
+                        const isSelected = editMode && sb?.id === b.id;
+                        return (
+                            <div
+                                key={b.id}
+                                className={`td-tracker-summary ${isSelected ? 'selected' : ''}`}
+                                style={{ '--tracker-color': b.color } as any}
+                                onClick={() => openSettingsFor(b.id)}
+                                title={`${b.name} settings`}
+                            >
+                                <ProgressRing pct={s.pct} color={b.color} size={72} stroke={6} />
+                                <div className="td-title-block">
+                                    <h2>{b.name}</h2>
+                                    <p>{s.done} / {s.total} items · {s.pct}%</p>
+                                </div>
+                            </div>
+                        );
+                    })}
+                    <button
+                        className={`td-add-tracker-chip ${isCreatingTracker ? 'active' : ''}`}
+                        onClick={() => setIsCreatingTracker(v => !v)}
+                        title="Add tracker"
+                    >
+                        <PlusIcon className="w-4 h-4" />
+                    </button>
                 </div>
 
                 <div className="td-header-actions">
-                    <button className="td-add-pb-btn" onClick={() => { setAddingPB(v => !v); setActiveLinkPBId(null); }}>
+                    <button className="td-add-pb-btn" onClick={() => { setAddingPB(v => !v); setActiveLink(null); }}>
                         <PlusIcon className="w-4 h-4" />
                         Add Progress Bar
                     </button>
-                    <button 
-                        className={`td-gear-btn ${compactView ? 'active' : ''}`} 
-                        onClick={() => setCompactView(v => !v)} 
+                    <button
+                        className={`td-gear-btn ${compactView ? 'active' : ''}`}
+                        onClick={() => setCompactView(v => !v)}
                         title={compactView ? "Normal View" : "Compact View"}
                     >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg>
                     </button>
-                    <button className={`td-gear-btn ${editMode ? 'active' : ''}`} onClick={() => setEditMode(v => !v)} title="Settings">
+                    <button className={`td-gear-btn ${editMode ? 'active' : ''}`} onClick={() => { setEditMode(v => !v); setActiveLink(null); }} title="Settings">
                         <GearIcon className="w-4 h-4" />
                     </button>
                 </div>
             </div>
+
+            {/* ══ New tracker form ══ */}
+            {isCreatingTracker && (
+                <div className="td-add-pb-form" style={{ marginBottom: 20 }}>
+                    <p className="tile-edit-label" style={{ marginBottom: 8 }}>New Tracker</p>
+                    <NewBucketForm
+                        onAdd={(name, color) => { onAddBucket(name, 'independent', color); setIsCreatingTracker(false); }}
+                        onCancel={() => setIsCreatingTracker(false)}
+                    />
+                </div>
+            )}
 
             {/* ══ Linking mode banner ══ */}
             {activeLinkPB && (
@@ -593,13 +648,13 @@ function TrackerDetailPanel({
                             — tap tasks or categories below to link them
                         </span>
                     </div>
-                    <button onClick={() => setActiveLinkPBId(null)} style={{ color: '#71717a', padding: 4 }}>
+                    <button onClick={() => setActiveLink(null)} style={{ color: '#71717a', padding: 4 }}>
                         <XIcon className="w-4 h-4" />
                     </button>
                 </div>
             )}
 
-            {/* ══ Add bar form ══ */}
+            {/* ══ Add bar form (single, shared) ══ */}
             {addingPB && (
                 <div className="td-add-pb-form" style={{ marginBottom: 20 }}>
                     <p className="tile-edit-label" style={{ marginBottom: 8 }}>New Progress Bar</p>
@@ -612,6 +667,23 @@ function TrackerDetailPanel({
                         autoFocus
                         style={{ marginBottom: 10, width: '100%' }}
                     />
+                    {buckets.length > 1 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+                            <span className="tile-edit-label" style={{ margin: 0 }}>Tracker</span>
+                            <div className="td-tracker-tabs">
+                                {buckets.map(b => (
+                                    <button
+                                        key={b.id}
+                                        className={`td-tracker-tab ${pbTargetBucketId === b.id ? 'active' : ''}`}
+                                        style={{ '--tracker-color': b.color } as any}
+                                        onClick={() => setNewPBBucketId(b.id)}
+                                    >
+                                        <span className="dot" />{b.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                         <div className="tile-palette">
                             {PALETTE.map(c => <button key={c} className={`tile-swatch ${newPBColor === c ? 'sel' : ''}`} style={{ background: c }} onClick={() => setNewPBColor(c)} />)}
@@ -624,55 +696,58 @@ function TrackerDetailPanel({
                 </div>
             )}
 
-            {/* ══════════ PROGRESS BARS ══════════ */}
-            {progressBars.length > 0 && (
+            {/* ══════════ PROGRESS BARS — every tracker's bars in one shared row ══════════ */}
+            {allPBs.length > 0 && (
                 <div className="td-section">
                     <p className="td-section-title" style={{ marginBottom: 12 }}>Progress Bars</p>
-                    <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-                        {progressBars.map(pb => {
+                    <div className="td-pb-row">
+                        {allPBs.map(({ pb, bucket }) => {
                             const prog = calcPctFromTasks(pb.categoryIds, pb.taskTexts, pb.subtaskTexts, categories, tasks, pb.color);
                             const isLinking = activeLinkPBId === pb.id;
                             const isEditingThis = editingPBId === pb.id;
                             const isOpenMenu = openMenuPBId === pb.id;
 
                             return (
-                                <div key={pb.id} className="td-pb-mini-widget" style={{ 
-                                    display: 'flex', alignItems: 'center', gap: 16, background: 'rgba(255,255,255,0.02)', 
+                                <div key={pb.id} className="td-pb-mini-widget" style={{
+                                    display: 'flex', alignItems: 'center', gap: 16, background: 'rgba(255,255,255,0.02)',
                                     padding: '12px 18px 12px 12px', borderRadius: 30, border: isLinking ? `1px solid ${pb.color}` : '1px solid rgba(255,255,255,0.05)',
-                                    boxShadow: isLinking ? `0 0 12px ${pb.color}40` : 'none', transition: 'all 0.2s', minWidth: 200
+                                    boxShadow: isLinking ? `0 0 12px ${pb.color}40` : 'none', transition: 'all 0.2s', minWidth: 0
                                 }}>
                                     <div style={{ position: 'relative', width: 34, height: 34, flexShrink: 0 }}>
                                         <ProgressRing pct={prog.pct} color={pb.color} size={34} stroke={3.5} />
                                     </div>
-                                    
-                                    <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minWidth: 0 }}>
                                         {isEditingThis ? (
                                             <PBLabelEdit pb={pb} onSave={label => { onUpdateProgressBar(bucket.id, pb.id, { label }); setEditingPBId(null); }} onCancel={() => setEditingPBId(null)} />
                                         ) : (
-                                            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#e4e4e7', cursor: 'pointer', whiteSpace: 'nowrap' }} onDoubleClick={() => setEditingPBId(pb.id)}>{pb.label}</span>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#e4e4e7', cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} onDoubleClick={() => setEditingPBId(pb.id)}>{pb.label}</span>
                                         )}
-                                        <span style={{ fontSize: '0.65rem', color: '#a1a1aa', fontWeight: 600 }}>{prog.done}/{prog.total} items</span>
+                                        <span style={{ fontSize: '0.65rem', color: '#a1a1aa', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {prog.done}/{prog.total} items
+                                            {buckets.length > 1 && <> · <span style={{ color: bucket.color }}>{bucket.name}</span></>}
+                                        </span>
                                     </div>
-                                    
+
                                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                        <button 
+                                        <button
                                             onClick={() => setOpenMenuPBId(isOpenMenu ? null : pb.id)}
                                             style={{ background: 'transparent', color: '#71717a', padding: 4, transition: 'color 0.2s' }}
                                         >
                                             <GearIcon className="w-5 h-5" />
                                         </button>
-                                        
+
                                         {isOpenMenu && (
                                             <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 8, background: '#1f1f23', padding: 8, borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.1)', zIndex: 100, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 140 }}>
-                                                <button 
-                                                    onClick={() => { setActiveLinkPBId(isLinking ? null : pb.id); setOpenMenuPBId(null); }}
+                                                <button
+                                                    onClick={() => { setActiveLink(isLinking ? null : { bucketId: bucket.id, pbId: pb.id }); setEditMode(false); setOpenMenuPBId(null); }}
                                                     style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', fontWeight: 600, color: isLinking ? pb.color : '#e4e4e7', padding: '8px 10px', borderRadius: 8, background: isLinking ? `${pb.color}20` : 'transparent', textAlign: 'left', width: '100%', transition: 'background 0.15s' }}
                                                     onMouseEnter={e => { if(!isLinking) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
                                                     onMouseLeave={e => { if(!isLinking) e.currentTarget.style.background = 'transparent' }}
                                                 >
                                                     <LinkIcon className="w-4 h-4" /> {isLinking ? 'Done Linking' : 'Link Tracker Items'}
                                                 </button>
-                                                <button 
+                                                <button
                                                     onClick={() => { setEditingPBId(pb.id); setOpenMenuPBId(null); }}
                                                     style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', fontWeight: 600, color: '#e4e4e7', padding: '8px 10px', borderRadius: 8, background: 'transparent', textAlign: 'left', width: '100%', transition: 'background 0.15s' }}
                                                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
@@ -682,8 +757,8 @@ function TrackerDetailPanel({
                                                     Rename Bar
                                                 </button>
                                                 <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
-                                                <button 
-                                                    onClick={() => { if (confirm(`Delete "${pb.label}"?`)) { onDeleteProgressBar(bucket.id, pb.id); if (activeLinkPBId === pb.id) setActiveLinkPBId(null); } setOpenMenuPBId(null); }}
+                                                <button
+                                                    onClick={() => { if (confirm(`Delete "${pb.label}"?`)) { onDeleteProgressBar(bucket.id, pb.id); if (activeLinkPBId === pb.id) setActiveLink(null); } setOpenMenuPBId(null); }}
                                                     style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', fontWeight: 600, color: '#ef4444', padding: '8px 10px', borderRadius: 8, background: 'transparent', textAlign: 'left', width: '100%', transition: 'background 0.15s' }}
                                                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
                                                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -700,20 +775,41 @@ function TrackerDetailPanel({
                 </div>
             )}
 
-            {/* ══════════ EDIT PANEL (bucket config) ══════════ */}
-            {editMode && (
+            {/* ══════════ EDIT PANEL (per-tracker config, one shared panel) ══════════ */}
+            {editMode && sb && (
                 <div className="tile-edit-panel" style={{ marginBottom: 24 }}>
+                    {buckets.length > 1 && (
+                        <div className="tile-edit-section">
+                            <label className="tile-edit-label">Tracker</label>
+                            <div className="td-tracker-tabs">
+                                {buckets.map(b => (
+                                    <button
+                                        key={b.id}
+                                        className={`td-tracker-tab ${sb.id === b.id ? 'active' : ''}`}
+                                        style={{ '--tracker-color': b.color } as any}
+                                        onClick={() => setSettingsBucketId(b.id)}
+                                    >
+                                        <span className="dot" />{b.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    <div className="tile-edit-section">
+                        <label className="tile-edit-label">Name</label>
+                        <TrackerNameInput key={sb.id} bucket={sb} onSave={name => onUpdateBucket(sb.id, { name })} />
+                    </div>
                     <div className="tile-edit-section">
                         <label className="tile-edit-label">Color</label>
                         <div className="tile-palette">
-                            {PALETTE.map(c => <button key={c} className={`tile-swatch ${bucket.color === c ? 'sel' : ''}`} style={{ background: c }} onClick={() => onUpdate({ color: c })} />)}
+                            {PALETTE.map(c => <button key={c} className={`tile-swatch ${sb.color === c ? 'sel' : ''}`} style={{ background: c }} onClick={() => onUpdateBucket(sb.id, { color: c })} />)}
                         </div>
                     </div>
                     <div className="tile-edit-section">
                         <label className="tile-edit-label">Overall Tracked Categories &amp; Tasks</label>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
                             {categories.map(cat => {
-                                const catLinked = (bucket.categoryIds || []).includes(cat.id);
+                                const catLinked = (sb.categoryIds || []).includes(cat.id);
                                 const catTasks = tasks.filter(t => t.categoryId === cat.id);
                                 const isEditExpanded = expandedEditCats.includes(cat.id);
                                 return (
@@ -734,7 +830,7 @@ function TrackerDetailPanel({
                                                 )}
                                             </div>
                                             <button
-                                                onClick={() => catLinked ? onRemoveCategoryFromBucket(cat.id) : onAddCategoryToBucket(cat.id)}
+                                                onClick={() => catLinked ? onRemoveCategoryFromBucket(sb.id, cat.id) : onAddCategoryToBucket(sb.id, cat.id)}
                                                 style={{ fontSize: '0.72rem', fontWeight: 700, padding: '3px 10px', borderRadius: 6, flexShrink: 0, background: catLinked ? cat.color : 'rgba(255,255,255,0.08)', color: catLinked ? 'white' : '#a1a1aa', transition: 'all 0.15s', border: 'none' }}
                                             >
                                                 {catLinked ? '✓ All' : 'Link All'}
@@ -745,13 +841,13 @@ function TrackerDetailPanel({
                                             <div className="td-edit-task-list">
                                                 {catTasks.map(t => {
                                                     const taskKey = `${cat.id}::${t.text}`;
-                                                    const taskLinked = (bucket.taskTexts || []).some(x => x === taskKey || x === t.text);
+                                                    const taskLinked = (sb.taskTexts || []).some(x => x === taskKey || x === t.text);
                                                     return (
                                                         <div key={t.id} className="td-edit-task-row">
                                                             <span style={{ width: 6, height: 6, borderRadius: '50%', background: t.completed ? cat.color : 'rgba(255,255,255,0.2)', flexShrink: 0, display: 'inline-block' }} />
                                                             <span className="td-edit-task-row-text" style={{ color: t.completed ? '#71717a' : '#d4d4d8', textDecoration: t.completed ? 'line-through' : 'none' }}>{t.text}</span>
                                                             <button
-                                                                onClick={() => taskLinked ? onRemoveBucketTask(bucket.id, taskKey) : onAddBucketTask(bucket.id, taskKey)}
+                                                                onClick={() => taskLinked ? onRemoveBucketTask(sb.id, taskKey) : onAddBucketTask(sb.id, taskKey)}
                                                                 style={{ fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: 5, flexShrink: 0, background: taskLinked ? cat.color : 'rgba(255,255,255,0.07)', color: taskLinked ? 'white' : '#71717a', border: 'none', transition: 'all 0.15s', whiteSpace: 'nowrap' }}
                                                             >
                                                                 {taskLinked ? '✓' : '+'}
@@ -770,24 +866,24 @@ function TrackerDetailPanel({
                         </div>
                     </div>
 
-                    <button className="td-delete-btn" onClick={() => { if (confirm(`Delete "${bucket.name}"?`)) { onDelete(); } }}>
-                        <TrashIcon className="w-3.5 h-3.5" /> Delete Tracker
+                    <button className="td-delete-btn" onClick={() => { if (confirm(`Delete "${sb.name}"?`)) { onDeleteBucket(sb.id); setSettingsBucketId(null); } }}>
+                        <TrashIcon className="w-3.5 h-3.5" /> Delete "{sb.name}"
                     </button>
                 </div>
             )}
 
-                                    {/* ══════════ CATEGORY TASK CARDS ══════════ */}
+            {/* ══════════ CATEGORY TASK CARDS — one shared layout for every tracker ══════════ */}
             <div className="td-section">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                     <p className="td-section-title" style={{ margin: 0 }}>
                         {activeLinkPB ? `Tap tasks to link → ${activeLinkPB.label}` : 'Dashboard Layout'}
                     </p>
                     {(!activeLinkPBId && !editMode) && (
-                        <button 
+                        <button
                             onClick={() => setLayoutEditMode(!layoutEditMode)}
-                            style={{ 
+                            style={{
                                 padding: '6px 12px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 700, border: 'none',
-                                background: layoutEditMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.05)', color: layoutEditMode ? '#ef4444' : 'white', transition: 'all 0.2s' 
+                                background: layoutEditMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.05)', color: layoutEditMode ? '#ef4444' : 'white', transition: 'all 0.2s'
                             }}
                         >
                             {layoutEditMode ? 'Close Editor' : 'Edit Layout'}
@@ -830,16 +926,16 @@ function TrackerDetailPanel({
                                          }} style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', padding: '4px 8px', borderRadius: 6, fontSize: '0.65rem', marginLeft: 'auto' }}>Remove Row</button>
                                      </div>
                                 )}
-                                
-                                <div style={{ 
-                                    display: 'grid', gap: compactView ? 12 : 20, 
-                                    gridTemplateColumns: `repeat(${row.columns}, 1fr)`,
+
+                                <div className="td-dash-row-grid" style={{
+                                    display: 'grid', gap: compactView ? 12 : 20,
+                                    gridTemplateColumns: `repeat(${row.columns}, minmax(0, 1fr))`,
                                     alignItems: row.matchHeight ? 'stretch' : 'start'
                                 }}>
                                      {row.slots.map((slottedCatId, slotIdx) => {
                                           if (!slottedCatId) {
                                               return layoutEditMode ? (
-                                                  <div key={`empty-${slotIdx}`} 
+                                                  <div key={`empty-${slotIdx}`}
                                                        className={`td-empty-slot ${dragOverTarget?.rowId === row.id && dragOverTarget?.slotIdx === slotIdx ? 'drag-over' : ''}`}
                                                        style={{ border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 12, minHeight: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', background: 'rgba(0,0,0,0.1)' }}
                                                        onDragOver={e => handleDragOver(e, row.id, slotIdx)}
@@ -857,15 +953,15 @@ function TrackerDetailPanel({
                                 </div>
                             </div>
                         ))}
-                        
+
                         {layoutEditMode && (
                              <button onClick={() => {
                                  saveDashboardRows([...dashboardRows, { id: `r-${Date.now()}`, columns: 3, matchHeight: false, slots: [null, null, null] }]);
                              }} style={{ width: '100%', padding: '12px', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 12, color: '#a1a1aa', fontSize: '0.8rem', fontWeight: 700, marginBottom: 32 }}>+ Add New Row</button>
                         )}
-                        
+
                         {(unassignedCatGroups.length > 0 || layoutEditMode) && (
-                            <div className="td-unassigned-pool" style={{ marginTop: 32, paddingTop: 32, borderTop: '1px solid rgba(255,255,255,0.05)' }} 
+                            <div className="td-unassigned-pool" style={{ marginTop: dashboardRows.length > 0 ? 32 : 0, paddingTop: dashboardRows.length > 0 ? 32 : 0, borderTop: dashboardRows.length > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}
                                  onDragOver={e => handleDragOver(e, 'unassigned', 0)}
                                  onDragLeave={() => setDragOverTarget(null)}
                                  onDrop={e => {
@@ -873,8 +969,10 @@ function TrackerDetailPanel({
                                       handleDrop(e, 'unassigned', 0);
                                  }}
                             >
-                                <p style={{ fontSize: '0.8rem', color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800, marginBottom: 16 }}>Unassigned Categories Pool</p>
-                                <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(240px, 1fr))`, gap: 16, minHeight: 120, border: dragOverTarget?.rowId === 'unassigned' ? '1px dashed #a1a1aa' : 'none', padding: 8, borderRadius: 12 }}>
+                                {(layoutEditMode || dashboardRows.length > 0) && (
+                                    <p style={{ fontSize: '0.8rem', color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800, marginBottom: 16 }}>Unassigned Categories Pool</p>
+                                )}
+                                <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(240px, 1fr))`, gap: 16, minHeight: layoutEditMode ? 120 : 0, border: dragOverTarget?.rowId === 'unassigned' ? '1px dashed #a1a1aa' : 'none', padding: layoutEditMode ? 8 : 0, borderRadius: 12 }}>
                                     {unassignedCatGroups.map((g, idx) => renderCategoryCard(g.cat.id, 'unassigned', idx))}
                                     {unassignedCatGroups.length === 0 && <div style={{ color: '#52525b', fontSize: '0.8rem' }}>Drag here to return to pool</div>}
                                 </div>
@@ -885,6 +983,22 @@ function TrackerDetailPanel({
                 )}
             </div>
         </div>
+    );
+}
+
+// ═══════════════════════════════════════════════ Tracker name editor ══
+function TrackerNameInput({ bucket, onSave }: { bucket: TrackerBucket; onSave: (name: string) => void }) {
+    const [v, setV] = useState(bucket.name);
+    const save = () => { if (v.trim() && v.trim() !== bucket.name) onSave(v.trim()); };
+    return (
+        <input
+            className="tile-edit-input"
+            value={v}
+            onChange={e => setV(e.target.value)}
+            onBlur={save}
+            onKeyDown={e => { if (e.key === 'Enter') save(); }}
+            style={{ width: '100%' }}
+        />
     );
 }
 
@@ -928,82 +1042,44 @@ function NewBucketForm({ onAdd, onCancel }: { onAdd: (name: string, color: strin
 
 // ═══════════════════════════════════════════════ Main export ══
 export default function TrackerBuckets(props: Props) {
-    const {
-        buckets, categories, tasks,
-        onAddBucket, onUpdateBucket, onDeleteBucket,
-        onAddCategoryToBucket, onRemoveCategoryFromBucket,
-        onAddBucketTask, onRemoveBucketTask, onAddBucketSubtask, onRemoveBucketSubtask,
-        onToggleTask, onToggleSubtask,
-        onAddProgressBar, onUpdateProgressBar, onDeleteProgressBar,
-        onAddPBCategory, onRemovePBCategory, onAddPBTask, onRemovePBTask, onAddPBSubtask, onRemovePBSubtask,
-    } = props;
-
+    const { buckets, onAddBucket } = props;
     const [isCreating, setIsCreating] = useState(false);
 
-    return (
-        <div className="tracker-buckets-root">
-            <div className="tracker-buckets-header">
-                <h3 className="tracker-buckets-title">Trackers</h3>
-                {!isCreating && (
-                    <button className="td-add-tracker-btn" onClick={() => setIsCreating(true)}>
-                        <PlusIcon className="w-4 h-4" />
-                        <span>Add Tracker</span>
-                    </button>
+    // No trackers yet → simple empty state
+    if (buckets.length === 0) {
+        return (
+            <div className="tracker-buckets-root">
+                <div className="tracker-buckets-header">
+                    <h3 className="tracker-buckets-title">Trackers</h3>
+                </div>
+                {isCreating ? (
+                    <div className="tracker-create-wrapper">
+                        <div className="tile-create-panel">
+                            <NewBucketForm
+                                onAdd={(name, color) => {
+                                    onAddBucket(name, 'independent', color);
+                                    setIsCreating(false);
+                                }}
+                                onCancel={() => setIsCreating(false)}
+                            />
+                        </div>
+                    </div>
+                ) : (
+                    <div className="tracker-panels-empty">
+                        <p>No trackers created yet.</p>
+                        <button className="tile-btn-create" onClick={() => setIsCreating(true)}>
+                            <PlusIcon className="w-4 h-4" /> Create Tracker
+                        </button>
+                    </div>
                 )}
             </div>
+        );
+    }
 
-            {isCreating && (
-                <div className="tracker-create-wrapper">
-                    <div className="tile-create-panel">
-                        <NewBucketForm
-                            onAdd={(name, color) => {
-                                onAddBucket(name, 'independent', color);
-                                setIsCreating(false);
-                            }}
-                            onCancel={() => setIsCreating(false)}
-                        />
-                    </div>
-                </div>
-            )}
-
-            {buckets.length === 0 && !isCreating ? (
-                <div className="tracker-panels-empty">
-                    <p>No trackers created yet.</p>
-                    <button className="tile-btn-create" onClick={() => setIsCreating(true)}>
-                        <PlusIcon className="w-4 h-4" /> Create Tracker
-                    </button>
-                </div>
-            ) : (
-                <div className="tracker-detail-panels-container">
-                    {buckets.map(bucket => (
-                        <TrackerDetailPanel
-                            key={bucket.id}
-                            bucket={bucket}
-                            categories={categories}
-                            tasks={tasks}
-                            onUpdate={u => onUpdateBucket(bucket.id, u)}
-                            onDelete={() => onDeleteBucket(bucket.id)}
-                            onAddCategoryToBucket={id => onAddCategoryToBucket(bucket.id, id)}
-                            onRemoveCategoryFromBucket={id => onRemoveCategoryFromBucket(bucket.id, id)}
-                            onAddBucketTask={onAddBucketTask}
-                            onRemoveBucketTask={onRemoveBucketTask}
-                            onAddBucketSubtask={onAddBucketSubtask}
-                            onRemoveBucketSubtask={onRemoveBucketSubtask}
-                            onToggleTask={onToggleTask}
-                            onToggleSubtask={onToggleSubtask}
-                            onAddProgressBar={onAddProgressBar}
-                            onUpdateProgressBar={onUpdateProgressBar}
-                            onDeleteProgressBar={onDeleteProgressBar}
-                            onAddPBCategory={onAddPBCategory}
-                            onRemovePBCategory={onRemovePBCategory}
-                            onAddPBTask={onAddPBTask}
-                            onRemovePBTask={onRemovePBTask}
-                            onAddPBSubtask={onAddPBSubtask}
-                            onRemovePBSubtask={onRemovePBSubtask}
-                        />
-                    ))}
-                </div>
-            )}
+    // All trackers share ONE seamless board
+    return (
+        <div className="tracker-buckets-root">
+            <TrackerBoard {...props} />
         </div>
     );
 }

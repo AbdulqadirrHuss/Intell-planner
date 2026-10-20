@@ -550,79 +550,124 @@ h1 { letter-spacing: -0.02em; }
     gap: 12px;
 }
 
-/* One continuous block: every tracker sits side by side inside a single
-   shared card, separated only by a thin divider. Each tracker still keeps
-   its own counter, progress bars and controls. */
-.tracker-detail-panels-container {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(420px, 1fr);
-    align-items: stretch;
-    width: 100%;
-    overflow-x: auto;
-    background: rgba(255, 255, 255, 0.03);
-    background-image:
-        radial-gradient(ellipse at 0% 0%, rgba(139, 92, 246, 0.12) 0%, transparent 55%),
-        radial-gradient(ellipse at 100% 100%, rgba(99, 102, 241, 0.06) 0%, transparent 50%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-xl);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
-}
-.tracker-detail-panels-container::-webkit-scrollbar { height: 6px; }
-.tracker-detail-panels-container::-webkit-scrollbar-track { background: transparent; }
-.tracker-detail-panels-container::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 3px; }
+/* ── Unified tracker board ──
+   Every tracker shares one header row, one progress-bar row and one dashboard
+   layout. Each tracker keeps its own ring / counter. */
+.tracker-unified-board { width: 100%; }
 
-/* Sections inside the shared block are flat (no separate card look) */
-.tracker-detail-panels-container > .tracker-detail-panel {
-    position: relative;
-    background: transparent;
-    background-image: none;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
+.td-header-unified {
+    flex-wrap: wrap;
+    row-gap: 16px;
 }
+.td-header-unified .td-header-actions { margin-left: auto; }
 
-/* Thin accent line in each tracker's colour so they still read as separate counters */
-.tracker-detail-panels-container > .tracker-detail-panel::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 1.5rem;
-    right: 1.5rem;
-    height: 2px;
-    border-radius: 0 0 2px 2px;
-    background: var(--tracker-color, var(--accent));
-    opacity: 0.55;
+.td-tracker-summaries {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    flex: 1 1 auto;
+    min-width: 0;
+    row-gap: 14px;
 }
-
-/* Divider between neighbouring trackers */
-.tracker-detail-panels-container > .tracker-detail-panel + .tracker-detail-panel {
+.td-tracker-summary {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    min-width: 0;
+}
+.td-tracker-summary + .td-tracker-summary {
+    margin-left: 22px;
+    padding-left: 22px;
     border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+.td-tracker-summaries .td-add-tracker-chip { margin-left: 22px; }
+
+/* Every tracker's progress bars share one evenly-filled row */
+.td-pb-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 14px;
+    align-items: center;
+}
+
+.td-tracker-summary .td-title-block { flex: 0 1 auto; }
+.td-tracker-summary .td-title-block h2 {
+    font-size: 1.5rem;
+    white-space: nowrap;
+    transition: color 0.18s;
+}
+.td-tracker-summary .td-title-block p { white-space: nowrap; }
+.td-tracker-summary:hover .td-title-block h2,
+.td-tracker-summary.selected .td-title-block h2 { color: var(--tracker-color); }
+
+.td-add-tracker-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: 36px;
+    height: 36px;
+    justify-content: center;
+    border-radius: 10px;
+    border: 1px dashed rgba(255, 255, 255, 0.14);
+    background: transparent;
+    color: #71717a;
+    font-size: 0.75rem;
+    font-weight: 700;
+    transition: all 0.18s;
+}
+.td-add-tracker-chip:hover,
+.td-add-tracker-chip.active {
+    color: white;
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.td-tracker-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.td-tracker-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #a1a1aa;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.15s;
+}
+.td-tracker-tab .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--tracker-color);
+}
+.td-tracker-tab:hover { color: white; }
+.td-tracker-tab.active {
+    color: white;
+    border-color: var(--tracker-color);
+    background: color-mix(in srgb, var(--tracker-color) 18%, transparent);
 }
 
 @media (max-width: 768px) {
-    .tracker-detail-panels-container {
-        grid-auto-flow: row;
-        grid-auto-columns: auto;
-        grid-template-columns: 1fr;
-        overflow-x: visible;
+    .tracker-detail-panel { padding: 1rem; }
+    .td-tracker-summary { gap: 10px; }
+    .td-tracker-summary + .td-tracker-summary { margin-left: 14px; padding-left: 14px; }
+    .td-tracker-summaries .td-add-tracker-chip { margin-left: 14px; }
+    .td-dash-row-grid { grid-template-columns: 1fr !important; }
+    .td-tracker-summary .td-title-block h2 { font-size: 1.15rem; }
+    .td-header-unified .td-header-actions {
+        margin-left: 0;
+        width: 100%;
     }
-    .tracker-detail-panel {
-        padding: 1rem;
-    }
-    .tracker-detail-panels-container > .tracker-detail-panel::before {
-        left: 1rem;
-        right: 1rem;
-    }
-    .tracker-detail-panels-container > .tracker-detail-panel + .tracker-detail-panel {
-        border-left: none;
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
+    .td-header-unified .td-add-pb-btn {
+        flex: 1;
+        justify-content: center;
     }
 }
 
