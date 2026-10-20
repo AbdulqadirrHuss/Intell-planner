@@ -35,11 +35,6 @@ const ChevronDownIcon = ({ className = '' }: { className?: string }) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
     </svg>
 );
-const ArrowLeftIcon = ({ className = '' }: { className?: string }) => (
-    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-    </svg>
-);
 const LinkIcon = ({ className = '' }: { className?: string }) => (
     <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
@@ -129,10 +124,10 @@ function ProgressRing({ pct, color, size = 90, stroke = 7 }: { pct: number; colo
     );
 }
 
-// ═══════════════════════════════════════════════ Tracker Detail Page ══
-function TrackerDetailPage({
+// ═══════════════════════════════════════════════ Tracker Detail Panel ══
+function TrackerDetailPanel({
     bucket, categories, tasks,
-    onBack, onUpdate, onDelete,
+    onUpdate, onDelete,
     onAddCategoryToBucket, onRemoveCategoryFromBucket,
     onAddBucketTask, onRemoveBucketTask,
     onAddBucketSubtask, onRemoveBucketSubtask,
@@ -143,7 +138,6 @@ function TrackerDetailPage({
     onAddPBSubtask, onRemovePBSubtask,
 }: {
     bucket: TrackerBucket; categories: Category[]; tasks: Task[];
-    onBack: () => void;
     onUpdate: (u: Partial<TrackerBucket>) => void; onDelete: () => void;
     onAddCategoryToBucket: (id: string) => void; onRemoveCategoryFromBucket: (id: string) => void;
     onAddBucketTask: (bId: string, t: string) => void; onRemoveBucketTask: (bId: string, t: string) => void;
@@ -544,15 +538,10 @@ function TrackerDetailPage({
     };
 
     return (
-        <div className="tracker-detail-page">
+        <div className="tracker-detail-panel">
 
             {/* ══════════ HEADER ══════════ */}
             <div className="td-header">
-                <button className="td-back-btn" onClick={onBack} title="Back to trackers">
-                    <ArrowLeftIcon className="w-4 h-4" />
-                    <span className="hidden sm:inline">Trackers</span>
-                </button>
-
                 <div style={{ '--ring-color': bucket.color } as any}>
                     <ProgressRing pct={pct} color={bucket.color} size={72} stroke={6} />
                 </div>
@@ -781,7 +770,7 @@ function TrackerDetailPage({
                         </div>
                     </div>
 
-                    <button className="td-delete-btn" onClick={() => { if (confirm(`Delete "${bucket.name}"?`)) { onDelete(); onBack(); } }}>
+                    <button className="td-delete-btn" onClick={() => { if (confirm(`Delete "${bucket.name}"?`)) { onDelete(); } }}>
                         <TrashIcon className="w-3.5 h-3.5" /> Delete Tracker
                     </button>
                 </div>
@@ -949,96 +938,72 @@ export default function TrackerBuckets(props: Props) {
         onAddPBCategory, onRemovePBCategory, onAddPBTask, onRemovePBTask, onAddPBSubtask, onRemovePBSubtask,
     } = props;
 
-    const [selectedId, setSelectedId] = useState<string | null>(null);
     const [isCreating, setIsCreating] = useState(false);
 
-    const selectedBucket = buckets.find(b => b.id === selectedId);
-
-    if (selectedBucket) {
-        return (
-            <TrackerDetailPage
-                bucket={selectedBucket}
-                categories={categories}
-                tasks={tasks}
-                onBack={() => setSelectedId(null)}
-                onUpdate={u => onUpdateBucket(selectedBucket.id, u)}
-                onDelete={() => { onDeleteBucket(selectedBucket.id); setSelectedId(null); }}
-                onAddCategoryToBucket={id => onAddCategoryToBucket(selectedBucket.id, id)}
-                onRemoveCategoryFromBucket={id => onRemoveCategoryFromBucket(selectedBucket.id, id)}
-                onAddBucketTask={onAddBucketTask}
-                onRemoveBucketTask={onRemoveBucketTask}
-                onAddBucketSubtask={onAddBucketSubtask}
-                onRemoveBucketSubtask={onRemoveBucketSubtask}
-                onToggleTask={onToggleTask}
-                onToggleSubtask={onToggleSubtask}
-                onAddProgressBar={onAddProgressBar}
-                onUpdateProgressBar={onUpdateProgressBar}
-                onDeleteProgressBar={onDeleteProgressBar}
-                onAddPBCategory={onAddPBCategory}
-                onRemovePBCategory={onRemovePBCategory}
-                onAddPBTask={onAddPBTask}
-                onRemovePBTask={onRemovePBTask}
-                onAddPBSubtask={onAddPBSubtask}
-                onRemovePBSubtask={onRemovePBSubtask}
-            />
-        );
-    }
-
-    // ══ Grid overview ══
     return (
         <div className="tracker-buckets-root">
             <div className="tracker-buckets-header">
                 <h3 className="tracker-buckets-title">Trackers</h3>
-            </div>
-            <div className="tile-grid">
-                {buckets.map(b => {
-                    const { done, total, pct } = calcPctFromTasks(b.categoryIds || [], b.taskTexts || [], b.subtaskTexts || [], categories, tasks, b.color);
-                    const bars = b.progressBars || [];
-                    return (
-                        <button key={b.id} className="tile futuristic-tile" style={{ '--tile-color': b.color } as any} onClick={() => setSelectedId(b.id)}>
-                            <div className="tile-shimmer" />
-                            <div className="tile-top">
-                                <div className="tile-ring-container" style={{ '--ring-color': b.color } as any}>
-                                    <ProgressRing pct={pct} color={b.color} size={90} stroke={7} />
-                                </div>
-                                <div className="tile-info">
-                                    <span className="tile-name">{b.name}</span>
-                                    <span className="tile-count">{done}/{total} items</span>
-                                    {bars.length > 0 && <span className="tile-pb-hint">{bars.length} bar{bars.length !== 1 ? 's' : ''}</span>}
-                                </div>
-                            </div>
-                            {bars.length > 0 && (
-                                <div className="tile-mini-bars">
-                                    {bars.map(pb => {
-                                        const pp = calcPctFromTasks(pb.categoryIds, pb.taskTexts, pb.subtaskTexts, categories, tasks, pb.color);
-                                        return (
-                                            <div key={pb.id} className="tile-mini-bar-row">
-                                                <span className="tile-mini-bar-label">{pb.label}</span>
-                                                <div className="tile-mini-bar-track">
-                                                    <div className="tile-mini-bar-fill" style={{ width: `${pp.pct}%`, background: pb.color, boxShadow: `0 0 6px ${pb.color}80` }} />
-                                                </div>
-                                                <span className="tile-mini-bar-pct" style={{ color: pb.color }}>{pp.pct}%</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </button>
-                    );
-                })}
-                {isCreating ? (
-                    <div className="tile-wrapper">
-                        <div className="tile-create-panel">
-                            <NewBucketForm onAdd={(name, color) => { onAddBucket(name, 'independent', color); setIsCreating(false); }} onCancel={() => setIsCreating(false)} />
-                        </div>
-                    </div>
-                ) : (
-                    <button className="tile-add-btn" onClick={() => setIsCreating(true)}>
-                        <PlusIcon className="w-6 h-6 text-gray-400 mb-1" />
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">+ New</span>
+                {!isCreating && (
+                    <button className="td-add-tracker-btn" onClick={() => setIsCreating(true)}>
+                        <PlusIcon className="w-4 h-4" />
+                        <span>Add Tracker</span>
                     </button>
                 )}
             </div>
+
+            {isCreating && (
+                <div className="tracker-create-wrapper">
+                    <div className="tile-create-panel">
+                        <NewBucketForm
+                            onAdd={(name, color) => {
+                                onAddBucket(name, 'independent', color);
+                                setIsCreating(false);
+                            }}
+                            onCancel={() => setIsCreating(false)}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {buckets.length === 0 && !isCreating ? (
+                <div className="tracker-panels-empty">
+                    <p>No trackers created yet.</p>
+                    <button className="tile-btn-create" onClick={() => setIsCreating(true)}>
+                        <PlusIcon className="w-4 h-4" /> Create Tracker
+                    </button>
+                </div>
+            ) : (
+                <div className="tracker-detail-panels-container">
+                    {buckets.map(bucket => (
+                        <TrackerDetailPanel
+                            key={bucket.id}
+                            bucket={bucket}
+                            categories={categories}
+                            tasks={tasks}
+                            onUpdate={u => onUpdateBucket(bucket.id, u)}
+                            onDelete={() => onDeleteBucket(bucket.id)}
+                            onAddCategoryToBucket={id => onAddCategoryToBucket(bucket.id, id)}
+                            onRemoveCategoryFromBucket={id => onRemoveCategoryFromBucket(bucket.id, id)}
+                            onAddBucketTask={onAddBucketTask}
+                            onRemoveBucketTask={onRemoveBucketTask}
+                            onAddBucketSubtask={onAddBucketSubtask}
+                            onRemoveBucketSubtask={onRemoveBucketSubtask}
+                            onToggleTask={onToggleTask}
+                            onToggleSubtask={onToggleSubtask}
+                            onAddProgressBar={onAddProgressBar}
+                            onUpdateProgressBar={onUpdateProgressBar}
+                            onDeleteProgressBar={onDeleteProgressBar}
+                            onAddPBCategory={onAddPBCategory}
+                            onRemovePBCategory={onRemovePBCategory}
+                            onAddPBTask={onAddPBTask}
+                            onRemovePBTask={onRemovePBTask}
+                            onAddPBSubtask={onAddPBSubtask}
+                            onRemovePBSubtask={onRemovePBSubtask}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
