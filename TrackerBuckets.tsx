@@ -131,6 +131,7 @@ function ProgressRing({ pct, color, size = 90, stroke = 7 }: { pct: number; colo
 // Each tracker still counts its own progress independently.
 
 const UNIFIED_ROWS_KEY = 'td_rows_unified';
+const BOARD_COLS = 2; // dashboard boxes per row (matches the tracker header columns)
 
 /** Build the shared dashboard layout, migrating any old per-tracker layouts once. */
 function loadUnifiedRows(buckets: TrackerBucket[]): DashboardRowLayout[] {
@@ -568,11 +569,60 @@ function TrackerBoard({
 
     const sb = settingsBucket; // tracker currently being configured in the settings panel
 
+    // ── Shared 2-column dashboard ──
+    // Every tracked category box flows into one 2-column grid (same columns as the
+    // tracker header above). Saved layout order is respected; anything not yet
+    // placed is appended so no dashboard box is ever hidden.
+    const effectiveIds = effectiveCatGroups.map(g => g.cat.id);
+    const orderedCatIds = Array.from(new Set([...activeLayoutIds.filter(id => effectiveIds.includes(id)), ...effectiveIds]));
+
+    const toggleLayoutEditor = () => {
+        if (!layoutEditMode) {
+            // Normalise into 2-slot rows; keep boxes that aren't visible today at the end so their order survives
+            const hidden = activeLayoutIds.filter(id => !orderedCatIds.includes(id));
+            const ids = [...orderedCatIds, ...hidden];
+            const rows: DashboardRowLayout[] = [];
+            for (let i = 0; i < ids.length; i += BOARD_COLS) {
+                const slots: (string | null)[] = ids.slice(i, i + BOARD_COLS);
+                while (slots.length < BOARD_COLS) slots.push(null);
+                rows.push({ id: `r-${Date.now()}-${i}`, columns: BOARD_COLS, matchHeight: true, slots });
+            }
+            saveDashboardRows(rows);
+        }
+        setLayoutEditMode(!layoutEditMode);
+    };
+
     return (
-        <div className="tracker-detail-panel tracker-unified-board">
+        <div className="tracker-detail-panel tracker-unified-board" style={{ '--board-gap': compactView ? '12px' : '20px' } as any}>
 
             {/* ══════════ HEADER — every tracker's counter side by side + shared actions ══════════ */}
             <div className="td-header td-header-unified">
+                <div className="td-board-toolbar">
+                    <p className="td-section-title" style={{ margin: 0 }}>Trackers</p>
+                    <div className="td-header-actions">
+                    <button
+                        className={`td-add-tracker-chip ${isCreatingTracker ? 'active' : ''}`}
+                        onClick={() => setIsCreatingTracker(v => !v)}
+                        title="Add tracker"
+                    >
+                        <PlusIcon className="w-4 h-4" />
+                    </button>
+                    <button className="td-add-pb-btn" onClick={() => { setAddingPB(v => !v); setActiveLink(null); }}>
+                        <PlusIcon className="w-4 h-4" />
+                        Add Progress Bar
+                    </button>
+                    <button
+                        className={`td-gear-btn ${compactView ? 'active' : ''}`}
+                        onClick={() => setCompactView(v => !v)}
+                        title={compactView ? "Normal View" : "Compact View"}
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg>
+                    </button>
+                    <button className={`td-gear-btn ${editMode ? 'active' : ''}`} onClick={() => { setEditMode(v => !v); setActiveLink(null); }} title="Settings">
+                        <GearIcon className="w-4 h-4" />
+                    </button>
+                    </div>
+                </div>
                 <div className="td-tracker-summaries">
                     {buckets.map(b => {
                         const s = calcPctFromTasks(b.categoryIds || [], b.taskTexts || [], b.subtaskTexts || [], categories, tasks, b.color);
@@ -593,30 +643,6 @@ function TrackerBoard({
                             </div>
                         );
                     })}
-                    <button
-                        className={`td-add-tracker-chip ${isCreatingTracker ? 'active' : ''}`}
-                        onClick={() => setIsCreatingTracker(v => !v)}
-                        title="Add tracker"
-                    >
-                        <PlusIcon className="w-4 h-4" />
-                    </button>
-                </div>
-
-                <div className="td-header-actions">
-                    <button className="td-add-pb-btn" onClick={() => { setAddingPB(v => !v); setActiveLink(null); }}>
-                        <PlusIcon className="w-4 h-4" />
-                        Add Progress Bar
-                    </button>
-                    <button
-                        className={`td-gear-btn ${compactView ? 'active' : ''}`}
-                        onClick={() => setCompactView(v => !v)}
-                        title={compactView ? "Normal View" : "Compact View"}
-                    >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg>
-                    </button>
-                    <button className={`td-gear-btn ${editMode ? 'active' : ''}`} onClick={() => { setEditMode(v => !v); setActiveLink(null); }} title="Settings">
-                        <GearIcon className="w-4 h-4" />
-                    </button>
                 </div>
             </div>
 
@@ -880,7 +906,7 @@ function TrackerBoard({
                     </p>
                     {(!activeLinkPBId && !editMode) && (
                         <button
-                            onClick={() => setLayoutEditMode(!layoutEditMode)}
+                            onClick={toggleLayoutEditor}
                             style={{
                                 padding: '6px 12px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 700, border: 'none',
                                 background: layoutEditMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.05)', color: layoutEditMode ? '#ef4444' : 'white', transition: 'all 0.2s'
@@ -895,90 +921,62 @@ function TrackerBoard({
                     <div className="tile-empty">No items tracked yet. Tap the Gear icon or "Add Progress Bar" to link tasks.</div>
                 ) : (
                     <div className="td-dashboard-engine">
-                        {dashboardRows.map((row) => (
-                            <div key={row.id} className="td-dash-row-container" style={{ marginBottom: 24 }}>
-                                {layoutEditMode && (
-                                     <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-                                         <span style={{ fontSize: '0.7rem', color: '#a1a1aa', fontWeight: 700, textTransform: 'uppercase' }}>Row Config</span>
-                                         <button onClick={() => {
-                                             const newRows = [...dashboardRows];
-                                             const r = newRows.find(x => x.id === row.id)!;
-                                             r.columns = Math.min(6, r.columns + 1);
-                                             r.slots.push(null);
-                                             saveDashboardRows(newRows);
-                                         }} style={{ background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: 6, fontSize: '0.65rem' }}>+ Column</button>
-                                         <button onClick={() => {
-                                             const newRows = [...dashboardRows];
-                                             const r = newRows.find(x => x.id === row.id)!;
-                                             if (r.columns > 1) { r.columns--; r.slots.pop(); }
-                                             saveDashboardRows(newRows);
-                                         }} style={{ background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: 6, fontSize: '0.65rem' }}>- Column</button>
-                                         <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.65rem', marginLeft: 16 }}>
-                                             <input type="checkbox" checked={row.matchHeight} onChange={e => {
-                                                 const newRows = [...dashboardRows];
-                                                 newRows.find(x => x.id === row.id)!.matchHeight = e.target.checked;
-                                                 saveDashboardRows(newRows);
-                                             }} />
-                                             Match Heights
-                                         </label>
-                                         <button onClick={() => {
-                                             saveDashboardRows(dashboardRows.filter(x => x.id !== row.id));
-                                         }} style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', padding: '4px 8px', borderRadius: 6, fontSize: '0.65rem', marginLeft: 'auto' }}>Remove Row</button>
-                                     </div>
-                                )}
-
-                                <div className="td-dash-row-grid" style={{
-                                    display: 'grid', gap: compactView ? 12 : 20,
-                                    gridTemplateColumns: `repeat(${row.columns}, minmax(0, 1fr))`,
-                                    alignItems: row.matchHeight ? 'stretch' : 'start'
-                                }}>
-                                     {row.slots.map((slottedCatId, slotIdx) => {
-                                          if (!slottedCatId) {
-                                              return layoutEditMode ? (
-                                                  <div key={`empty-${slotIdx}`}
-                                                       className={`td-empty-slot ${dragOverTarget?.rowId === row.id && dragOverTarget?.slotIdx === slotIdx ? 'drag-over' : ''}`}
-                                                       style={{ border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 12, minHeight: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', background: 'rgba(0,0,0,0.1)' }}
-                                                       onDragOver={e => handleDragOver(e, row.id, slotIdx)}
-                                                       onDragLeave={() => setDragOverTarget(null)}
-                                                       onDrop={e => handleDrop(e, row.id, slotIdx)}
-                                                  >
-                                                      <span style={{ fontSize: '0.7rem', color: '#a1a1aa' }}>Empty Slot</span>
-                                                  </div>
-                                              ) : (
-                                                  <div key={`empty-${slotIdx}`} style={{ visibility: 'hidden' }} />
-                                              );
-                                          }
-                                          return renderCategoryCard(slottedCatId, row.id, slotIdx);
-                                     })}
-                                </div>
+                        {!layoutEditMode ? (
+                            <div className="td-board-grid">
+                                {orderedCatIds.map((id, idx) => renderCategoryCard(id, 'flow', idx))}
                             </div>
-                        ))}
+                        ) : (
+                            <>
+                                {dashboardRows.map((row) => (
+                                    <div key={row.id} className="td-dash-row-container" style={{ marginBottom: 'var(--board-gap)' }}>
+                                        <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                                            <span style={{ fontSize: '0.7rem', color: '#a1a1aa', fontWeight: 700, textTransform: 'uppercase' }}>Row</span>
+                                            <button onClick={() => {
+                                                saveDashboardRows(dashboardRows.filter(x => x.id !== row.id));
+                                            }} style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', padding: '4px 8px', borderRadius: 6, fontSize: '0.65rem', marginLeft: 'auto' }}>Remove Row</button>
+                                        </div>
 
-                        {layoutEditMode && (
-                             <button onClick={() => {
-                                 saveDashboardRows([...dashboardRows, { id: `r-${Date.now()}`, columns: 3, matchHeight: false, slots: [null, null, null] }]);
-                             }} style={{ width: '100%', padding: '12px', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 12, color: '#a1a1aa', fontSize: '0.8rem', fontWeight: 700, marginBottom: 32 }}>+ Add New Row</button>
-                        )}
+                                        <div className="td-board-grid">
+                                            {row.slots.map((slottedCatId, slotIdx) => {
+                                                if (!slottedCatId) {
+                                                    return (
+                                                        <div key={`empty-${slotIdx}`}
+                                                             className={`td-empty-slot ${dragOverTarget?.rowId === row.id && dragOverTarget?.slotIdx === slotIdx ? 'drag-over' : ''}`}
+                                                             style={{ border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 12, minHeight: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', background: 'rgba(0,0,0,0.1)' }}
+                                                             onDragOver={e => handleDragOver(e, row.id, slotIdx)}
+                                                             onDragLeave={() => setDragOverTarget(null)}
+                                                             onDrop={e => handleDrop(e, row.id, slotIdx)}
+                                                        >
+                                                            <span style={{ fontSize: '0.7rem', color: '#a1a1aa' }}>Empty Slot</span>
+                                                        </div>
+                                                    );
+                                                }
+                                                return renderCategoryCard(slottedCatId, row.id, slotIdx);
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
 
-                        {(unassignedCatGroups.length > 0 || layoutEditMode) && (
-                            <div className="td-unassigned-pool" style={{ marginTop: dashboardRows.length > 0 ? 32 : 0, paddingTop: dashboardRows.length > 0 ? 32 : 0, borderTop: dashboardRows.length > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}
-                                 onDragOver={e => handleDragOver(e, 'unassigned', 0)}
-                                 onDragLeave={() => setDragOverTarget(null)}
-                                 onDrop={e => {
-                                      // Native drop into unassigned area logic natively resets via handleDrop checking 'unassigned'
-                                      handleDrop(e, 'unassigned', 0);
-                                 }}
-                            >
-                                {(layoutEditMode || dashboardRows.length > 0) && (
-                                    <p style={{ fontSize: '0.8rem', color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800, marginBottom: 16 }}>Unassigned Categories Pool</p>
-                                )}
-                                <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(240px, 1fr))`, gap: 16, minHeight: layoutEditMode ? 120 : 0, border: dragOverTarget?.rowId === 'unassigned' ? '1px dashed #a1a1aa' : 'none', padding: layoutEditMode ? 8 : 0, borderRadius: 12 }}>
-                                    {unassignedCatGroups.map((g, idx) => renderCategoryCard(g.cat.id, 'unassigned', idx))}
-                                    {unassignedCatGroups.length === 0 && <div style={{ color: '#52525b', fontSize: '0.8rem' }}>Drag here to return to pool</div>}
+                                <button onClick={() => {
+                                    saveDashboardRows([...dashboardRows, { id: `r-${Date.now()}`, columns: BOARD_COLS, matchHeight: true, slots: Array(BOARD_COLS).fill(null) }]);
+                                }} style={{ width: '100%', padding: '12px', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 12, color: '#a1a1aa', fontSize: '0.8rem', fontWeight: 700, marginBottom: 32 }}>+ Add New Row</button>
+
+                                <div className="td-unassigned-pool" style={{ paddingTop: 24, borderTop: '1px solid rgba(255,255,255,0.05)' }}
+                                     onDragOver={e => handleDragOver(e, 'unassigned', 0)}
+                                     onDragLeave={() => setDragOverTarget(null)}
+                                     onDrop={e => {
+                                          // Native drop into unassigned area logic natively resets via handleDrop checking 'unassigned'
+                                          handleDrop(e, 'unassigned', 0);
+                                     }}
+                                >
+                                    <p style={{ fontSize: '0.8rem', color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800, marginBottom: 16 }}>Unplaced boxes (shown at the end)</p>
+                                    <div className="td-board-grid" style={{ minHeight: 120, border: dragOverTarget?.rowId === 'unassigned' ? '1px dashed #a1a1aa' : 'none', padding: 8, borderRadius: 12 }}>
+                                        {unassignedCatGroups.map((g, idx) => renderCategoryCard(g.cat.id, 'unassigned', idx))}
+                                        {unassignedCatGroups.length === 0 && <div style={{ color: '#52525b', fontSize: '0.8rem' }}>Drag a box here to unplace it</div>}
+                                    </div>
                                 </div>
-                            </div>
+                            </>
                         )}
-
                     </div>
                 )}
             </div>

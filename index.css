@@ -34,7 +34,7 @@ body {
 }
 
 .app-container {
-    max-width: 1000px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 2rem;
     min-height: 100vh;
@@ -551,23 +551,32 @@ h1 { letter-spacing: -0.02em; }
 }
 
 /* ── Unified tracker board ──
-   Every tracker shares one header row, one progress-bar row and one dashboard
-   layout. Each tracker keeps its own ring / counter. */
-.tracker-unified-board { width: 100%; }
+   Every tracker shares one header, one progress-bar row and one dashboard.
+   Header, progress bars and dashboard all use the same 2-column rhythm so
+   their columns line up. Each tracker keeps its own ring / counter. */
+.tracker-unified-board {
+    width: 100%;
+    --board-gap: 20px;
+}
 
 .td-header-unified {
-    flex-wrap: wrap;
-    row-gap: 16px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
 }
-.td-header-unified .td-header-actions { margin-left: auto; }
-
-.td-tracker-summaries {
+.td-board-toolbar {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     flex-wrap: wrap;
-    flex: 1 1 auto;
-    min-width: 0;
-    row-gap: 14px;
+}
+
+/* Tracker counters: same 2 columns as the dashboard below */
+.td-tracker-summaries {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--board-gap);
 }
 .td-tracker-summary {
     display: flex;
@@ -576,44 +585,44 @@ h1 { letter-spacing: -0.02em; }
     cursor: pointer;
     min-width: 0;
 }
-.td-tracker-summary + .td-tracker-summary {
-    margin-left: 22px;
-    padding-left: 22px;
-    border-left: 1px solid rgba(255, 255, 255, 0.08);
-}
-.td-tracker-summaries .td-add-tracker-chip { margin-left: 22px; }
-
-/* Every tracker's progress bars share one evenly-filled row */
-.td-pb-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-    gap: 14px;
-    align-items: center;
-}
-
-.td-tracker-summary .td-title-block { flex: 0 1 auto; }
+.td-tracker-summary .td-title-block { flex: 1 1 auto; min-width: 0; }
 .td-tracker-summary .td-title-block h2 {
     font-size: 1.5rem;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     transition: color 0.18s;
 }
 .td-tracker-summary .td-title-block p { white-space: nowrap; }
 .td-tracker-summary:hover .td-title-block h2,
 .td-tracker-summary.selected .td-title-block h2 { color: var(--tracker-color); }
 
+/* Progress bars: 4 per row = exactly 2 under each column above */
+.td-pb-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--board-gap);
+    align-items: center;
+}
+
+/* Dashboard boxes: 2 per row, equal widths, matching the columns above */
+.td-board-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--board-gap);
+    align-items: stretch;
+}
+
 .td-add-tracker-chip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
     width: 36px;
     height: 36px;
-    justify-content: center;
     border-radius: 10px;
     border: 1px dashed rgba(255, 255, 255, 0.14);
     background: transparent;
     color: #71717a;
-    font-size: 0.75rem;
-    font-weight: 700;
     transition: all 0.18s;
 }
 .td-add-tracker-chip:hover,
@@ -654,21 +663,17 @@ h1 { letter-spacing: -0.02em; }
     background: color-mix(in srgb, var(--tracker-color) 18%, transparent);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
+    .td-pb-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
     .tracker-detail-panel { padding: 1rem; }
-    .td-tracker-summary { gap: 10px; }
-    .td-tracker-summary + .td-tracker-summary { margin-left: 14px; padding-left: 14px; }
-    .td-tracker-summaries .td-add-tracker-chip { margin-left: 14px; }
-    .td-dash-row-grid { grid-template-columns: 1fr !important; }
-    .td-tracker-summary .td-title-block h2 { font-size: 1.15rem; }
-    .td-header-unified .td-header-actions {
-        margin-left: 0;
-        width: 100%;
-    }
-    .td-header-unified .td-add-pb-btn {
-        flex: 1;
-        justify-content: center;
-    }
+    .td-tracker-summaries,
+    .td-board-grid { grid-template-columns: 1fr; }
+    .td-tracker-summary .td-title-block h2 { font-size: 1.2rem; }
+    .td-board-toolbar .td-header-actions { width: 100%; }
+    .td-board-toolbar .td-add-pb-btn { flex: 1; justify-content: center; }
 }
 
 /* ── Tile Grid (preserved for reuse) ── */
